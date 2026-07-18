@@ -567,6 +567,97 @@ private static void dfs(int[][] m, boolean[] seen, int i) {
   </div>
 </details>
 
+<details class="sol" id="lc802">
+  <summary><span class="badge medium">medium</span> Find Eventual Safe States — LeetCode 802</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> In a directed graph, a node is <em>safe</em> if every possible
+    walk from it ends at a terminal node (no outgoing edges) — equivalently, if it can never reach a
+    cycle. Return all safe nodes, sorted.</p>
+    <p><strong>Example.</strong> graph <code>[[1,2],[2,3],[5],[0],[5],[],[]]</code> →
+    <code>[2,4,5,6]</code> (0, 1, 3 sit on or feed the 0→1→3→0 cycle).</p>
+    <p class="code-title">Three-color DFS · O(V + E)</p>
+<pre class="code"><code>private static final int WHITE = 0, GRAY = 1, BLACK = 2;   // black = proven safe
+
+private static boolean dfs(int[][] g, int u, int[] color) {
+    if (color[u] != WHITE)
+        return color[u] == BLACK;       // GRAY again = we're in a cycle
+    color[u] = GRAY;                    // u joins the current path
+    for (int v : g[u])
+        if (!dfs(g, v, color))
+            return false;               // some route reaches a cycle: unsafe
+    color[u] = BLACK;                   // every exit proved safe — memoized
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The three-color scheme from the topological-sort section, promoted
+    to the star of the show: gray = "on the current path" detects cycles, black doubles as a
+    memoization mark so each node is fully processed once. Equivalent alternative worth naming:
+    reverse all edges and run Kahn's algorithm from the terminal nodes — safe nodes are the ones that
+    ever reach in-degree 0. Mirror: <code>code/16-graphs-advanced/EventualSafeStates.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc310">
+  <summary><span class="badge medium">medium</span> Minimum Height Trees — LeetCode 310</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A tree with n nodes: which roots minimize the tree's height?
+    (There are at most two.)</p>
+    <p><strong>Example.</strong> n=6, edges [[3,0],[3,1],[3,2],[3,4],[5,4]] → roots 3 and 4.</p>
+    <p class="code-title">Peel leaves inward until ≤ 2 remain · O(n)</p>
+<pre class="code"><code>List&lt;Integer&gt; leaves = new ArrayList&lt;&gt;();
+for (int i = 0; i &lt; n; i++)
+    if (adj.get(i).size() == 1) leaves.add(i);
+
+int remaining = n;
+while (remaining &gt; 2) {                  // the center is at most 2 nodes
+    remaining -= leaves.size();
+    List&lt;Integer&gt; next = new ArrayList&lt;&gt;();
+    for (int leaf : leaves) {
+        int nb = adj.get(leaf).iterator().next();   // a leaf's only neighbor
+        adj.get(nb).remove(leaf);        // peel the leaf off
+        if (adj.get(nb).size() == 1)     // neighbor just became a leaf
+            next.add(nb);
+    }
+    leaves = next;
+}
+return leaves;                           // the tree's center(s)</code></pre>
+    <p><strong>Takeaway.</strong> The min-height root is the tree's <em>center</em> — the node(s)
+    minimizing the farthest distance — and peeling leaves layer-by-layer converges on it like
+    burning a rope from all ends at once. Structurally this is Kahn's algorithm with "degree 1" in
+    place of "in-degree 0". Why at most two survivors: each peel round shortens every longest path
+    by one from both ends, so the middle is 1 node (odd diameter) or 2 (even).
+    Mirror: <code>code/16-graphs-advanced/MinHeightTrees.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1319">
+  <summary><span class="badge medium">medium</span> Number of Operations to Make Network Connected — LeetCode 1319</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> n computers, given cables between pairs. One operation moves an
+    existing cable elsewhere. Minimum operations to connect all computers, or −1.</p>
+    <p><strong>Example.</strong> n=4, connections [[0,1],[0,2],[1,2]] → 1 (move the redundant 1–2
+    cable to computer 3). n=6 with 4 cables → −1 (5 needed).</p>
+    <p class="code-title">Union-find: components and spare cables · O(E α(n))</p>
+<pre class="code"><code>public static int makeConnected(int n, int[][] connections) {
+    if (connections.length &lt; n - 1) return -1;   // a spanning tree needs n−1
+
+    parent = new int[n];
+    for (int i = 0; i &lt; n; i++) parent[i] = i;
+    int components = n;
+    for (int[] c : connections)
+        if (union(c[0], c[1]))
+            components--;                        // useful cable: merged two
+        // else: redundant cable — exactly the kind we can move
+    return components - 1;                       // one move per extra component
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two counting facts close the problem before any cleverness: k
+    components need exactly k−1 connecting moves, and total cables ≥ n−1 guarantees enough
+    redundant ones exist (any component with a cycle has spares). Union-find's
+    "did this edge merge or was it redundant?" return value is precisely the classifier needed —
+    the same signal Redundant Connection (above) built on.
+    Mirror: <code>code/16-graphs-advanced/NetworkConnected.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc269">
   <summary><span class="badge hard">hard</span> Alien Dictionary — LeetCode 269</summary>
   <div class="sol-body">
@@ -626,6 +717,44 @@ private static void dfs(int[][] m, boolean[] seen, int i) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc332">
+  <summary><span class="badge hard">hard</span> Reconstruct Itinerary — LeetCode 332</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Use every flight ticket exactly once starting from "JFK"; among
+    valid itineraries return the lexicographically smallest. A valid itinerary always exists.</p>
+    <p><strong>Example.</strong> tickets JFK→SFO, JFK→ATL, SFO→ATL, ATL→JFK, ATL→SFO →
+    JFK, ATL, JFK, SFO, ATL, SFO (plain greedy-smallest would strand itself in SFO first).</p>
+    <p class="code-title">Hierholzer's algorithm: post-order Eulerian path · O(E log E)</p>
+<pre class="code"><code>public static List&lt;String&gt; findItinerary(List&lt;List&lt;String&gt;&gt; tickets) {
+    Map&lt;String, PriorityQueue&lt;String&gt;&gt; graph = new HashMap&lt;&gt;();
+    for (List&lt;String&gt; t : tickets)
+        graph.computeIfAbsent(t.get(0), k -&gt; new PriorityQueue&lt;&gt;())
+             .add(t.get(1));               // heap = smallest destination first
+
+    LinkedList&lt;String&gt; route = new LinkedList&lt;&gt;();
+    dfs("JFK", graph, route);
+    return route;
+}
+
+private static void dfs(String airport, Map&lt;String, PriorityQueue&lt;String&gt;&gt; graph,
+                        LinkedList&lt;String&gt; route) {
+    PriorityQueue&lt;String&gt; dests = graph.get(airport);
+    while (dests != null &amp;&amp; !dests.isEmpty())
+        dfs(dests.poll(), graph, route);   // poll() consumes the ticket forever
+    // POST-order: an airport is added only when it has no unused tickets
+    // left — dead ends sink to the route's end, detours splice themselves in.
+    route.addFirst(airport);
+}</code></pre>
+    <p><strong>Takeaway.</strong> "Use every edge exactly once" is an <em>Eulerian path</em> —
+    different beast from visiting every node. The magic is the post-order append: greedy DFS may
+    strand itself early, but the stuck airport just gets logged <em>last</em>, and the unexplored
+    side-loops naturally insert before it. The heap gives lexicographic order at no extra logic.
+    Same algorithm reassembles DNA fragments (de Bruijn graphs) in bioinformatics.
+    Mirror: <code>code/16-graphs-advanced/ReconstructItinerary.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Read the edge direction in Course Schedule.</strong> <code>[a, b]</code> means b comes first (edge b→a). Building the adjacency list backwards passes the easy tests and fails the rest — fix the direction before coding.</li>

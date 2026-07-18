@@ -392,7 +392,11 @@
   <tr><td><a href="16-graphs-advanced.html#lc684">Redundant Connection</a></td><td>684</td><td><span class="badge medium">medium</span></td><td>The first edge whose endpoints already share a root closes the cycle.</td></tr>
   <tr><td><a href="16-graphs-advanced.html#lc721">Accounts Merge</a></td><td>721</td><td><span class="badge medium">medium</span></td><td>Union the emails; the components are the people.</td></tr>
   <tr><td><a href="16-graphs-advanced.html#lc785">Is Graph Bipartite?</a></td><td>785</td><td><span class="badge medium">medium</span></td><td>Two-color with BFS; any odd cycle breaks bipartiteness.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc802">Find Eventual Safe States</a></td><td>802</td><td><span class="badge medium">medium</span></td><td>Three-color DFS: gray finds cycles, black memoizes safety.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc310">Minimum Height Trees</a></td><td>310</td><td><span class="badge medium">medium</span></td><td>Peel leaves inward — Kahn’s algorithm converging on the tree’s center.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc1319">Number of Operations to Make Network Connected</a></td><td>1319</td><td><span class="badge medium">medium</span></td><td>Union-find counts components; redundant edges are the movable cables.</td></tr>
   <tr><td><a href="16-graphs-advanced.html#lc269">Alien Dictionary</a></td><td>269</td><td><span class="badge hard">hard</span></td><td>Extract edges from adjacent word pairs, then topo-sort the letters.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc332">Reconstruct Itinerary</a></td><td>332</td><td><span class="badge hard">hard</span></td><td>Eulerian path via Hierholzer: post-order append, dead ends sink last.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> build systems and package managers (topological order), community detection (<a href="25-real-world-systems.html#social">social networks</a>), Git DAG (<a href="25-real-world-systems.html#git">Git</a>).</p>
@@ -406,6 +410,9 @@
   <tr><td><a href="17-shortest-paths.html#lc787">Cheapest Flights Within K Stops</a></td><td>787</td><td><span class="badge medium">medium</span></td><td>Edge-count cap → Bellman-Ford, whose rounds mean “≤ k+1 edges”.</td></tr>
   <tr><td><a href="17-shortest-paths.html#lc1584">Min Cost to Connect All Points</a></td><td>1584</td><td><span class="badge medium">medium</span></td><td>Not shortest path — connect everything cheaply: Kruskal’s MST.</td></tr>
   <tr><td><a href="17-shortest-paths.html#lc1631">Path With Minimum Effort</a></td><td>1631</td><td><span class="badge medium">medium</span></td><td>Minimize the max edge → Dijkstra variant or binary search + BFS.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc1514">Path with Maximum Probability</a></td><td>1514</td><td><span class="badge medium">medium</span></td><td>Dijkstra re-aimed: maximize a product with a max-heap.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc399">Evaluate Division</a></td><td>399</td><td><span class="badge medium">medium</span></td><td>Division facts = weighted edges; answers = path products.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc1976">Number of Ways to Arrive at Destination</a></td><td>1976</td><td><span class="badge medium">medium</span></td><td>Dijkstra + ways[]: strictly-better resets, ties accumulate.</td></tr>
   <tr><td><a href="17-shortest-paths.html#lc778">Swim in Rising Water</a></td><td>778</td><td><span class="badge hard">hard</span></td><td>Same minimize-the-max family, on rising water.</td></tr>
 </table>
 </div>
@@ -423,6 +430,10 @@
   <tr><td><a href="18-dp-1d.html#lc300">Longest Increasing Subsequence</a></td><td>300</td><td><span class="badge medium">medium</span></td><td>LIS: O(n²) table, then patience piles + binary search for O(n log n).</td></tr>
   <tr><td><a href="18-dp-1d.html#lc152">Maximum Product Subarray</a></td><td>152</td><td><span class="badge medium">medium</span></td><td>Track max AND min products — a negative flips them.</td></tr>
   <tr><td><a href="18-dp-1d.html#lc213">House Robber II</a></td><td>213</td><td><span class="badge medium">medium</span></td><td>The circle constraint = two linear house-robber runs.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc53">Maximum Subarray</a></td><td>53</td><td><span class="badge medium">medium</span></td><td>Kadane: best sum ENDING here — extend or restart.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc91">Decode Ways</a></td><td>91</td><td><span class="badge medium">medium</span></td><td>Climbing stairs with validity gates; the zeros are the exam.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc279">Perfect Squares</a></td><td>279</td><td><span class="badge medium">medium</span></td><td>Coin Change with coins {1, 4, 9, 16, …}.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc740">Delete and Earn</a></td><td>740</td><td><span class="badge medium">medium</span></td><td>Bucket by value, then House Robber along the value axis.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> retry/backoff planning, resource allocation, spell-correct scoring (<a href="25-real-world-systems.html#db">search</a>).</p>
@@ -439,6 +450,10 @@
   <tr><td><a href="19-dp-2d.html#lc518">Coin Change II</a></td><td>518</td><td><span class="badge medium">medium</span></td><td>Count combinations: coins outer, amounts inner — loop order matters.</td></tr>
   <tr><td><a href="19-dp-2d.html#lc97">Interleaving String</a></td><td>97</td><td><span class="badge medium">medium</span></td><td>dp[i][j]: can prefixes of s1 and s2 interleave into s3’s prefix?</td></tr>
   <tr><td><a href="19-dp-2d.html#lc516">Longest Palindromic Subsequence</a></td><td>516</td><td><span class="badge medium">medium</span></td><td>LPS = LCS(s, reverse(s)), or interval DP straight on the string.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc63">Unique Paths II</a></td><td>63</td><td><span class="badge medium">medium</span></td><td>Same recurrence — obstacles are just states pinned to zero.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc221">Maximal Square</a></td><td>221</td><td><span class="badge medium">medium</span></td><td>Side ending at each bottom-right corner: 1 + min of three supports.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc494">Target Sum</a></td><td>494</td><td><span class="badge medium">medium</span></td><td>One line of algebra: P = (total+target)/2 → count subsets.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc115">Distinct Subsequences</a></td><td>115</td><td><span class="badge hard">hard</span></td><td>The LCS table counting ways instead of maximizing.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> diff algorithms (<a href="25-real-world-systems.html#git">Git</a>), bioinformatics alignment, translation memories.</p>
