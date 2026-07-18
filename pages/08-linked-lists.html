@@ -78,6 +78,22 @@ static class ListNode {
   Nearly every linked-list bug is an assignment executed one line too early. When stuck, narrate each line:
   "who points where <em>now</em>?" — and draw it.
 </div>
+<p>
+  It's worth knowing what a node actually <em>costs</em>, because it explains this page's central irony (spelled
+  out under "When to use what"). In current JDKs, that little <code>ListNode</code> is roughly
+  <strong>24 bytes</strong> with compressed references — a 12-byte object header, 4 bytes of <code>val</code>,
+  4 bytes for <code>next</code>, padded to an 8-byte boundary — and up to 32 bytes without compression. Call it
+  24–32 bytes of heap for 4 bytes of payload; <code>java.util.LinkedList</code> is heavier still, since its
+  doubly linked node adds <code>prev</code> plus a reference to a <em>boxed</em> <code>Integer</code>
+  (~16 more bytes). Worse than the size is the <strong>layout</strong>: nodes land wherever the allocator put
+  them, so every <code>.next</code> hop is a dependent load the CPU cannot begin until the previous one
+  resolves — the hardware prefetcher, which happily streams a contiguous array 16 ints per 64-byte cache line,
+  gets nothing to predict, and each hop risks a ~100&nbsp;ns cache miss. That's the mechanical reason
+  <code>ArrayDeque</code> (<a href="09-stacks-queues.html">page 09</a>) beats <code>LinkedList</code> at its own
+  queue game, and why the linked list's one honest production victory is the LRU cache's doubly linked list
+  (<a href="24-advanced-structures.html">page 24</a>) — the case where a HashMap hands you the exact node and
+  the pointer-chasing walk never happens at all.
+</p>
 
 <h3>2. The dummy head: delete your special cases</h3>
 <p>
@@ -168,11 +184,76 @@ public static boolean hasCycle(ListNode head) {
     return false;                                // fast found a null — no cycle possible
 }</code></pre>
 
+<p>
+  Because <a href="02-two-pointers.html">page 02</a> and the cycle problems below all lean on it, here is the
+  <strong>full Floyd proof</strong>, slowly — this is the canonical treatment in the runbook. Name three
+  distances: <code>a</code> = head to the cycle's entrance, <code>b</code> = entrance to the meeting point
+  (measured forward along the cycle), <code>C</code> = the cycle's length.
+</p>
+<ul>
+  <li><strong>They meet, and quickly.</strong> Slow reaches the entrance after a steps; fast is already
+  somewhere in the cycle. From then on the gap from fast to slow shrinks by exactly 1 per step (the tip above),
+  so they collide within at most C further steps. Total: slow walks at most a + C ≤ n steps — the detection is
+  O(n) time, and slow never completes even one full lap before being caught.</li>
+  <li><strong>The meeting point is special.</strong> At the collision, slow has walked a + b. Fast, at double
+  speed, has walked exactly 2(a + b). Fast's surplus distance, 2(a + b) − (a + b) = a + b, was spent entirely
+  going around in circles — so it must be a whole number of laps: <code>a + b = kC</code> for some integer
+  k ≥ 1.</li>
+  <li><strong>Head and meeting point are equidistant from the entrance.</strong> Rearrange:
+  <code>a = kC − b</code>. Now start one pointer at the head and leave the other at the meeting point, both
+  moving at speed 1. After a steps the first stands at the entrance by definition. The second has moved a = kC − b
+  forward from a point b past the entrance — position b + (kC − b) = kC along the cycle, which is 0 mod C:
+  <em>also the entrance</em>. They arrive together, so the first place they can ever be equal is the entrance —
+  which is exactly the phase-2 loop of Linked List Cycle II below.</li>
+</ul>
+<div class="note">
+  <strong>Why interviewers care about the derivation.</strong> Reciting phase 2 without the k is where
+  candidates get caught: fast may lap the cycle several times before the meeting (whenever a &gt; C), so the
+  surplus is kC, not C. The proof never needed k's value — only that the surplus is <em>some</em> multiple of
+  the cycle length. If you can reproduce the three bullets above unprompted, the entire fast/slow family is
+  yours.
+</div>
+
 <h3>5. The rest of the standard kit</h3>
 <ul>
   <li><strong>Merge two sorted lists</strong> — dummy head + always-take-the-smaller. Worked below; it's also the heart of Merge k Sorted Lists (page 12) and merge sort on lists.</li>
   <li><strong>Reorder List</strong> (L0→Ln→L1→Ln-1…) — a three-trick combo: fast/slow finds the middle, reverse the second half, then interleave the two halves. If you know this decomposition, the "hard-looking" problem is three easies.</li>
   <li><strong>Deep copy with random pointers</strong> (LC 138) — either a <code>HashMap&lt;Node,Node&gt;</code> from originals to clones (O(n) space, obvious), or the elegant O(1)-space interleave: weave each clone in right after its original (<code>A→A'→B→B'</code>), set <code>clone.random = orig.random.next</code>, then unweave.</li>
+</ul>
+<div class="note">
+  <strong>Merge k lists — two roads to the same O(N log k).</strong> With N total nodes across k lists, the
+  min-heap of current heads (<a href="12-heaps.html">page 12</a>) pays O(log k) per node output. The
+  <strong>divide-and-conquer</strong> alternative merges lists pairwise like a tournament bracket: ⌈log k⌉
+  rounds, each touching all N nodes with the two-list merge above — O(N log k) again, O(1) extra space where
+  the heap costs O(k). The unifying picture is a <em>tournament tree</em>: every output node wins ⌈log k⌉
+  head-to-head comparisons on its way out, and the two methods just schedule those comparisons differently
+  (heap = lazily per element, D&amp;C = eagerly per round). Naive fold-left merging is the trap answer: early
+  lists get re-walked in every later merge, O(N·k).
+</div>
+
+<h3>6. Exotic variants worth recognizing</h3>
+<p class="lead">
+  None of these are "implement it live" material — but each is a one-sentence answer to a follow-up that
+  separates seniors from script-followers.
+</p>
+<ul>
+  <li><strong>Sentinel circular doubly linked list</strong> — the production workhorse. One permanent dummy
+  node whose <code>next</code>/<code>prev</code> close the ring; an empty list is the sentinel pointing at
+  itself. Every insert and unlink becomes the same four assignments with <em>zero</em> null checks — no head
+  case, no tail case, no empty case. This is exactly how <code>LinkedHashMap</code> threads its entries and
+  how the LRU cache on <a href="24-advanced-structures.html">page 24</a> should be written; the Linux kernel's
+  ubiquitous <code>list_head</code> is the same design in C.</li>
+  <li><strong>Unrolled linked lists</strong> — each node carries a small <em>array</em> of up to B elements
+  instead of one. Pointer overhead drops ~B-fold and each hop delivers a full cache line of payload — a direct
+  fix for the memory math in §1. Text-editor rope/gap structures and some deque implementations use this
+  layout.</li>
+  <li><strong>XOR lists</strong> — trivia with a lesson: store <code>prev ⊕ next</code> in a single field and
+  recover either neighbor given the other, halving pointer memory. Impossible in Java, and saying <em>why</em>
+  is the point — the GC must be able to see real references, and an XOR of two addresses isn't one.</li>
+  <li><strong>Skip lists</strong> — a sorted linked list with randomized "express lanes" stacked on top,
+  giving O(log n) expected search/insert without rotations. Java ships one as
+  <code>ConcurrentSkipListMap</code>; the expected-height argument lives on
+  <a href="24-advanced-structures.html">page 24</a>.</li>
 </ul>
 
 <!-- ============================================================ -->

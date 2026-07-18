@@ -82,6 +82,30 @@ int front = queue.poll(); // remove from head
   declare your stack is free senior signal. (Same story for <code>LinkedList</code>-as-queue: it works, but
   <code>ArrayDeque</code> is the idiomatic, faster choice.)
 </div>
+<p>
+  Knowing <em>how</em> <code>ArrayDeque</code> pulls off O(1) at both ends is a favorite internals question.
+  It's a <strong>circular array</strong>: <code>head</code> and <code>tail</code> indices chase each other
+  around an <code>Object[]</code>, and neither end ever shifts elements. The classic design — the one to
+  describe in an interview — keeps the capacity a <strong>power of two</strong>, so wrapping around the array's
+  edge is a bitmask instead of a modulo or a branch:
+</p>
+<p class="code-title">The index math (why capacity is a power of two)</p>
+<pre class="code"><code>// Conceptually, with elements.length always a power of two:
+head = (head - 1) &amp; (elements.length - 1);   // addFirst/push: step left, wrap free
+tail = (tail + 1) &amp; (elements.length - 1);   // addLast/offer: step right, wrap free
+// Two's complement makes it work at the seam: -1 &amp; 15 == 15.
+// Full (head meets tail) -&gt; allocate double, copy the ring out in TWO
+// System.arraycopy calls, because the live elements may straddle the array's end.</code></pre>
+<p>
+  Three consequences worth saying out loud. <strong>Amortized O(1):</strong> growth doubles the array, so the
+  occasional O(n) copy is prepaid by the n cheap inserts before it — the same aggregate argument as
+  ArrayList on <a href="00-foundations.html">page 00</a>. <strong>No nulls, by design:</strong> empty slots in
+  the ring are <code>null</code>, and <code>poll()</code> returns <code>null</code> to mean "empty" — a stored
+  null would be indistinguishable from a vacancy, so <code>offer(null)</code> throws NPE (pitfall below).
+  <strong>No shrinking:</strong> the ring only ever grows; a deque that once held 10⁶ elements keeps that
+  array. In current JDKs the exact sizing details vary, but the circular-array-with-two-cursors design — and
+  everything it implies — has been stable since the class appeared in Java 6.
+</p>
 
 <h3>2. Matching &amp; nesting: the native LIFO problem</h3>
 <p>
@@ -111,6 +135,17 @@ int front = queue.poll(); // remove from head
     public int  top()    { return stack.peek(); }
     public int  getMin() { return mins.peek(); }       // O(1), always current
 }</code></pre>
+<div class="note">
+  <strong>The design follow-up: Max Stack with <code>popMax()</code> (LC 716).</strong> Extend the idea to
+  "also <em>remove</em> the maximum, wherever it sits" and the snapshot trick dies — snapshots answer
+  <em>reads</em> about history, but deleting from the middle invalidates every snapshot above it. The senior
+  answer pairs two structures: a doubly linked list holding the stack's actual order (O(1) removal of a node
+  you hold — <a href="08-linked-lists.html">page 08</a>'s LRU move) plus a
+  <code>TreeMap&lt;Integer, List&lt;Node&gt;&gt;</code> indexing nodes by value. <code>push</code>/<code>pop</code>/
+  <code>popMax</code> all land in O(log n): the TreeMap finds the largest value (<code>lastKey()</code>), the
+  list unlinks its node in O(1). The lesson generalizes: a plain stack answers "what's on top?"; the moment a
+  question demands <em>arbitrary deletion by rank</em>, you need an ordered index bolted on.
+</div>
 
 <h3>4. Expression evaluation: stacks as tiny interpreters</h3>
 <p>
@@ -191,6 +226,33 @@ int front = queue.poll(); // remove from head
   anchor. And the <strong>monotonic deque</strong> from Sliding Window Maximum (page 03) is this same idea with
   expiry: greater-elements pop from the back, out-of-window elements leave from the front.
 </p>
+<p>
+  The tip above proves O(n) by the <strong>aggregate method</strong> (count all pops at once); the
+  <strong>accounting method</strong> (<a href="00-foundations.html">page 00</a>) phrases it per element, which
+  is often easier to say under pressure: hand every arriving element <em>two credits</em> — one pays for its
+  push now, one rides along as prepaid fare for its single future pop. Every iteration of the inner while-loop
+  spends a credit that was already paid, so total work ≤ 2n no matter how the pops cluster. The same two-credit
+  argument certifies the monotonic deque on <a href="03-sliding-window.html">page 03</a> verbatim.
+</p>
+<p>
+  And the histogram's width formula deserves its one-line proof, because it's where hand-waving gets caught.
+  When bar j pops (incoming bar i is the first <em>strictly shorter</em> bar to its right), the new stack top
+  is the nearest bar to j's left that survived every pop j survived — i.e. the nearest bar
+  <em>shorter-or-equal</em> on the left. Everything strictly between those two boundaries must be
+  ≥ heights[j], because anything shorter would have popped j earlier. So the maximal rectangle of height
+  heights[j] spans exactly <code>width = i − stack.peek() − 1</code>.
+</p>
+<div class="warn">
+  <strong>The ≥-vs-&gt; subtlety, resolved.</strong> With equal heights <code>[5, 5, 5]</code> and a
+  strict pop condition (<code>h &lt; top</code>, as in the worked LC 84 below), equal bars pile up unpopped —
+  and when a shorter bar finally flushes them, the earlier equal bars compute <em>undercounted</em> widths
+  (their left boundary is a same-height twin, not a shorter bar). The algorithm survives anyway: the
+  <em>last</em> equal bar's pop sees the full span, so the maximum is still right. That asymmetry is fine for
+  "largest rectangle" but fatal for problems that need <em>every</em> element's exact span — for a strict
+  "next greater", equal elements must chain (pop on <code>&gt;=</code> instead), and for "count of subarrays
+  where a[i] is the max" you must break ties one strict / one non-strict or you'll double-count. Decide the
+  comparison from the problem, not from muscle memory.
+</div>
 
 <h3>6. Queue via two stacks: two reversals make a forward</h3>
 <p>
@@ -199,6 +261,73 @@ int front = queue.poll(); // remove from head
   <code>out</code>. Each element makes exactly one trip: pushed on <code>in</code>, moved once, popped from
   <code>out</code> — so every operation is amortized O(1) even though a single poll can be O(n).
 </p>
+<p>
+  That "one trip each" sentence is the aggregate method. This structure is also the cleanest place to run a
+  <strong>potential-function proof</strong> once, because interviewers who ask "prove the amortized bound" want
+  this shape (<a href="00-foundations.html">page 00</a> defines the machinery). Choose
+  <strong>Φ = 2 · |in|</strong> — twice the size of the in-stack, a "stored energy" that is 0 at the start and
+  never negative. Amortized cost = actual cost + ΔΦ:
+</p>
+<ul>
+  <li><strong>push:</strong> actual 1, Φ rises by 2 → amortized <strong>3</strong>. The push overpays,
+  banking energy for the element's future transfer.</li>
+  <li><strong>poll, out non-empty:</strong> actual 1, ΔΦ = 0 → amortized <strong>1</strong>.</li>
+  <li><strong>poll with a dump of k elements:</strong> actual k pops + k pushes + 1 pop = 2k + 1, but Φ drops
+  by 2k → amortized <strong>1</strong>. The expensive operation is <em>paid for before it happens</em>.</li>
+</ul>
+<p>
+  Every operation is amortized ≤ 3 = O(1), and because Φ ≥ 0 always, total actual cost ≤ total amortized cost —
+  the bank never overdrafts. Same theorem as the aggregate argument, but this version generalizes to structures
+  where "each element moves once" isn't obvious.
+</p>
+
+<h3>7. The JVM stack: where recursion actually lives</h3>
+<p class="lead">
+  Every recursive solution in this runbook secretly uses today's data structure — the thread's call stack. It
+  is small, fixed, and it fails loudly. Knowing its numbers is what turns "I'd use DFS" into a deployable
+  answer. (Pages 10, 15, and 18 all point back here.)
+</p>
+<p>
+  Each Java thread owns a <strong>fixed-size, contiguous stack</strong>, allocated at thread creation — by
+  default roughly 512&nbsp;KB–1&nbsp;MB depending on platform, tunable per thread or via <code>-Xss</code>.
+  Every method call pushes a <strong>frame</strong>: the method's local variables, its operand stack (the JVM
+  is a stack machine — §4's RPN evaluator in hardware), and the return address. A frame costs on the order of
+  a hundred bytes, more with many locals. Divide and you get the number to memorize:
+  <strong>~10,000 frames of headroom by default</strong>, give or take a small factor. When it runs out the
+  JVM throws <code>StackOverflowError</code> — not an exception to catch, a structural fact about your
+  algorithm.
+</p>
+<p>
+  Now read a constraint like <em>n ≤ 10⁵</em> with that number in mind. A recursion whose depth tracks n — a
+  degenerate BST (<a href="11-trees.html">page 11</a>), DFS down a path-shaped graph
+  (<a href="15-graphs-basics.html">page 15</a>), a memoized DP recursing to depth n
+  (<a href="18-dp-1d.html">page 18</a>) — dies at ten times the default budget, and no amount of algorithmic
+  cleverness fixes an exhausted stack. The heap has no such limit: an explicit
+  <code>ArrayDeque</code> holding ten million entries is routine. Hence the standard conversion — push what you
+  would have passed as arguments:
+</p>
+<p class="code-title">Recursion → explicit stack (the 10⁵-depth insurance policy)</p>
+<pre class="code"><code>// Before: void dfs(Node u) { ...; for (child) dfs(child); }   // depth-limited
+// After: your own frames, on the HEAP — depth limited only by memory.
+Deque&lt;Node&gt; stack = new ArrayDeque&lt;&gt;();
+stack.push(root);
+while (!stack.isEmpty()) {
+    Node u = stack.pop();          // "entering the call"
+    process(u);
+    for (Node child : u.children)  // pushed = "recursive calls scheduled"
+        stack.push(child);
+}
+// Needs post-processing on the way "back up"? Push a (node, state) pair and
+// revisit — the two-phase visit trick, spelled out on page 11's iterative traversals.</code></pre>
+<div class="note">
+  <strong>Facts worth quoting.</strong> Java performs <strong>no tail-call optimization</strong> — even a
+  perfectly tail-recursive method consumes a frame per call (the why lives on
+  <a href="10-recursion-backtracking.html">page 10</a>). Thread stack size is fixed at thread start; a common
+  competitive-programming escape hatch is running the solver in a
+  <code>new Thread(null, runnable, "main", 1 &lt;&lt; 26)</code> with a 64&nbsp;MB stack. In an interview, the
+  winning sentence is simpler: "recursion depth is O(n) here and n is 10⁵, so I'd either convert to an
+  explicit stack or note the stack-size caveat."
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>
