@@ -661,6 +661,114 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
   </div>
 </details>
 
+<details class="sol" id="lc1514">
+  <summary><span class="badge medium">medium</span> Path with Maximum Probability — LeetCode 1514</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Undirected graph where each edge has a success probability;
+    maximize the product of probabilities along a path from start to end (0 if unreachable).</p>
+    <p><strong>Example.</strong> Edges (0−1, 0.5), (1−2, 0.5), (0−2, 0.2) → best 0→2 is via 1:
+    0.5 × 0.5 = 0.25 &gt; 0.2.</p>
+    <p class="code-title">Dijkstra with a max-heap and products · O(E log V)</p>
+<pre class="code"><code>double[] best = new double[n];
+best[start] = 1.0;                                     // certain to be at start
+PriorityQueue&lt;double[]&gt; heap =                         // {prob, node}, MAX first
+        new PriorityQueue&lt;&gt;((a, b) -&gt; Double.compare(b[0], a[0]));
+heap.offer(new double[]{1.0, start});
+while (!heap.isEmpty()) {
+    double[] top = heap.poll();
+    double p = top[0];
+    int u = (int) top[1];
+    if (u == end) return p;                            // settled — optimal
+    if (p &lt; best[u]) continue;                         // stale heap entry
+    for (double[] e : adj.get(u)) {
+        int v = (int) e[0];
+        double np = p * e[1];                          // multiply, don't add
+        if (np &gt; best[v]) {
+            best[v] = np;
+            heap.offer(new double[]{np, v});
+        }
+    }
+}
+return 0.0;</code></pre>
+    <p><strong>Takeaway.</strong> Dijkstra's real requirement isn't "sums of non-negative weights" —
+    it's that <em>extending a path never improves its score</em>. Probabilities in [0,1] multiply
+    downward, so maximize-with-max-heap works identically (equivalently: minimize −log p and it IS
+    classic Dijkstra). Recognizing that invariance lets you re-aim the algorithm at products,
+    minimums (Path With Minimum Effort above), and other monotone costs.
+    Mirror: <code>code/17-shortest-paths/MaxProbabilityPath.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc399">
+  <summary><span class="badge medium">medium</span> Evaluate Division — LeetCode 399</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given equations like a/b = 2.0 and b/c = 3.0, answer queries
+    like a/c (−1.0 if undeterminable).</p>
+    <p><strong>Example.</strong> a/b=2, b/c=3 → a/c = 6.0, b/a = 0.5, a/e = −1.0, a/a = 1.0.</p>
+    <p class="code-title">Ratios are edge weights; answers are path products · O(Q · (V+E))</p>
+<pre class="code"><code>// Build: a/b = 2.0 becomes edges a-&gt;b (2.0) and b-&gt;a (1/2.0).
+Map&lt;String, Map&lt;String, Double&gt;&gt; graph = new HashMap&lt;&gt;();
+for (int i = 0; i &lt; values.length; i++) {
+    String a = equations.get(i).get(0), b = equations.get(i).get(1);
+    graph.computeIfAbsent(a, k -&gt; new HashMap&lt;&gt;()).put(b, values[i]);
+    graph.computeIfAbsent(b, k -&gt; new HashMap&lt;&gt;()).put(a, 1.0 / values[i]);
+}
+
+private static double dfs(Map&lt;String, Map&lt;String, Double&gt;&gt; g, String curr,
+                          String target, double product, Set&lt;String&gt; visited) {
+    if (curr.equals(target)) return product;     // multiplied along the path
+    visited.add(curr);
+    for (Map.Entry&lt;String, Double&gt; e : g.get(curr).entrySet()) {
+        if (visited.contains(e.getKey())) continue;
+        double r = dfs(g, e.getKey(), target, product * e.getValue(), visited);
+        if (r != -1.0) return r;                 // any path works — ratios agree
+    }
+    return -1.0;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The modeling leap — division facts become a weighted graph where
+    chaining divisions = multiplying edge weights — is the entire problem; the traversal is routine
+    DFS. Guard the two traps: querying variables never seen (answer −1 <em>before</em> traversal),
+    and x/x for a known x (=1.0 via the base case). Scaled up with union-find + ratios, this is how
+    unit-conversion systems and currency-arbitrage checks are built.
+    Mirror: <code>code/17-shortest-paths/EvaluateDivision.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1976">
+  <summary><span class="badge medium">medium</span> Number of Ways to Arrive at Destination — LeetCode 1976</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count the distinct <em>shortest</em> paths from intersection 0
+    to n−1 in a weighted road network (mod 1e9+7).</p>
+    <p><strong>Example.</strong> The 7-node test network has shortest time 7 achieved by exactly 4
+    routes → 4.</p>
+    <p class="code-title">Dijkstra + a ways[] array riding along · O(E log V)</p>
+<pre class="code"><code>long[] dist = new long[n];
+Arrays.fill(dist, Long.MAX_VALUE);
+long[] ways = new long[n];
+dist[0] = 0;
+ways[0] = 1;
+// ... standard Dijkstra loop; per edge relaxation:
+for (long[] e : adj.get(u)) {
+    int v = (int) e[0];
+    long nd = d + e[1];
+    if (nd &lt; dist[v]) {                            // strictly better path found
+        dist[v] = nd;
+        ways[v] = ways[u];                         // old count is obsolete
+        heap.offer(new long[]{nd, v});
+    } else if (nd == dist[v]) {                    // tie: one more way in
+        ways[v] = (ways[v] + ways[u]) % MOD;
+    }
+}
+return (int) ways[n - 1];</code></pre>
+    <p><strong>Takeaway.</strong> Augmenting Dijkstra: piggyback extra state (here a path count)
+    whose update rule mirrors the relaxation — strictly-better resets it, exactly-equal accumulates.
+    The counts are correct because Dijkstra settles nodes in distance order, so ways[u] is final
+    before u propagates. Use <code>long</code> distances (weights up to 1e9 sum past int) and mod
+    the counts, not the distances — the two classic slips.
+    Mirror: <code>code/17-shortest-paths/WaysToArrive.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc778">
   <summary><span class="badge hard">hard</span> Swim in Rising Water — LeetCode 778</summary>
   <div class="sol-body">
