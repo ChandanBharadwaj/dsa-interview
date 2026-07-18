@@ -518,6 +518,7 @@
 <div class="tablewrap">
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="23-math-geometry.html#lc9">Palindrome Number</a></td><td>9</td><td><span class="badge easy">easy</span></td><td>Reverse only half the digits — overflow becomes impossible.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc204">Count Primes</a></td><td>204</td><td><span class="badge medium">medium</span></td><td>The sieve: mark multiples starting from each prime squared.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc50">Pow(x, n)</a></td><td>50</td><td><span class="badge medium">medium</span></td><td>Square-and-multiply halves the exponent every step.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc384">Shuffle an Array</a></td><td>384</td><td><span class="badge medium">medium</span></td><td>Fisher-Yates: swap each i with a uniform j ≤ i.</td></tr>
@@ -525,6 +526,10 @@
   <tr><td><a href="23-math-geometry.html#lc171">Excel Sheet Column Number</a></td><td>171</td><td><span class="badge easy">easy</span></td><td>Bijective base-26 parsing: result = result·26 + digit.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc528">Random Pick with Weight</a></td><td>528</td><td><span class="badge medium">medium</span></td><td>Prefix sums turn weights into ranges; binary-search the dart.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc189">Rotate Array</a></td><td>189</td><td><span class="badge medium">medium</span></td><td>Three reversals rotate in place; normalize with k %= n first.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc7">Reverse Integer</a></td><td>7</td><td><span class="badge medium">medium</span></td><td>Check the overflow BEFORE the multiply (MAX/10 with digit 7/−8).</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc43">Multiply Strings</a></td><td>43</td><td><span class="badge medium">medium</span></td><td>Digit i × digit j lands at positions i+j and i+j+1.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc398">Random Pick Index</a></td><td>398</td><td><span class="badge medium">medium</span></td><td>Reservoir sampling: keep match k with probability 1/k.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc149">Max Points on a Line</a></td><td>149</td><td><span class="badge hard">hard</span></td><td>Anchor a point; equal gcd-reduced slopes = same line.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> sharding and consistent hashing arithmetic (<a href="25-real-world-systems.html#infra">infra</a>), weighted load balancing, A/B bucketing.</p>
