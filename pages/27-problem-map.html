@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>27 · Concept → Problem Map — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>The Concept → Problem Map</h1>
+<p class="subtitle">Every fully worked problem on this site, indexed by the concept that solves it — with a one-line cue for <em>why</em> that concept applies, and where the pattern runs in production.</p>
+<p>
+  <span class="badge phase">Reference · use throughout</span>
+  <span class="badge freq">The reverse index of the whole runbook</span>
+</p>
+
+<div class="why">
+  <strong>How to use this page.</strong> Reading a topic teaches you a pattern; this page answers the
+  reverse question — <em>“show me everything this pattern solves.”</em> Each row links straight to the
+  fully worked solution (statement, examples, brute→optimal variations in commented Java). Cover the
+  cue column and quiz yourself: read the problem name, say the cue out loud, then click through and
+  check. The <strong>Real-world</strong> line under each table points at the production systems on
+  <a href="25-real-world-systems.html">page 25</a> that run the same pattern. Remember the grid
+  shortest-path question that started this runbook? It sits in
+  <a href="17-shortest-paths.html">17 · Shortest Paths</a> and gets the full four-algorithm face-off in
+  <a href="26-interview-playbook.html#p-drill-4-cheapest-path-through-a-grid-4-algorithms">drill 4 of the playbook</a>.
+</div>
+<p class="muted small" style="line-height:2">Jump to:
+  <a href="#m-01">01 Arrays & Hashing</a> ·
+  <a href="#m-02">02 Two Pointers</a> ·
+  <a href="#m-03">03 Sliding Window</a> ·
+  <a href="#m-04">04 Prefix Sum</a> ·
+  <a href="#m-05">05 Matrix & 2D Simulation</a> ·
+  <a href="#m-06">06 Sorting</a> ·
+  <a href="#m-07">07 Binary Search</a> ·
+  <a href="#m-08">08 Linked Lists</a> ·
+  <a href="#m-09">09 Stacks & Queues</a> ·
+  <a href="#m-10">10 Recursion & Backtracking</a> ·
+  <a href="#m-11">11 Trees & BSTs</a> ·
+  <a href="#m-12">12 Heaps & Priority Queues</a> ·
+  <a href="#m-13">13 Tries</a> ·
+  <a href="#m-14">14 String Algorithms</a> ·
+  <a href="#m-15">15 Graph Basics</a> ·
+  <a href="#m-16">16 Graphs Advanced</a> ·
+  <a href="#m-17">17 Shortest Paths & MST</a> ·
+  <a href="#m-18">18 Dynamic Programming 1D</a> ·
+  <a href="#m-19">19 Dynamic Programming 2D</a> ·
+  <a href="#m-20">20 DP Advanced</a> ·
+  <a href="#m-21">21 Greedy & Intervals</a> ·
+  <a href="#m-22">22 Bit Manipulation</a> ·
+  <a href="#m-23">23 Math & Geometry</a> ·
+  <a href="#m-24">24 Advanced Structures & Design</a> ·
+  <a href="#m-26">26 Interview Playbook</a>
+</p>
+
+<h2 id="m-01">01 · Arrays & Hashing</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc217">Contains Duplicate</a></td><td>217</td><td><span class="badge easy">easy</span></td><td>Seen-before test — one HashSet membership check per element.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc242">Valid Anagram</a></td><td>242</td><td><span class="badge easy">easy</span></td><td>Frequency counting: two strings are anagrams iff their count maps match.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc1">Two Sum</a></td><td>1</td><td><span class="badge easy">easy</span></td><td>Complement lookup: “have I seen target−x?” is one HashMap probe.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc49">Group Anagrams</a></td><td>49</td><td><span class="badge medium">medium</span></td><td>Canonical key (sorted word / count signature) groups anagrams in one map.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc347">Top K Frequent Elements</a></td><td>347</td><td><span class="badge medium">medium</span></td><td>Count map + bucket-by-frequency beats sorting for top-K.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix × suffix products — the no-division two-pass trick.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc128">Longest Consecutive Sequence</a></td><td>128</td><td><span class="badge medium">medium</span></td><td>Set membership lets each streak be walked once from its true start.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc41">First Missing Positive</a></td><td>41</td><td><span class="badge hard">hard</span></td><td>Index-as-hash: cyclic sort puts value v at index v−1; the first hole answers.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> recommendation co-visitation counting and item similarity (<a href="25-real-world-systems.html#reco">reco systems</a>), hash indexes and dedup (<a href="25-real-world-systems.html#db">databases</a>).</p>
+
+<h2 id="m-02">02 · Two Pointers</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="02-two-pointers.html#lc125">Valid Palindrome</a></td><td>125</td><td><span class="badge easy">easy</span></td><td>Converging pointers compare both ends, skipping non-alphanumerics.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc167">Two Sum II (sorted input)</a></td><td>167</td><td><span class="badge medium">medium</span></td><td>Sorted input: move the pair inward based on sum vs target.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc26">Remove Duplicates from Sorted Array</a></td><td>26</td><td><span class="badge easy">easy</span></td><td>Reader/writer parallel pointers compact the array in place.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc11">Container With Most Water</a></td><td>11</td><td><span class="badge medium">medium</span></td><td>Move the shorter wall inward — the classic discard argument.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc15">3Sum</a></td><td>15</td><td><span class="badge medium">medium</span></td><td>Sort, fix one element, two-pointer the remaining pair; skip duplicates.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc42">Trapping Rain Water</a></td><td>42</td><td><span class="badge hard">hard</span></td><td>Water at i = min(maxLeft, maxRight) − height; two pointers track both maxes.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> merge steps inside databases and log compaction (<a href="25-real-world-systems.html#db">databases</a>), diff tools (<a href="25-real-world-systems.html#git">Git</a>).</p>
+
+<h2 id="m-03">03 · Sliding Window</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="03-sliding-window.html#lc121">Best Time to Buy and Sell Stock</a></td><td>121</td><td><span class="badge easy">easy</span></td><td>Min-so-far scan = a window whose left edge only jumps at a new low.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc643">Maximum Average Subarray I</a></td><td>643</td><td><span class="badge easy">easy</span></td><td>Fixed window: add the entering element, subtract the leaving one.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc3">Longest Substring Without Repeating Characters</a></td><td>3</td><td><span class="badge medium">medium</span></td><td>Variable window + last-seen map; jump the left edge past repeats.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc567">Permutation in String</a></td><td>567</td><td><span class="badge medium">medium</span></td><td>Fixed-size window comparing 26-letter histograms.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc76">Minimum Window Substring</a></td><td>76</td><td><span class="badge hard">hard</span></td><td>Expand to cover, shrink to minimal — the canonical variable window.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc239">Sliding Window Maximum</a></td><td>239</td><td><span class="badge hard">hard</span></td><td>Monotonic deque keeps the window maximum at the front.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> trending counters and stream analytics (<a href="25-real-world-systems.html#sched">streaming</a>), rate limiters (<a href="25-real-world-systems.html#infra">infra</a>).</p>
+
+<h2 id="m-04">04 · Prefix Sum</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="04-prefix-sum.html#lc1480">Running Sum of 1d Array</a></td><td>1480</td><td><span class="badge easy">easy</span></td><td>The definition of a prefix sum, verbatim.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc303">Range Sum Query, Immutable</a></td><td>303</td><td><span class="badge easy">easy</span></td><td>Precompute once; any range sum becomes two lookups.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc560">Subarray Sum Equals K</a></td><td>560</td><td><span class="badge medium">medium</span></td><td>Prefix + HashMap: count earlier prefixes equal to currentSum − k.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc525">Contiguous Array</a></td><td>525</td><td><span class="badge medium">medium</span></td><td>Map 0→−1; equal 0/1 counts mean the same prefix value seen twice.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix/suffix products — the additive trick with × instead of +.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc1094">Car Pooling</a></td><td>1094</td><td><span class="badge medium">medium</span></td><td>Difference array: +passengers at pickup, − at drop-off, then scan.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> pre-aggregated metrics and OLAP cubes (<a href="25-real-world-systems.html#db">databases</a>), capacity planning (<a href="25-real-world-systems.html#sched">schedulers</a>).</p>
+
+<h2 id="m-05">05 · Matrix & 2D Simulation</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="05-matrix.html#lc867">Transpose Matrix</a></td><td>867</td><td><span class="badge easy">easy</span></td><td>Pure index gymnastics: out[c][r] = in[r][c].</td></tr>
+  <tr><td><a href="05-matrix.html#lc54">Spiral Matrix</a></td><td>54</td><td><span class="badge medium">medium</span></td><td>Four shrinking boundaries walk the spiral layer by layer.</td></tr>
+  <tr><td><a href="05-matrix.html#lc48">Rotate Image</a></td><td>48</td><td><span class="badge medium">medium</span></td><td>Transpose + reverse each row = 90° rotation in place.</td></tr>
+  <tr><td><a href="05-matrix.html#lc73">Set Matrix Zeroes</a></td><td>73</td><td><span class="badge medium">medium</span></td><td>First row/column double as zero markers — O(1) extra space.</td></tr>
+  <tr><td><a href="05-matrix.html#lc289">Game of Life</a></td><td>289</td><td><span class="badge medium">medium</span></td><td>Encode the next state in spare bits for an in-place simulation.</td></tr>
+  <tr><td><a href="05-matrix.html#lc36">Valid Sudoku</a></td><td>36</td><td><span class="badge medium">medium</span></td><td>Row/column/box seen-sets checked in a single sweep.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> image transforms, spreadsheet engines, cellular-automata simulation (<a href="25-real-world-systems.html#sched">simulation</a>).</p>
+
+<h2 id="m-06">06 · Sorting</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="06-sorting.html#lc88">Merge Sorted Array</a></td><td>88</td><td><span class="badge easy">easy</span></td><td>Merge from the back so nothing gets overwritten.</td></tr>
+  <tr><td><a href="06-sorting.html#lc1365">How Many Numbers Are Smaller Than the Current Number</a></td><td>1365</td><td><span class="badge easy">easy</span></td><td>Value range 0–100 → counting sort beats comparisons.</td></tr>
+  <tr><td><a href="06-sorting.html#lc75">Sort Colors (Dutch National Flag)</a></td><td>75</td><td><span class="badge medium">medium</span></td><td>Dutch national flag: three-way partition in one pass.</td></tr>
+  <tr><td><a href="06-sorting.html#lc215">Kth Largest Element in an Array</a></td><td>215</td><td><span class="badge medium">medium</span></td><td>Quickselect: partition until the pivot lands at index k.</td></tr>
+  <tr><td><a href="06-sorting.html#lc179">Largest Number</a></td><td>179</td><td><span class="badge medium">medium</span></td><td>Custom comparator: order by (a+b) vs (b+a) concatenation.</td></tr>
+  <tr><td><a href="06-sorting.html#lc148">Sort List</a></td><td>148</td><td><span class="badge medium">medium</span></td><td>Merge sort is the natural O(n log n) for linked lists.</td></tr>
+  <tr><td><a href="06-sorting.html#lc315">Count of Smaller Numbers After Self</a></td><td>315</td><td><span class="badge hard">hard</span></td><td>Merge sort counts cross-half inversions while it merges.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> external sort in databases and MapReduce shuffles (<a href="25-real-world-systems.html#db">databases</a>).</p>
+
+<h2 id="m-07">07 · Binary Search</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="07-binary-search.html#lc704">Binary Search</a></td><td>704</td><td><span class="badge easy">easy</span></td><td>The classic halving template.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc278">First Bad Version</a></td><td>278</td><td><span class="badge easy">easy</span></td><td>Boundary search: first index where the predicate flips to true.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc35">Search Insert Position</a></td><td>35</td><td><span class="badge easy">easy</span></td><td>lowerBound: first index with value ≥ target.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc34">Find First and Last Position</a></td><td>34</td><td><span class="badge medium">medium</span></td><td>Two boundary searches: first ≥ target and first &gt; target.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc33">Search in Rotated Sorted Array</a></td><td>33</td><td><span class="badge medium">medium</span></td><td>One half is always sorted — decide which, then recurse into it.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc153">Find Minimum in Rotated Sorted Array</a></td><td>153</td><td><span class="badge medium">medium</span></td><td>Compare mid with the right end to find the unrotated minimum.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc875">Koko Eating Bananas</a></td><td>875</td><td><span class="badge medium">medium</span></td><td>Binary search the answer: “can Koko finish at speed s?” is monotonic.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc1011">Capacity To Ship Packages Within D Days</a></td><td>1011</td><td><span class="badge medium">medium</span></td><td>Search on capacity; each feasibility check is a greedy scan.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc4">Median of Two Sorted Arrays</a></td><td>4</td><td><span class="badge hard">hard</span></td><td>Partition both arrays so the left halves hold exactly half the elements.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> index lookups and LSM-tree reads (<a href="25-real-world-systems.html#db">databases</a>), autoscaling thresholds (<a href="25-real-world-systems.html#infra">infra</a>).</p>
+
+<h2 id="m-08">08 · Linked Lists</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="08-linked-lists.html#lc206">Reverse Linked List</a></td><td>206</td><td><span class="badge easy">easy</span></td><td>The three-pointer rewire loop every list problem builds on.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc21">Merge Two Sorted Lists</a></td><td>21</td><td><span class="badge easy">easy</span></td><td>Dummy head + tail-append merge.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc141">Linked List Cycle</a></td><td>141</td><td><span class="badge easy">easy</span></td><td>Floyd: the fast pointer catches the slow one iff a cycle exists.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc876">Middle of the Linked List</a></td><td>876</td><td><span class="badge easy">easy</span></td><td>Fast moves 2, slow moves 1 — slow stops at the middle.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc19">Remove Nth Node From End</a></td><td>19</td><td><span class="badge medium">medium</span></td><td>Two pointers n apart reach the end and the target together.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc2">Add Two Numbers</a></td><td>2</td><td><span class="badge medium">medium</span></td><td>Schoolbook digit-by-digit addition with a carry.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc143">Reorder List</a></td><td>143</td><td><span class="badge medium">medium</span></td><td>Middle + reverse the second half + interleave.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc138">Copy List with Random Pointer</a></td><td>138</td><td><span class="badge medium">medium</span></td><td>Interleave copies between originals (or an old→new map).</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc142">Linked List Cycle II</a></td><td>142</td><td><span class="badge medium">medium</span></td><td>After the meeting, reset one pointer to head; they meet at the cycle start.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc25">Reverse Nodes in k-Group</a></td><td>25</td><td><span class="badge hard">hard</span></td><td>Reverse k nodes at a time; count the group before committing.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> LRU chains in caches (<a href="25-real-world-systems.html#infra">infra</a>), free lists in allocators.</p>
+
+<h2 id="m-09">09 · Stacks & Queues</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="09-stacks-queues.html#lc20">Valid Parentheses</a></td><td>20</td><td><span class="badge easy">easy</span></td><td>A stack of expected closing brackets.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc155">Min Stack</a></td><td>155</td><td><span class="badge medium">medium</span></td><td>Each node stores min-so-far alongside its value.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc232">Implement Queue using Stacks</a></td><td>232</td><td><span class="badge easy">easy</span></td><td>Two stacks: transfer reverses order, amortized O(1).</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc150">Evaluate Reverse Polish Notation</a></td><td>150</td><td><span class="badge medium">medium</span></td><td>Postfix evaluation: push operands, pop two per operator.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc739">Daily Temperatures</a></td><td>739</td><td><span class="badge medium">medium</span></td><td>Monotonic decreasing stack of not-yet-answered days.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc853">Car Fleet</a></td><td>853</td><td><span class="badge medium">medium</span></td><td>Sort by position; fleets form where arrival times collide.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc22">Generate Parentheses</a></td><td>22</td><td><span class="badge medium">medium</span></td><td>Backtracking on open/close counts — the call stack is the stack.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc84">Largest Rectangle in Histogram</a></td><td>84</td><td><span class="badge hard">hard</span></td><td>Monotonic stack finds each bar’s nearer-smaller boundaries.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> undo stacks, expression parsers and compilers, monotonic price spans in trading (<a href="25-real-world-systems.html#sched">streaming</a>).</p>
+
+<h2 id="m-10">10 · Recursion & Backtracking</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc78">Subsets</a></td><td>78</td><td><span class="badge medium">medium</span></td><td>Include/exclude decision per element — the subset tree.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc46">Permutations</a></td><td>46</td><td><span class="badge medium">medium</span></td><td>Choose each unused element per slot (swap or used[] array).</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc17">Letter Combinations of a Phone Number</a></td><td>17</td><td><span class="badge medium">medium</span></td><td>Cartesian product via one recursion depth per digit.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc39">Combination Sum</a></td><td>39</td><td><span class="badge medium">medium</span></td><td>Reuse allowed → stay on the same index after choosing it.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc79">Word Search</a></td><td>79</td><td><span class="badge medium">medium</span></td><td>Grid DFS with mark-and-unmark of the visited cell.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc131">Palindrome Partitioning</a></td><td>131</td><td><span class="badge medium">medium</span></td><td>Cut at every palindromic prefix, recurse on the remainder.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc51">N-Queens</a></td><td>51</td><td><span class="badge hard">hard</span></td><td>Column/diagonal sets prune before each queen is placed.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> config-space search, dependency resolution back-off, puzzle/route solvers (<a href="25-real-world-systems.html#maps">navigation</a>).</p>
+
+<h2 id="m-11">11 · Trees & BSTs</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="11-trees.html#lc104">Maximum Depth of Binary Tree</a></td><td>104</td><td><span class="badge easy">easy</span></td><td>Depth = 1 + max of children — structural recursion.</td></tr>
+  <tr><td><a href="11-trees.html#lc226">Invert Binary Tree</a></td><td>226</td><td><span class="badge easy">easy</span></td><td>Swap the children at every node.</td></tr>
+  <tr><td><a href="11-trees.html#lc100">Same Tree</a></td><td>100</td><td><span class="badge easy">easy</span></td><td>Compare both trees node-by-node in lockstep.</td></tr>
+  <tr><td><a href="11-trees.html#lc543">Diameter of Binary Tree</a></td><td>543</td><td><span class="badge easy">easy</span></td><td>Diameter through a node = left depth + right depth; track a global max.</td></tr>
+  <tr><td><a href="11-trees.html#lc102">Binary Tree Level Order Traversal</a></td><td>102</td><td><span class="badge medium">medium</span></td><td>BFS with a per-level size snapshot.</td></tr>
+  <tr><td><a href="11-trees.html#lc98">Validate Binary Search Tree</a></td><td>98</td><td><span class="badge medium">medium</span></td><td>Pass down (min,max) bounds — parent-child checks are not enough.</td></tr>
+  <tr><td><a href="11-trees.html#lc235">Lowest Common Ancestor of a BST</a></td><td>235</td><td><span class="badge medium">medium</span></td><td>BST order: the LCA is where p and q split.</td></tr>
+  <tr><td><a href="11-trees.html#lc230">Kth Smallest Element in a BST</a></td><td>230</td><td><span class="badge medium">medium</span></td><td>In-order traversal visits a BST in sorted order; stop at k.</td></tr>
+  <tr><td><a href="11-trees.html#lc297">Serialize and Deserialize Binary Tree</a></td><td>297</td><td><span class="badge hard">hard</span></td><td>Preorder with null markers round-trips the exact shape.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> B-tree indexes and file systems (<a href="25-real-world-systems.html#db">databases</a>), DOM/AST processing (<a href="25-real-world-systems.html#git">Git trees</a>).</p>
+
+<h2 id="m-12">12 · Heaps & Priority Queues</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="12-heaps.html#lc703">Kth Largest Element in a Stream</a></td><td>703</td><td><span class="badge easy">easy</span></td><td>Size-k min-heap: the root IS the kth largest.</td></tr>
+  <tr><td><a href="12-heaps.html#lc1046">Last Stone Weight</a></td><td>1046</td><td><span class="badge easy">easy</span></td><td>Max-heap: repeatedly smash the two heaviest stones.</td></tr>
+  <tr><td><a href="12-heaps.html#lc973">K Closest Points to Origin</a></td><td>973</td><td><span class="badge medium">medium</span></td><td>Size-k max-heap by distance keeps the k closest points.</td></tr>
+  <tr><td><a href="12-heaps.html#lc347">Top K Frequent Elements</a></td><td>347</td><td><span class="badge medium">medium</span></td><td>Count map + size-k min-heap (compare with page 01’s buckets).</td></tr>
+  <tr><td><a href="12-heaps.html#lc621">Task Scheduler</a></td><td>621</td><td><span class="badge medium">medium</span></td><td>Most-frequent-first greedy with a cooldown queue.</td></tr>
+  <tr><td><a href="12-heaps.html#lc23">Merge k Sorted Lists</a></td><td>23</td><td><span class="badge hard">hard</span></td><td>A heap of the k list heads; pop-push until all lists drain.</td></tr>
+  <tr><td><a href="12-heaps.html#lc295">Find Median from Data Stream</a></td><td>295</td><td><span class="badge hard">hard</span></td><td>Two heaps split the stream; the median lives at their tops.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> top-K ranking stages (<a href="25-real-world-systems.html#reco">reco systems</a>), task queues (<a href="25-real-world-systems.html#sched">schedulers</a>).</p>
+
+<h2 id="m-13">13 · Tries</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="13-tries.html#lc14">Longest Common Prefix</a></td><td>14</td><td><span class="badge easy">easy</span></td><td>Vertical scan = walking a single trie path.</td></tr>
+  <tr><td><a href="13-tries.html#lc208">Implement Trie (Prefix Tree)</a></td><td>208</td><td><span class="badge medium">medium</span></td><td>The node-per-character structure itself.</td></tr>
+  <tr><td><a href="13-tries.html#lc648">Replace Words</a></td><td>648</td><td><span class="badge medium">medium</span></td><td>Walk each word; stop at the first root flag you meet.</td></tr>
+  <tr><td><a href="13-tries.html#lc211">Design Add and Search Words</a></td><td>211</td><td><span class="badge medium">medium</span></td><td>Trie DFS that branches on “.” wildcards.</td></tr>
+  <tr><td><a href="13-tries.html#lc677">Map Sum Pairs</a></td><td>677</td><td><span class="badge medium">medium</span></td><td>Store running prefix sums on every node during insert.</td></tr>
+  <tr><td><a href="13-tries.html#lc1268">Search Suggestions System</a></td><td>1268</td><td><span class="badge medium">medium</span></td><td>Trie walk carrying the 3 lexicographically-first completions per node.</td></tr>
+  <tr><td><a href="13-tries.html#lc212">Word Search II</a></td><td>212</td><td><span class="badge hard">hard</span></td><td>One trie for all words; DFS the grid against it, pruning dead branches.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> search typeahead (<a href="25-real-world-systems.html#reco">reco systems</a>), IP routing tables, spell-check (<a href="25-real-world-systems.html#db">search engines</a>).</p>
+
+<h2 id="m-14">14 · String Algorithms</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="14-strings-advanced.html#lc125">Valid Palindrome</a></td><td>125</td><td><span class="badge easy">easy</span></td><td>Two pointers from both ends (page 02’s pattern on strings).</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc459">Repeated Substring Pattern</a></td><td>459</td><td><span class="badge easy">easy</span></td><td>If s occurs inside (s+s) minus its end characters, s is a repeated unit.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc443">String Compression</a></td><td>443</td><td><span class="badge medium">medium</span></td><td>Read/write pointers compress character runs in place.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc5">Longest Palindromic Substring</a></td><td>5</td><td><span class="badge medium">medium</span></td><td>Expand around each of the 2n−1 palindrome centers.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc647">Palindromic Substrings</a></td><td>647</td><td><span class="badge medium">medium</span></td><td>Same center expansion, counting every palindrome hit.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc28">Find the Index of the First Occurrence (strStr)</a></td><td>28</td><td><span class="badge medium">medium</span></td><td>KMP’s failure function skips re-matching known prefixes.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> plagiarism and dedup fingerprinting, grep/editors, DNA matching (<a href="25-real-world-systems.html#db">search engines</a>).</p>
+
+<h2 id="m-15">15 · Graph Basics</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="15-graphs-basics.html#lc733">Flood Fill</a></td><td>733</td><td><span class="badge easy">easy</span></td><td>Repaint from the seed — the hello-world of graph traversal.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc200">Number of Islands</a></td><td>200</td><td><span class="badge medium">medium</span></td><td>Each DFS flood consumes one island; count the launches.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc695">Max Area of Island</a></td><td>695</td><td><span class="badge medium">medium</span></td><td>A flood fill that returns the size of its region.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc994">Rotting Oranges</a></td><td>994</td><td><span class="badge medium">medium</span></td><td>Multi-source BFS: every rotten cell starts at distance 0.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc542">01 Matrix</a></td><td>542</td><td><span class="badge medium">medium</span></td><td>Multi-source BFS from all zeros gives every distance at once.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc133">Clone Graph</a></td><td>133</td><td><span class="badge medium">medium</span></td><td>Traverse with an old→new map to clone as you go.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc417">Pacific Atlantic Water Flow</a></td><td>417</td><td><span class="badge medium">medium</span></td><td>Reverse thinking: search inward from both oceans.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc1091">Shortest Path in Binary Matrix</a></td><td>1091</td><td><span class="badge medium">medium</span></td><td>Unweighted shortest path = plain BFS, eight directions.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> "users like you" traversal (<a href="25-real-world-systems.html#reco">reco systems</a>), degrees of separation (<a href="25-real-world-systems.html#social">social networks</a>).</p>
+
+<h2 id="m-16">16 · Graphs Advanced</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc547">Number of Provinces</a></td><td>547</td><td><span class="badge medium">medium</span></td><td>Union-find (or DFS) over the adjacency matrix counts components.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc207">Course Schedule</a></td><td>207</td><td><span class="badge medium">medium</span></td><td>A cycle in the prerequisite digraph = impossible; Kahn’s in-degrees.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc210">Course Schedule II</a></td><td>210</td><td><span class="badge medium">medium</span></td><td>The topological order IS the answer.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc684">Redundant Connection</a></td><td>684</td><td><span class="badge medium">medium</span></td><td>The first edge whose endpoints already share a root closes the cycle.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc721">Accounts Merge</a></td><td>721</td><td><span class="badge medium">medium</span></td><td>Union the emails; the components are the people.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc785">Is Graph Bipartite?</a></td><td>785</td><td><span class="badge medium">medium</span></td><td>Two-color with BFS; any odd cycle breaks bipartiteness.</td></tr>
+  <tr><td><a href="16-graphs-advanced.html#lc269">Alien Dictionary</a></td><td>269</td><td><span class="badge hard">hard</span></td><td>Extract edges from adjacent word pairs, then topo-sort the letters.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> build systems and package managers (topological order), community detection (<a href="25-real-world-systems.html#social">social networks</a>), Git DAG (<a href="25-real-world-systems.html#git">Git</a>).</p>
+
+<h2 id="m-17">17 · Shortest Paths & MST</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="17-shortest-paths.html#lc1091">Shortest Path in Binary Matrix</a></td><td>1091</td><td><span class="badge medium">medium</span></td><td>Unweighted grid → BFS; DP fails because moves go all 8 ways (cycles).</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc743">Network Delay Time</a></td><td>743</td><td><span class="badge medium">medium</span></td><td>Classic Dijkstra with a lazy-deletion heap.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc787">Cheapest Flights Within K Stops</a></td><td>787</td><td><span class="badge medium">medium</span></td><td>Edge-count cap → Bellman-Ford, whose rounds mean “≤ k+1 edges”.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc1584">Min Cost to Connect All Points</a></td><td>1584</td><td><span class="badge medium">medium</span></td><td>Not shortest path — connect everything cheaply: Kruskal’s MST.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc1631">Path With Minimum Effort</a></td><td>1631</td><td><span class="badge medium">medium</span></td><td>Minimize the max edge → Dijkstra variant or binary search + BFS.</td></tr>
+  <tr><td><a href="17-shortest-paths.html#lc778">Swim in Rising Water</a></td><td>778</td><td><span class="badge hard">hard</span></td><td>Same minimize-the-max family, on rising water.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> turn-by-turn routing (<a href="25-real-world-systems.html#maps">Google Maps</a>), network routing protocols (<a href="25-real-world-systems.html#infra">infra</a>).</p>
+
+<h2 id="m-18">18 · Dynamic Programming 1D</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="18-dp-1d.html#lc70">Climbing Stairs</a></td><td>70</td><td><span class="badge easy">easy</span></td><td>f(n) = f(n−1) + f(n−2): memo → table → two variables.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc746">Min Cost Climbing Stairs</a></td><td>746</td><td><span class="badge easy">easy</span></td><td>The same recurrence with step costs; finish from either last step.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc198">House Robber</a></td><td>198</td><td><span class="badge medium">medium</span></td><td>Rob-or-skip choice: dp[i] = max(dp[i−1], dp[i−2] + v).</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc322">Coin Change</a></td><td>322</td><td><span class="badge medium">medium</span></td><td>Unbounded min-coins: try every coin from every amount.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc139">Word Break</a></td><td>139</td><td><span class="badge medium">medium</span></td><td>dp[i]: can s[0..i) be segmented? Try every word ending at i.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc300">Longest Increasing Subsequence</a></td><td>300</td><td><span class="badge medium">medium</span></td><td>LIS: O(n²) table, then patience piles + binary search for O(n log n).</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc152">Maximum Product Subarray</a></td><td>152</td><td><span class="badge medium">medium</span></td><td>Track max AND min products — a negative flips them.</td></tr>
+  <tr><td><a href="18-dp-1d.html#lc213">House Robber II</a></td><td>213</td><td><span class="badge medium">medium</span></td><td>The circle constraint = two linear house-robber runs.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> retry/backoff planning, resource allocation, spell-correct scoring (<a href="25-real-world-systems.html#db">search</a>).</p>
+
+<h2 id="m-19">19 · Dynamic Programming 2D</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="19-dp-2d.html#lc62">Unique Paths</a></td><td>62</td><td><span class="badge medium">medium</span></td><td>paths(r,c) = up + left; a combinatorics shortcut exists too.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc64">Minimum Path Sum</a></td><td>64</td><td><span class="badge medium">medium</span></td><td>Grid DP works because moves only go right/down — the grid is a DAG.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc1143">Longest Common Subsequence</a></td><td>1143</td><td><span class="badge medium">medium</span></td><td>The 2D subsequence table: match → diag+1, else max(up, left).</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc72">Edit Distance</a></td><td>72</td><td><span class="badge medium">medium</span></td><td>Three edit operations = three table neighbors; LCS’s harder sibling.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc416">Partition Equal Subset Sum</a></td><td>416</td><td><span class="badge medium">medium</span></td><td>Subset-sum knapsack: can some subset hit total/2?</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc518">Coin Change II</a></td><td>518</td><td><span class="badge medium">medium</span></td><td>Count combinations: coins outer, amounts inner — loop order matters.</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc97">Interleaving String</a></td><td>97</td><td><span class="badge medium">medium</span></td><td>dp[i][j]: can prefixes of s1 and s2 interleave into s3’s prefix?</td></tr>
+  <tr><td><a href="19-dp-2d.html#lc516">Longest Palindromic Subsequence</a></td><td>516</td><td><span class="badge medium">medium</span></td><td>LPS = LCS(s, reverse(s)), or interval DP straight on the string.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> diff algorithms (<a href="25-real-world-systems.html#git">Git</a>), bioinformatics alignment, translation memories.</p>
+
+<h2 id="m-20">20 · DP Advanced</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="20-dp-advanced.html#lc122">Best Time to Buy and Sell Stock II</a></td><td>122</td><td><span class="badge medium">medium</span></td><td>Hold/cash two-state machine.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc309">Best Time ... with Cooldown</a></td><td>309</td><td><span class="badge medium">medium</span></td><td>Add a cooldown state — a three-state machine.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc337">House Robber III</a></td><td>337</td><td><span class="badge medium">medium</span></td><td>Tree DP: each node returns (robbed, skipped).</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc312">Burst Balloons</a></td><td>312</td><td><span class="badge hard">hard</span></td><td>Interval DP: choose the LAST balloon popped in each range.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc877">Stone Game</a></td><td>877</td><td><span class="badge medium">medium</span></td><td>Game DP on the score difference; the current player maximizes.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc698">Partition to K Equal Sum Subsets</a></td><td>698</td><td><span class="badge medium">medium</span></td><td>Bitmask over chosen elements, pruned bucket by bucket.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc188">Best Time to Buy and Sell Stock IV</a></td><td>188</td><td><span class="badge hard">hard</span></td><td>k transactions → a 2k-state machine over (day, txn, holding).</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> trading-strategy state machines, matrix-chain query planners (<a href="25-real-world-systems.html#db">databases</a>).</p>
+
+<h2 id="m-21">21 · Greedy & Intervals</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc55">Jump Game</a></td><td>55</td><td><span class="badge medium">medium</span></td><td>Track the furthest reach; one scan decides.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc763">Partition Labels</a></td><td>763</td><td><span class="badge medium">medium</span></td><td>Each letter’s last occurrence bounds its partition.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc56">Merge Intervals</a></td><td>56</td><td><span class="badge medium">medium</span></td><td>Sort by start; overlapping intervals absorb into one.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc435">Non-overlapping Intervals</a></td><td>435</td><td><span class="badge medium">medium</span></td><td>Sort by end; keep the earliest-ending compatible interval.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc253">Meeting Rooms II</a></td><td>253</td><td><span class="badge medium">medium</span></td><td>Peak overlap count = rooms; min-heap of end times or a sweep line.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc134">Gas Station</a></td><td>134</td><td><span class="badge medium">medium</span></td><td>Failure at i eliminates every start ≤ i; the net total decides feasibility.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc57">Insert Interval</a></td><td>57</td><td><span class="badge medium">medium</span></td><td>Sorted disjoint input → before/absorb/after in one pass.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc452">Minimum Number of Arrows to Burst Balloons</a></td><td>452</td><td><span class="badge medium">medium</span></td><td>Interval scheduling inverted: shoot at the earliest end.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> meeting/room scheduling (<a href="25-real-world-systems.html#sched">schedulers</a>), interval maps in storage engines (<a href="25-real-world-systems.html#db">databases</a>).</p>
+
+<h2 id="m-22">22 · Bit Manipulation</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc136">Single Number</a></td><td>136</td><td><span class="badge easy">easy</span></td><td>XOR cancels pairs; the survivor remains.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc338">Counting Bits</a></td><td>338</td><td><span class="badge easy">easy</span></td><td>bits(i) = bits(i&gt;&gt;1) + (i&amp;1) — DP on the bits themselves.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc268">Missing Number</a></td><td>268</td><td><span class="badge easy">easy</span></td><td>XOR indices against values; the missing one survives.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc191">Number of 1 Bits</a></td><td>191</td><td><span class="badge easy">easy</span></td><td>n &amp; (n−1) clears the lowest set bit — count the iterations.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc190">Reverse Bits</a></td><td>190</td><td><span class="badge easy">easy</span></td><td>Peel bits off one end, push them onto the other.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc371">Sum of Two Integers</a></td><td>371</td><td><span class="badge medium">medium</span></td><td>XOR = sum without carry, AND≪1 = carry; loop until the carry dies.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc137">Single Number II</a></td><td>137</td><td><span class="badge medium">medium</span></td><td>Count bits mod 3 (or the two-register state machine).</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> permission masks, bitmap indexes (<a href="25-real-world-systems.html#db">databases</a>), feature flags, bloom-filter internals (<a href="25-real-world-systems.html#infra">infra</a>).</p>
+
+<h2 id="m-23">23 · Math & Geometry</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="23-math-geometry.html#lc204">Count Primes</a></td><td>204</td><td><span class="badge medium">medium</span></td><td>The sieve: mark multiples starting from each prime squared.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc50">Pow(x, n)</a></td><td>50</td><td><span class="badge medium">medium</span></td><td>Square-and-multiply halves the exponent every step.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc384">Shuffle an Array</a></td><td>384</td><td><span class="badge medium">medium</span></td><td>Fisher-Yates: swap each i with a uniform j ≤ i.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc1071">Greatest Common Divisor of Strings</a></td><td>1071</td><td><span class="badge easy">easy</span></td><td>The s1+s2 == s2+s1 test, then Euclid on the lengths.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc171">Excel Sheet Column Number</a></td><td>171</td><td><span class="badge easy">easy</span></td><td>Bijective base-26 parsing: result = result·26 + digit.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc528">Random Pick with Weight</a></td><td>528</td><td><span class="badge medium">medium</span></td><td>Prefix sums turn weights into ranges; binary-search the dart.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc189">Rotate Array</a></td><td>189</td><td><span class="badge medium">medium</span></td><td>Three reversals rotate in place; normalize with k %= n first.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> sharding and consistent hashing arithmetic (<a href="25-real-world-systems.html#infra">infra</a>), weighted load balancing, A/B bucketing.</p>
+
+<h2 id="m-24">24 · Advanced Structures & Design</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="24-advanced-structures.html#lc146">LRU Cache</a></td><td>146</td><td><span class="badge medium">medium</span></td><td>HashMap + doubly linked list = O(1) get/put in recency order.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc380">Insert Delete GetRandom O(1)</a></td><td>380</td><td><span class="badge medium">medium</span></td><td>Array + index map; swap-with-last makes remove O(1).</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc307">Range Sum Query — Mutable</a></td><td>307</td><td><span class="badge medium">medium</span></td><td>Fenwick tree: point update and prefix query, both O(log n).</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc729">My Calendar I</a></td><td>729</td><td><span class="badge medium">medium</span></td><td>TreeMap neighbors: only the floor and ceiling bookings can conflict.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc362">Design Hit Counter</a></td><td>362</td><td><span class="badge medium">medium</span></td><td>Timestamp queue vs 300 circular buckets — the window-counting trade.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc981">Time Based Key-Value Store</a></td><td>981</td><td><span class="badge medium">medium</span></td><td>Floor binary search over an append-only (hence sorted) version list.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc460">LFU Cache</a></td><td>460</td><td><span class="badge hard">hard</span></td><td>Frequency buckets of LinkedHashSets plus a minFreq pointer.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> caches at every layer (<a href="25-real-world-systems.html#infra">infra</a>), rate limiters, time-series and versioned stores (<a href="25-real-world-systems.html#db">databases</a>).</p>
+
+<h2 id="m-26">26 · Interview Playbook — the decision-gym drills</h2>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-1-find-a-pair-summing-to-target-3-algorithms">"Find a pair summing to target" — 3 algorithms</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Brute force vs HashMap vs sort + two pointers — memory and sortedness flip the verdict.</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-2-top-k-elements-4-algorithms">"Top-K elements" — 4 algorithms</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Sort vs heap vs quickselect vs buckets — n, k, and streaming decide.</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-3-count-the-connected-groups-3-algorithms">"Count the connected groups" — 3 algorithms</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>DFS vs BFS vs union-find — static counting vs dynamic merging.</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-4-cheapest-path-through-a-grid-4-algorithms">"Cheapest path through a grid" — 4 algorithms (the screenshot problem)</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Grid DP vs BFS vs Dijkstra vs minimize-max — the movement rules decide (the screenshot problem).</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-5-how-many-meeting-rooms-4-algorithms">"How many meeting rooms?" — 4 algorithms</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Heap vs sweep line vs difference array vs TreeMap — same counting, four costumes.</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-6-sum-of-a-range-many-times-4-structures">"Sum of a range, many times" — 4 structures</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Recompute vs prefix vs Fenwick vs segment tree — the update/query mix decides.</td></tr>
+  <tr><td><a href="26-interview-playbook.html#p-drill-7-best-contiguous-stretch-window-vs-prefix-m">"Best contiguous stretch" — window vs prefix-map vs DP</a></td><td>—</td><td><span class="badge medium">medium</span></td><td>Window vs prefix-map vs Kadane — negatives and the objective decide.</td></tr>
+</table>
+</div>
+<p class="small"><strong>Real-world:</strong> the interview itself — one problem, many algorithms, and the constraints that flip the verdict.</p>
+
+<div class="note">
+  <strong>This page grows with the runbook.</strong> Every newly worked problem lands here
+  automatically, so if a table looks short today it will fill out as more problems are added to its
+  topic page. The drills of the <a href="26-interview-playbook.html">Interview Playbook</a> are listed
+  last — they are the “one problem, many algorithms” capstone this whole map builds toward.
+</div>
+
+<nav class="pager">
+  <a class="prev" href="26-interview-playbook.html"><span class="dir">⟵ Prev</span><span class="name">26 · Interview Playbook</span></a>
+  <a class="next" href="../index.html#cheatsheet"><span class="dir">Next ⟶</span><span class="name">Master cheat-sheet</span></a>
+</nav>
+
+</div>
+</body>
+</html>
