@@ -47,13 +47,7 @@
   <li><a href="18-dp-1d.html">18 · DP 1D</a> — you'll contrast greedy with DP (remember coin change with coins [1,3,4]).</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you justify a greedy choice</strong>, not just state it? "Sort by end time because…" is the whole answer.</li>
-  <li><strong>Do you know the sort-by-start vs sort-by-end split?</strong> Picking the wrong one is the classic interval mistake.</li>
-  <li><strong>Do you test greedy against small counterexamples</strong> before committing, instead of assuming it works?</li>
-  <li><strong>Comparator fluency in Java</strong> — writing <code>(a, b) -&gt; Integer.compare(a[0], b[0])</code> without overflow bugs.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> intervals appear in every phone-screen pool; the tested skill is the sort-by-start-or-end decision plus a correctness argument for the greedy choice.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -253,12 +247,9 @@ for (int[] iv : intervals) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/jump-game/">Jump Game</a>
-    <span class="hint">One variable: the furthest index reachable so far. If i ever exceeds it, you're stuck.</span></div>
   <div class="prob"><span class="badge medium">medium</span>
     <a class="t" href="https://leetcode.com/problems/gas-station/">Gas Station</a>
     <span class="hint">If total gas ≥ total cost an answer exists; whenever the tank goes negative, restart from the next station.</span></div>
@@ -283,7 +274,7 @@ for (int[] iv : intervals) {
 </div>
 
 <details class="sol">
-  <summary>Worked solution — Jump Game (greedy reach)</summary>
+  <summary><span class="badge medium">medium</span> Jump Game — LeetCode 55 (greedy reach)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> from index 0, each cell tells you your max jump length — can you reach the last index?</p>
     <p><strong>Idea:</strong> you never need to know the actual path. Keep one number — the furthest index reachable using
@@ -304,7 +295,7 @@ for (int[] iv : intervals) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Partition Labels (last occurrence)</summary>
+  <summary><span class="badge medium">medium</span> Partition Labels — LeetCode 763 (last occurrence)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> split a string into as many chunks as possible so each letter appears in at most one chunk; return chunk sizes.</p>
     <p><strong>Idea:</strong> a cut after position i is legal only if no letter in s[start..i] occurs again after i.
@@ -334,7 +325,7 @@ for (int[] iv : intervals) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Merge Intervals (sort by start)</summary>
+  <summary><span class="badge medium">medium</span> Merge Intervals — LeetCode 56 (sort by start)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> given intervals in any order, return the merged, non-overlapping set.</p>
     <p><strong>Idea:</strong> exactly the animation above. Sort by start; grow a current block; a new interval either
@@ -363,7 +354,7 @@ for (int[] iv : intervals) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Non-overlapping Intervals (sort by end)</summary>
+  <summary><span class="badge medium">medium</span> Non-overlapping Intervals — LeetCode 435 (sort by end)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> remove the minimum number of intervals so the rest don't overlap.</p>
     <p><strong>Idea:</strong> flip it: <em>keep</em> the maximum non-overlapping set (activity selection), then removals
@@ -391,7 +382,7 @@ for (int[] iv : intervals) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Meeting Rooms II (heap AND sweep line)</summary>
+  <summary><span class="badge medium">medium</span> Meeting Rooms II — LeetCode 253 (heap AND sweep line)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> given meeting [start,end) intervals, find the minimum number of rooms needed.</p>
     <p><strong>Idea A (heap):</strong> take meetings in start order; the min-heap holds the end time of every occupied
@@ -441,8 +432,138 @@ public static int minMeetingRoomsSweep(int[][] intervals) {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Gas Station — LeetCode 134</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Circular route of stations: at station i you gain <code>gas[i]</code>
+    and spend <code>cost[i]</code> driving to the next. Return the unique starting station from which you can
+    complete a full lap (tank starts empty), or −1.</p>
+    <p><strong>Example.</strong> <code>gas=[1,2,3,4,5], cost=[3,4,5,1,2]</code> → <code>3</code>
+    (start at station 3 with net +3, survive the early deficits). <code>gas=[2,3,4], cost=[3,4,3]</code> →
+    <code>-1</code> (total gas &lt; total cost).</p>
+
+    <p class="code-title">Variation 1 — simulate from every start · O(n²)</p>
+<pre class="code"><code>public static int canCompleteCircuitBrute(int[] gas, int[] cost) {
+    int n = gas.length;
+    for (int start = 0; start &lt; n; start++) {
+        int tank = 0;
+        int i = 0;
+        for (; i &lt; n; i++) {                       // drive one full lap
+            int station = (start + i) % n;
+            tank += gas[station] - cost[station];
+            if (tank &lt; 0) break;                   // stranded — this start fails
+        }
+        if (i == n) return start;
+    }
+    return -1;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — greedy reset (optimal) · O(n)</p>
+<pre class="code"><code>public static int canCompleteCircuit(int[] gas, int[] cost) {
+    int total = 0;      // net gas over the whole circle
+    int tank = 0;       // gas since the current candidate start
+    int start = 0;      // current candidate starting station
+    for (int i = 0; i &lt; gas.length; i++) {
+        int net = gas[i] - cost[i];
+        total += net;
+        tank += net;
+        if (tank &lt; 0) {
+            // KEY FACT: if we ran dry reaching station i+1, then no station
+            // between the old start and i can work either — each of them
+            // would arrive here with even LESS gas (they skip the early
+            // surplus that we had). So jump the candidate past i wholesale.
+            start = i + 1;
+            tank = 0;
+        }
+    }
+    // Sufficiency: if total net >= 0, the final candidate completes the lap.
+    return total &gt;= 0 ? start : -1;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two greedy facts carry it: (1) failure at i eliminates <em>every</em> start
+    up to i in one stroke — that's what collapses O(n²) to O(n); (2) total net ≥ 0 guarantees some start
+    works, so the surviving candidate is it. This eliminate-a-whole-range reasoning is the same shape as the
+    two-pointer discard proofs on <a href="02-two-pointers.html">page 02</a>.
+    Mirror: <code>code/21-greedy-intervals/GasStation.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Insert Interval — LeetCode 57</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A sorted, non-overlapping interval list plus one new interval: insert
+    it, merging where necessary, and return the (still sorted, non-overlapping) result.</p>
+    <p><strong>Example.</strong> intervals <code>[[1,3],[6,9]]</code>, new <code>[2,5]</code> →
+    <code>[[1,5],[6,9]]</code>. intervals <code>[[1,2],[3,5],[6,7],[8,10],[12,16]]</code>, new
+    <code>[4,8]</code> → <code>[[1,2],[3,10],[12,16]]</code>.</p>
+    <p class="code-title">Three phases: before / absorb / after · O(n)</p>
+<pre class="code"><code>public static int[][] insert(int[][] intervals, int[] newInterval) {
+    List&lt;int[]&gt; res = new ArrayList&lt;&gt;();
+    int i = 0, n = intervals.length;
+
+    // Phase 1: intervals entirely BEFORE the new one (end &lt; newStart)
+    while (i &lt; n &amp;&amp; intervals[i][1] &lt; newInterval[0])
+        res.add(intervals[i++]);
+
+    // Phase 2: everything that overlaps the new interval gets absorbed.
+    // Overlap test: interval starts before (or at) the new one's end.
+    while (i &lt; n &amp;&amp; intervals[i][0] &lt;= newInterval[1]) {
+        newInterval[0] = Math.min(newInterval[0], intervals[i][0]);  // stretch left
+        newInterval[1] = Math.max(newInterval[1], intervals[i][1]);  // stretch right
+        i++;
+    }
+    res.add(newInterval);                    // the merged blob goes in once
+
+    // Phase 3: the untouched tail
+    while (i &lt; n)
+        res.add(intervals[i++]);
+
+    return res.toArray(new int[0][]);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Because the input is already sorted and disjoint, the overlap zone is one
+    contiguous run — so a single left-to-right pass with three phases does it, no sorting needed
+    (contrast Merge Intervals, which must sort first). The two boundary comparisons
+    (<code>end &lt; newStart</code>, <code>start ≤ newEnd</code>) are the entire correctness surface —
+    check them against touching intervals like [1,2]+[2,3].
+    Mirror: <code>code/21-greedy-intervals/InsertInterval.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Minimum Number of Arrows to Burst Balloons — LeetCode 452</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Balloons are horizontal intervals <code>[start, end]</code>; a vertical
+    arrow shot at x pops every balloon whose interval contains x (ends inclusive). Minimize arrows to pop
+    all balloons.</p>
+    <p><strong>Example.</strong> <code>[[10,16],[2,8],[1,6],[7,12]]</code> → <code>2</code>
+    (x=6 pops [2,8]+[1,6]; x=11 pops [10,16]+[7,12]). <code>[[1,2],[3,4],[4,5]]</code> → <code>2</code>.</p>
+    <p class="code-title">Sort by end; shoot at each first-unpopped balloon's end · O(n log n)</p>
+<pre class="code"><code>public static int findMinArrowShots(int[][] points) {
+    if (points.length == 0) return 0;
+    // Sort by END (long-safe compare — coordinates hit ±2^31).
+    Arrays.sort(points, (a, b) -&gt; Integer.compare(a[1], b[1]));
+
+    int arrows = 1;
+    long arrowX = points[0][1];        // greedy: shoot at the earliest end
+    for (int[] p : points) {
+        if (p[0] &gt; arrowX) {           // this balloon starts after the arrow -&gt; missed
+            arrows++;                  // need a fresh arrow...
+            arrowX = p[1];             // ...again at the new balloon's end
+        }
+        // else: p straddles arrowX (its end >= arrowX by sort order) — already popped
+    }
+    return arrows;
+}</code></pre>
+    <p><strong>Takeaway.</strong> This is Non-overlapping Intervals inverted: an arrow at the earliest
+    unpopped balloon's <em>end</em> catches every balloon overlapping it — the exchange argument says no
+    other x pops a superset. Arrows = number of "overlap groups" = n − (max intervals you could keep
+    non-overlapping). Same sort, same greedy, opposite bookkeeping. Note the inclusive ends: [1,2] and
+    [2,3] share x=2 and need one arrow — which is why the miss test is strict <code>&gt;</code>.
+    Mirror: <code>code/21-greedy-intervals/MinArrows.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Comparator overflow:</strong> <code>(a, b) -&gt; a[0] - b[0]</code> breaks when values straddle ±2·10⁹
     (subtraction wraps). Always <code>Integer.compare(a[0], b[0])</code> or <code>Comparator.comparingInt(a -&gt; a[0])</code>.</li>
