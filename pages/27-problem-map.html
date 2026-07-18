@@ -141,10 +141,16 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="04-prefix-sum.html#lc1480">Running Sum of 1d Array</a></td><td>1480</td><td><span class="badge easy">easy</span></td><td>The definition of a prefix sum, verbatim.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc303">Range Sum Query, Immutable</a></td><td>303</td><td><span class="badge easy">easy</span></td><td>Precompute once; any range sum becomes two lookups.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc724">Find Pivot Index</a></td><td>724</td><td><span class="badge easy">easy</span></td><td>One running left sum + the total: right side by subtraction.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc560">Subarray Sum Equals K</a></td><td>560</td><td><span class="badge medium">medium</span></td><td>Prefix + HashMap: count earlier prefixes equal to currentSum − k.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc525">Contiguous Array</a></td><td>525</td><td><span class="badge medium">medium</span></td><td>Map 0→−1; equal 0/1 counts mean the same prefix value seen twice.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix/suffix products — the additive trick with × instead of +.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc1094">Car Pooling</a></td><td>1094</td><td><span class="badge medium">medium</span></td><td>Difference array: +passengers at pickup, − at drop-off, then scan.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc304">Range Sum Query 2D, Immutable</a></td><td>304</td><td><span class="badge medium">medium</span></td><td>2D prefix table; any rectangle = four lookups (inclusion–exclusion).</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc974">Subarray Sums Divisible by K</a></td><td>974</td><td><span class="badge medium">medium</span></td><td>Divisible subarray ⇔ two prefixes share a remainder class.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc523">Continuous Subarray Sum</a></td><td>523</td><td><span class="badge medium">medium</span></td><td>Remember each remainder’s FIRST index; distance ≥ 2 seals it.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc1109">Corporate Flight Bookings</a></td><td>1109</td><td><span class="badge medium">medium</span></td><td>Range adds become two point edits; integrate once at the end.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc862">Shortest Subarray with Sum at Least K</a></td><td>862</td><td><span class="badge hard">hard</span></td><td>Negatives kill the window — prefix sums + monotonic deque of starts.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> pre-aggregated metrics and OLAP cubes (<a href="25-real-world-systems.html#db">databases</a>), capacity planning (<a href="25-real-world-systems.html#sched">schedulers</a>).</p>
