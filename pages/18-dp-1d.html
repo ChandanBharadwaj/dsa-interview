@@ -46,13 +46,7 @@
   <li><a href="00-foundations.html">00 · Foundations</a> — you'll be comparing O(2ⁿ) vs O(n) constantly.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you define the state in words?</strong> "dp[i] = the best answer for the first i items" — saying this sentence out loud is 70% of the solution.</li>
-  <li><strong>Can you derive the recurrence</strong> from a choice ("rob it or skip it"), not memorize it?</li>
-  <li><strong>Do you spot when greedy fails</strong> and DP is required (overlapping choices where a local best isn't globally safe)?</li>
-  <li><strong>Do you know both directions</strong> — top-down memoization and bottom-up tabulation — and when to space-optimize?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the most feared topic — the 4-step recipe (state in words, recurrence, base cases, order) is what actually gets graded.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -325,11 +319,9 @@ counterexamples, that's greedy.</p>
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span> <a class="t" href="https://leetcode.com/problems/climbing-stairs/">Climbing Stairs</a>
-    <span class="hint">ways(n) = ways(n−1) + ways(n−2) — the "hello world" of DP; do it memo, tab, then O(1) space.</span></div>
   <div class="prob"><span class="badge easy">easy</span> <a class="t" href="https://leetcode.com/problems/min-cost-climbing-stairs/">Min Cost Climbing Stairs</a>
     <span class="hint">Same skeleton but with min instead of sum: dp[i] = cost[i] + min(dp[i−1], dp[i−2]).</span></div>
   <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/house-robber/">House Robber</a>
@@ -347,9 +339,10 @@ counterexamples, that's greedy.</p>
 </div>
 
 <details class="sol">
-  <summary>Worked solution — Climbing Stairs (all three versions)</summary>
+  <summary><span class="badge easy">easy</span> Climbing Stairs — LeetCode 70 (all three versions)</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> climbing 1 or 2 steps at a time, count the distinct ways to reach step n.</p>
+    <p><strong>Example.</strong> n=2 → 2 (1+1, 2). n=3 → 3 (1+1+1, 1+2, 2+1). n=5 → 8 — it is Fibonacci in disguise.</p>
     <p><strong>Idea:</strong> partition all ways by the <em>last</em> move: it was a 1-step (from n−1) or a 2-step (from n−2),
     and these sets don't overlap, so add them. That single sentence is the recurrence; the three versions in
     §2 and §4 above (memo → tab → two variables) are the full solution ladder. See
@@ -359,7 +352,7 @@ counterexamples, that's greedy.</p>
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Min Cost Climbing Stairs</summary>
+  <summary><span class="badge easy">easy</span> Min Cost Climbing Stairs — LeetCode 746</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> each step has a fee paid when you leave it; start at step 0 or 1; reach the top (one past the last step) as cheaply as possible.</p>
     <p><strong>Idea:</strong> same two-predecessor shape as Climbing Stairs, but combining with <code>min</code> instead of
@@ -386,9 +379,10 @@ public static int minCostClimbingStairs(int[] cost) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — House Robber</summary>
+  <summary><span class="badge medium">medium</span> House Robber — LeetCode 198</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> maximize loot from a row of houses where robbing two adjacent houses trips the alarm.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,1]</code> → 4 (houses 0 and 2). <code>[2,7,9,3,1]</code> → 12 (2+9+1).</p>
     <p><strong>Idea:</strong> dp[i] = best loot after <em>considering</em> houses 0..i (considered, not necessarily robbed —
     precision here prevents bugs). Rob house i → add nums[i] to dp[i−2]; skip → keep dp[i−1]. Take the max. The
     animation in §5 walks this exact array.</p>
@@ -417,7 +411,7 @@ public static int rob(int[] nums) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Coin Change</summary>
+  <summary><span class="badge medium">medium</span> Coin Change — LeetCode 322</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> fewest coins (each denomination reusable) summing to <code>amount</code>, or −1 if impossible.</p>
     <p><strong>Idea:</strong> dp[a] = fewest coins making amount a. The last coin used was some c, leaving the subproblem
@@ -447,7 +441,7 @@ public static int coinChange(int[] coins, int amount) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Word Break</summary>
+  <summary><span class="badge medium">medium</span> Word Break — LeetCode 139</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> can string s be split entirely into words from a dictionary (words reusable)?</p>
     <p><strong>Idea:</strong> dp over <em>prefixes</em>: dp[i] = "the first i characters can be segmented". For prefix i,
@@ -481,7 +475,7 @@ public static boolean wordBreak(String s, List&lt;String&gt; wordDict) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Longest Increasing Subsequence (O(n²) and O(n log n))</summary>
+  <summary><span class="badge medium">medium</span> Longest Increasing Subsequence — LeetCode 300 (O(n²) and O(n log n))</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> length of the longest strictly increasing subsequence (not necessarily contiguous).</p>
     <p><strong>Idea 1 (O(n²)):</strong> dp[i] = LIS length <em>ending exactly at</em> index i. To extend, look at every
@@ -533,8 +527,82 @@ public static int lengthOfLISFast(int[] nums) {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Maximum Product Subarray — LeetCode 152</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Find the contiguous subarray with the largest <em>product</em>.
+    Negatives make this tricky: two of them multiply into a positive, so the "worst" running value can
+    suddenly become the best.</p>
+    <p><strong>Example.</strong> <code>[2,3,-2,4]</code> → <code>6</code> ([2,3]).
+    <code>[-2,0,-1]</code> → <code>0</code>. <code>[-2,3,-4]</code> → <code>24</code> (the whole array —
+    the two negatives cancel).</p>
+    <p class="code-title">Track BOTH the max and min product ending here · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int maxProduct(int[] nums) {
+    // maxHere / minHere = the largest and smallest product of a subarray
+    // ENDING at the current index. We need the min too: multiplied by a
+    // negative, the smallest product becomes the largest.
+    int maxHere = nums[0], minHere = nums[0], best = nums[0];
+    for (int i = 1; i &lt; nums.length; i++) {
+        int x = nums[i];
+        if (x &lt; 0) {                      // a negative flips the roles:
+            int t = maxHere;              // the old min is about to become
+            maxHere = minHere;            // the new max, and vice versa
+            minHere = t;
+        }
+        // Either extend the running product, or start fresh at x
+        maxHere = Math.max(x, maxHere * x);
+        minHere = Math.min(x, minHere * x);
+        best = Math.max(best, maxHere);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Kadane's maximum-subarray idea (carry "best ending here") needs a twin
+    here: because multiplication by a negative swaps extremes, you must carry the minimum as well. Carrying
+    <em>two</em> running states instead of one is a mini state-machine — the training wheels for
+    <a href="20-dp-advanced.html">page 20</a>. Zeros reset both states naturally via the "start fresh at x"
+    branch. Mirror: <code>code/18-dp-1d/MaxProductSubarray.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> House Robber II — LeetCode 213</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Same as House Robber, but the houses form a <em>circle</em> — the first
+    and last house are adjacent, so robbing both trips the alarm.</p>
+    <p><strong>Example.</strong> <code>[2,3,2]</code> → <code>3</code> (can't take both 2s — they're
+    neighbors on the circle). <code>[1,2,3,1]</code> → <code>4</code>. <code>[5]</code> → <code>5</code>.</p>
+    <p class="code-title">Break the circle into two lines · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int rob(int[] nums) {
+    int n = nums.length;
+    if (n == 1) return nums[0];
+    // The circle only adds ONE constraint: house 0 and house n-1 can't
+    // both be robbed. So the answer is the better of two LINE problems:
+    //   case A: house 0 allowed, house n-1 excluded  -> rob nums[0..n-2]
+    //   case B: house 0 excluded, house n-1 allowed  -> rob nums[1..n-1]
+    return Math.max(robLine(nums, 0, n - 2),
+                    robLine(nums, 1, n - 1));
+}
+
+// Plain House Robber (LC 198) on nums[lo..hi] with two rolling variables.
+private static int robLine(int[] nums, int lo, int hi) {
+    int skip = 0, rob = 0;                 // best if we skip / rob the previous house
+    for (int i = lo; i &lt;= hi; i++) {
+        int newRob = skip + nums[i];       // rob i: previous must be skipped
+        skip = Math.max(skip, rob);        // skip i: carry the better past
+        rob = newRob;
+    }
+    return Math.max(skip, rob);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Don't invent circular DP — <em>reduce</em> to the linear problem you
+    already solved: any valid plan omits house 0 or house n−1, so solving both restricted lines and taking
+    the max covers every possibility. Case analysis that removes a constraint is a general trick (the same
+    move solves circular versions of other line-DP problems).
+    Mirror: <code>code/18-dp-1d/HouseRobberII.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Say the state sentence before writing code.</strong> Most DP failures are a fuzzy state ("dp[i] is... the answer... at i?"). If dp[i] is "best ending AT i" (LIS) the final answer is a max over all cells; if it's "best considering 0..i" (robber) the answer is the last cell. Know which yours is.</li>
   <li><strong>Base cases off-by-one:</strong> dp[0] usually means the <em>empty</em> prefix/amount, not the first element. Coin Change's dp[0]=0 and Word Break's dp[0]=true both encode "the empty problem is trivially solved".</li>
