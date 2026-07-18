@@ -379,6 +379,28 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
   </div>
 </details>
 
+<details class="sol" id="lc476">
+  <summary><span class="badge easy">easy</span> Number Complement — LeetCode 476</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Flip every bit of n's binary representation — but only the
+    significant bits (no leading zeros become ones).</p>
+    <p><strong>Example.</strong> 5 (<code>101</code>) → 2 (<code>010</code>).
+    10 (<code>1010</code>) → 5 (<code>0101</code>).</p>
+    <p class="code-title">Build a same-length mask of 1s, then XOR · O(log n)</p>
+<pre class="code"><code>public static int findComplement(int num) {
+    int mask = 1;
+    while (mask &lt; num)              // grow until the mask covers n's top bit
+        mask = (mask &lt;&lt; 1) | 1;     // 1 -&gt; 11 -&gt; 111 -&gt; ...
+    return num ^ mask;              // XOR with 1 flips: complement done
+}</code></pre>
+    <p><strong>Takeaway.</strong> Plain <code>~num</code> flips all 32 bits — leading zeros
+    included — which is why the mask is the whole exercise: scope the flip to the significant
+    length. "XOR with a mask of 1s = controlled flip" joins your bit-tool belt next to
+    <code>n &amp; (n−1)</code> and <code>n &amp; −n</code>.
+    Mirror: <code>code/22-bit-manipulation/NumberComplement.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc371">
   <summary><span class="badge medium">medium</span> Sum of Two Integers — LeetCode 371</summary>
   <div class="sol-body">
@@ -444,6 +466,67 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc260">
+  <summary><span class="badge medium">medium</span> Single Number III — LeetCode 260</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Every element appears exactly twice except <em>two</em>
+    different elements that appear once each. Find both in O(n) time, O(1) space.</p>
+    <p><strong>Example.</strong> <code>[1,2,1,3,2,5]</code> → {3, 5}.</p>
+    <p class="code-title">XOR-all, then split on a differing bit · O(n)</p>
+<pre class="code"><code>public static int[] singleNumber(int[] nums) {
+    long xorAll = 0;                     // pairs cancel: xorAll == a ^ b
+    for (int x : nums) xorAll ^= x;
+
+    // Any set bit of a^b is a bit where a and b DIFFER. Take the lowest:
+    long diff = xorAll &amp; (-xorAll);      // (long guards Integer.MIN_VALUE)
+    int a = 0, b = 0;
+    for (int x : nums) {
+        if ((x &amp; diff) != 0) a ^= x;     // group with that bit set
+        else b ^= x;                     // group without it
+    }
+    // Every pair falls wholly into one group; a and b land in different
+    // groups — so each group's XOR is one lone survivor.
+    return new int[]{a, b};
+}</code></pre>
+    <p><strong>Takeaway.</strong> Completes the Single Number trilogy: I is XOR cancellation, II
+    counts bits mod 3, III <em>partitions</em> — the shared theme being that XOR aggregates
+    pairwise structure you can then pry apart. The split works because the chosen bit sends each
+    pair intact to one side (equal numbers share all bits) while separating a from b by
+    construction. <code>x &amp; −x</code> isolating the lowest set bit is the two's-complement gem to
+    remember. Mirror: <code>code/22-bit-manipulation/SingleNumberIII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc201">
+  <summary><span class="badge medium">medium</span> Bitwise AND of Numbers Range — LeetCode 201</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The AND of every integer in [left, right] — where the range can
+    span billions of values, so looping is out.</p>
+    <p><strong>Example.</strong> [5, 7] → 4 (101 &amp; 110 &amp; 111 = 100).
+    [1, 2147483647] → 0.</p>
+    <p class="code-title">Common binary prefix of the endpoints · O(log n)</p>
+<pre class="code"><code>public static int rangeBitwiseAnd(int left, int right) {
+    // Below the first bit where left and right disagree, every pattern
+    // occurs somewhere in the range — so each of those bits meets a 0
+    // and dies. What survives is the endpoints' COMMON PREFIX.
+    int shift = 0;
+    while (left != right) {         // strip differing low bits
+        left &gt;&gt;= 1;
+        right &gt;&gt;= 1;
+        shift++;
+    }
+    return left &lt;&lt; shift;           // common high prefix, zero-padded
+}</code></pre>
+    <p><strong>Takeaway.</strong> The insight is about what a <em>range</em> does to bits: crossing
+    from ...0111 to ...1000 zeroes an AND at every position below the disagreement, so only the
+    shared prefix can survive. Equivalent slick form: <code>while (left &lt; right) right &amp;=
+    right - 1;</code> — Kernighan's trick erasing right's low bits until it falls inside the prefix.
+    The brute-force cross-check in the mirror covers all small ranges.
+    Mirror: <code>code/22-bit-manipulation/BitwiseAndRange.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Precedence bites:</strong> <code>&amp;</code> binds <em>looser</em> than <code>==</code>, so
