@@ -201,12 +201,17 @@
   <tr><td><a href="07-binary-search.html#lc704">Binary Search</a></td><td>704</td><td><span class="badge easy">easy</span></td><td>The classic halving template.</td></tr>
   <tr><td><a href="07-binary-search.html#lc278">First Bad Version</a></td><td>278</td><td><span class="badge easy">easy</span></td><td>Boundary search: first index where the predicate flips to true.</td></tr>
   <tr><td><a href="07-binary-search.html#lc35">Search Insert Position</a></td><td>35</td><td><span class="badge easy">easy</span></td><td>lowerBound: first index with value ≥ target.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc69">Sqrt(x)</a></td><td>69</td><td><span class="badge easy">easy</span></td><td>Last k with k² ≤ x — answer-space search; cast to long before squaring.</td></tr>
   <tr><td><a href="07-binary-search.html#lc34">Find First and Last Position</a></td><td>34</td><td><span class="badge medium">medium</span></td><td>Two boundary searches: first ≥ target and first &gt; target.</td></tr>
   <tr><td><a href="07-binary-search.html#lc33">Search in Rotated Sorted Array</a></td><td>33</td><td><span class="badge medium">medium</span></td><td>One half is always sorted — decide which, then recurse into it.</td></tr>
   <tr><td><a href="07-binary-search.html#lc153">Find Minimum in Rotated Sorted Array</a></td><td>153</td><td><span class="badge medium">medium</span></td><td>Compare mid with the right end to find the unrotated minimum.</td></tr>
   <tr><td><a href="07-binary-search.html#lc875">Koko Eating Bananas</a></td><td>875</td><td><span class="badge medium">medium</span></td><td>Binary search the answer: “can Koko finish at speed s?” is monotonic.</td></tr>
   <tr><td><a href="07-binary-search.html#lc1011">Capacity To Ship Packages Within D Days</a></td><td>1011</td><td><span class="badge medium">medium</span></td><td>Search on capacity; each feasibility check is a greedy scan.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc74">Search a 2D Matrix</a></td><td>74</td><td><span class="badge medium">medium</span></td><td>Row-chained matrix = one sorted list; search the flat index.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc162">Find Peak Element</a></td><td>162</td><td><span class="badge medium">medium</span></td><td>No sortedness needed — the slope at mid is the direction oracle.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc540">Single Element in a Sorted Array</a></td><td>540</td><td><span class="badge medium">medium</span></td><td>Search where pair-start index parity flips from even to odd.</td></tr>
   <tr><td><a href="07-binary-search.html#lc4">Median of Two Sorted Arrays</a></td><td>4</td><td><span class="badge hard">hard</span></td><td>Partition both arrays so the left halves hold exactly half the elements.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc410">Split Array Largest Sum</a></td><td>410</td><td><span class="badge hard">hard</span></td><td>Minimize-the-max ⇒ binary search the cap + greedy feasibility.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> index lookups and LSM-tree reads (<a href="25-real-world-systems.html#db">databases</a>), autoscaling thresholds (<a href="25-real-world-systems.html#infra">infra</a>).</p>
