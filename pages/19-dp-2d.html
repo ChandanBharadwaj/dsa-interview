@@ -46,13 +46,7 @@
   <li><a href="17-shortest-paths.html">17 · Shortest Paths &amp; MST</a> — the "when is a grid problem DP vs BFS" decision.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you name the two dimensions?</strong> "Rows = prefix of word1, columns = prefix of word2" — stating what each axis means is the whole design.</li>
-  <li><strong>Do you handle row 0 / column 0</strong> (the empty-prefix base cases) deliberately, or do you off-by-one your way into a wrong table?</li>
-  <li><strong>Can you recognize a disguise?</strong> Partition Equal Subset Sum <em>is</em> knapsack; diff <em>is</em> LCS. Naming the reduction scores senior points.</li>
-  <li><strong>Space awareness:</strong> can you drop an O(m·n) table to one row — and explain why 0/1 knapsack's row must be filled right-to-left?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> grid DP, LCS, and edit distance are interview canon; the two-string table is the master template.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -342,11 +336,9 @@ subproblem does.</p>
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/unique-paths/">Unique Paths</a>
-    <span class="hint">Count paths on a DAG grid: add the two predecessor cells; first row/col are all 1.</span></div>
   <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/minimum-path-sum/">Minimum Path Sum</a>
     <span class="hint">Same grid, min instead of sum-of-ways — and it's DP (not BFS) because movement is restricted.</span></div>
   <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/longest-common-subsequence/">Longest Common Subsequence</a>
@@ -364,7 +356,7 @@ subproblem does.</p>
 </div>
 
 <details class="sol">
-  <summary>Worked solution — Unique Paths</summary>
+  <summary><span class="badge medium">medium</span> Unique Paths — LeetCode 62</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> count distinct right/down paths from the top-left to the bottom-right of an m×n grid.</p>
     <p><strong>Idea:</strong> every path enters a cell from above or from the left, and those path sets are disjoint —
@@ -392,7 +384,7 @@ public static int uniquePaths(int m, int n) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Minimum Path Sum</summary>
+  <summary><span class="badge medium">medium</span> Minimum Path Sum — LeetCode 64</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> cheapest right/down path from top-left to bottom-right, paying each visited cell's value.</p>
     <p><strong>Idea:</strong> dp[r][c] = cheapest cost to reach (r,c); take the cheaper of the two predecessors and add
@@ -403,7 +395,7 @@ public static int uniquePaths(int m, int n) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Longest Common Subsequence</summary>
+  <summary><span class="badge medium">medium</span> Longest Common Subsequence — LeetCode 1143</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> length of the longest sequence appearing in both strings in order (not necessarily contiguously).</p>
     <p><strong>Idea:</strong> compare last characters of the two prefixes: match → diagonal + 1; differ → best of
@@ -416,7 +408,7 @@ public static int uniquePaths(int m, int n) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Edit Distance</summary>
+  <summary><span class="badge medium">medium</span> Edit Distance — LeetCode 72</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> minimum single-character inserts, deletes and replaces to turn word1 into word2.</p>
     <p><strong>Idea:</strong> dp over prefix pairs; on matching last characters the diagonal transfers for free, otherwise
@@ -429,7 +421,7 @@ public static int uniquePaths(int m, int n) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Partition Equal Subset Sum</summary>
+  <summary><span class="badge medium">medium</span> Partition Equal Subset Sum — LeetCode 416</summary>
   <div class="sol-body">
     <p><strong>Problem:</strong> can the array split into two subsets with equal sums?</p>
     <p><strong>Idea:</strong> if some subset reaches total/2, the remaining elements are the other half — so this is
@@ -441,8 +433,119 @@ public static int uniquePaths(int m, int n) {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Coin Change II — LeetCode 518</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count the number of distinct <em>combinations</em> of coins that make
+    <code>amount</code> (each coin usable unlimited times; 1+2 and 2+1 are the same combination).</p>
+    <p><strong>Example.</strong> <code>amount=5, coins=[1,2,5]</code> → <code>4</code>
+    (5; 2+2+1; 2+1+1+1; 1+1+1+1+1). <code>amount=3, coins=[2]</code> → <code>0</code>.</p>
+    <p class="code-title">Unbounded knapsack counting — loop order is the whole trick · O(coins·amount)</p>
+<pre class="code"><code>// dp[a] = number of ways to build amount a with the coins processed SO FAR.
+// Loop order is the whole trick:
+//   coins OUTER, amounts inner  -&gt; each way is built in one fixed coin order = combinations
+//   amounts outer, coins inner  -&gt; 1+2 and 2+1 both counted = permutations (a different problem!)
+public static int change(int amount, int[] coins) {
+    int[] dp = new int[amount + 1];
+    dp[0] = 1;                                 // one way to make 0: use no coins
+    for (int coin : coins) {                   // commit to coins one at a time...
+        for (int a = coin; a &lt;= amount; a++) { // FORWARD loop = unbounded (coin reusable)
+            dp[a] += dp[a - coin];             // ways that use at least one more of this coin
+        }
+    }
+    return dp[amount];
+}</code></pre>
+    <p><strong>Takeaway.</strong> Contrast with the problems around it: Coin Change I
+    (<a href="18-dp-1d.html">page 18</a>) minimizes coins, this counts combinations; Partition Equal Subset
+    (0/1) loops amounts <em>backward</em> so each item is used once, while the forward loop here means
+    unlimited reuse. Two loop-direction decisions encode the entire knapsack family.
+    Mirror: <code>code/19-dp-2d/CoinChangeII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Interleaving String — LeetCode 97</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Is <code>s3</code> an interleaving of <code>s1</code> and
+    <code>s2</code> — formed by weaving their characters together while keeping each string's internal
+    order?</p>
+    <p><strong>Example.</strong> <code>s1="aabcc", s2="dbbca", s3="aadbbcbcac"</code> → true.
+    <code>s3="aadbbbaccc"</code> → false. Lengths must satisfy |s1|+|s2|=|s3| or it's instantly false.</p>
+    <p class="code-title">Two-index DP: who supplied each character of s3? · O(n·m)</p>
+<pre class="code"><code>public static boolean isInterleave(String s1, String s2, String s3) {
+    int n = s1.length(), m = s2.length();
+    if (n + m != s3.length()) return false;    // lengths must add up exactly
+
+    // dp[i][j] = can s1's first i chars + s2's first j chars interleave
+    // into s3's first i+j chars? (The position in s3 is DETERMINED: i+j.)
+    boolean[][] dp = new boolean[n + 1][m + 1];
+    dp[0][0] = true;                           // empty + empty = empty
+    for (int i = 0; i &lt;= n; i++) {
+        for (int j = 0; j &lt;= m; j++) {
+            if (i == 0 &amp;&amp; j == 0) continue;
+            char need = s3.charAt(i + j - 1);  // the character to explain
+            // It came from s1's i-th char...
+            boolean fromS1 = i &gt; 0 &amp;&amp; dp[i - 1][j] &amp;&amp; s1.charAt(i - 1) == need;
+            // ...or from s2's j-th char.
+            boolean fromS2 = j &gt; 0 &amp;&amp; dp[i][j - 1] &amp;&amp; s2.charAt(j - 1) == need;
+            dp[i][j] = fromS1 || fromS2;
+        }
+    }
+    return dp[n][m];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The insight that makes this 2D (not 3D): once you know how much of s1 (i)
+    and s2 (j) is consumed, the position in s3 is forced (i+j) — a hidden dependency that collapses a
+    dimension. Greedy two-pointer matching fails on inputs like s1="aa", s2="ab", s3="aaba", where you must
+    <em>choose</em> which 'a' to take — that choice is exactly what the DP table explores.
+    Mirror: <code>code/19-dp-2d/InterleavingString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Longest Palindromic Subsequence — LeetCode 516</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The longest <em>subsequence</em> (characters may be skipped, order
+    kept) of <code>s</code> that reads the same forwards and backwards.</p>
+    <p><strong>Example.</strong> <code>"bbbab"</code> → <code>4</code> ("bbbb").
+    <code>"cbbd"</code> → <code>2</code> ("bb").</p>
+
+    <p class="code-title">Variation 1 — reduce to LCS with the reverse · O(n²)</p>
+<pre class="code"><code>public static int longestPalindromeSubseqLCS(String s) {
+    // A palindromic subsequence of s reads the same in s and reverse(s) —
+    // so it IS a common subsequence of the two. The longest palindromic
+    // subsequence = LCS(s, reverse(s)). Reuse the LCS table wholesale.
+    String r = new StringBuilder(s).reverse().toString();
+    return longestCommonSubsequence(s, r);     // the LCS worked above
+}</code></pre>
+
+    <p class="code-title">Variation 2 — interval DP on [i..j] directly · O(n²)</p>
+<pre class="code"><code>public static int longestPalindromeSubseq(String s) {
+    int n = s.length();
+    // dp[i][j] = longest palindromic subsequence within s[i..j].
+    int[][] dp = new int[n][n];
+    for (int i = n - 1; i &gt;= 0; i--) {         // i sweeps RIGHT-to-LEFT so
+        dp[i][i] = 1;                          // dp[i+1][...] is ready when needed
+        for (int j = i + 1; j &lt; n; j++) {
+            if (s.charAt(i) == s.charAt(j))
+                // Matching ends wrap the best interior answer
+                dp[i][j] = dp[i + 1][j - 1] + 2;
+            else
+                // Drop one end or the other — keep the better
+                dp[i][j] = Math.max(dp[i + 1][j], dp[i][j - 1]);
+        }
+    }
+    return dp[0][n - 1];                       // the whole string
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two lenses on one problem: the reduction reuses machinery you already have
+    (LCS with the reverse), while the interval form previews <a href="20-dp-advanced.html">page 20</a> —
+    state = a range, solved shorter-ranges-first. Also lock in the vocabulary: palindromic
+    <em>substring</em> is contiguous (<a href="14-strings-advanced.html">page 14</a>); subsequence allows
+    gaps and is DP territory. Mirror: <code>code/19-dp-2d/LongestPalindromicSubseq.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>dp indices are prefix lengths, not char indices.</strong> dp[i][j] speaks of the first i and j characters, so the characters compared are <code>a.charAt(i-1)</code> and <code>b.charAt(j-1)</code>. Mixing these up is the #1 two-string DP bug.</li>
   <li><strong>Write row 0 and column 0 first, on the whiteboard.</strong> LCS: zeros. Edit distance: 0..m and 0..n. Grids: running sums. Knapsack: base row all 0 / dp[0]=true. Wrong borders poison the whole table silently.</li>
