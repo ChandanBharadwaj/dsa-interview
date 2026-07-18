@@ -3,7 +3,9 @@
 A complete, self-contained data-structures & algorithms interview prep site for an
 experienced Java engineer starting from zero DSA background.
 
-**Start here → open [`index.html`](index.html) in any browser.** No build step, no
+**Live site → https://chandanbharadwaj.github.io/dsa-interview/**
+
+**Or locally → open [`index.html`](index.html) in any browser.** No build step, no
 server, no internet needed — everything (styles, scripts, SVG animations) is local.
 
 ## What's inside
