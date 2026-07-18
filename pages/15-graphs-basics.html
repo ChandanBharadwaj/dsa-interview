@@ -282,6 +282,33 @@ private static void fill(int[][] img, int r, int c, int from, int to) {
   </div>
 </details>
 
+<details class="sol" id="lc463">
+  <summary><span class="badge easy">easy</span> Island Perimeter — LeetCode 463</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> One island of 1s in a grid (no lakes) — compute its perimeter.</p>
+    <p><strong>Example.</strong> The classic cross-shaped island → 16. A single cell → 4.
+    Two cells side by side → 6.</p>
+    <p class="code-title">Count sides arithmetically — no traversal · O(mn)</p>
+<pre class="code"><code>public static int islandPerimeter(int[][] grid) {
+    int perimeter = 0;
+    for (int r = 0; r &lt; grid.length; r++)
+        for (int c = 0; c &lt; grid[0].length; c++) {
+            if (grid[r][c] == 0) continue;
+            perimeter += 4;                    // each land cell: 4 sides...
+            // ...minus 2 per shared edge (checking up+left counts each once)
+            if (r &gt; 0 &amp;&amp; grid[r - 1][c] == 1) perimeter -= 2;
+            if (c &gt; 0 &amp;&amp; grid[r][c - 1] == 1) perimeter -= 2;
+        }
+    return perimeter;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Not every grid problem needs DFS: the perimeter is a local
+    counting fact (4 per cell, −2 per adjacency), so a plain scan suffices. Checking only up and left
+    counts each shared edge exactly once — the same each-pair-once discipline as counting edges in
+    any graph. Recognizing "no connectivity question here" saves you from over-engineering.
+    Mirror: <code>code/15-graphs-basics/IslandPerimeter.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc200">
   <summary><span class="badge medium">medium</span> Number of Islands — LeetCode 200</summary>
   <div class="sol-body">
@@ -562,6 +589,153 @@ private static void climb(int[][] h, boolean[][] seen, int r, int c) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc130">
+  <summary><span class="badge medium">medium</span> Surrounded Regions — LeetCode 130</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Capture (flip to X) every region of O's fully surrounded by X's.
+    Regions touching the board's border are not surrounded and survive.</p>
+    <p><strong>Example.</strong> In a 4×4 board, the interior O-blob flips; the O on the bottom
+    border stays.</p>
+    <p class="code-title">Flood from the border, flip the unmarked · O(mn)</p>
+<pre class="code"><code>public static void solve(char[][] board) {
+    int rows = board.length, cols = board[0].length;
+    // Invert the question: an O survives iff it CONNECTS TO THE BORDER.
+    for (int r = 0; r &lt; rows; r++) {           // flood from all border O's
+        mark(board, r, 0);
+        mark(board, r, cols - 1);
+    }
+    for (int c = 0; c &lt; cols; c++) {
+        mark(board, 0, c);
+        mark(board, rows - 1, c);
+    }
+    for (int r = 0; r &lt; rows; r++)
+        for (int c = 0; c &lt; cols; c++) {
+            if (board[r][c] == 'O') board[r][c] = 'X';       // trapped: capture
+            else if (board[r][c] == 'S') board[r][c] = 'O';  // safe: restore
+        }
+}
+
+private static void mark(char[][] b, int r, int c) {
+    if (r &lt; 0 || r &gt;= b.length || c &lt; 0 || c &gt;= b[0].length || b[r][c] != 'O')
+        return;
+    b[r][c] = 'S';                              // safe — reaches the border
+    mark(b, r + 1, c);
+    mark(b, r - 1, c);
+    mark(b, r, c + 1);
+    mark(b, r, c - 1);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Chasing "is this region surrounded?" directly is awkward; chasing
+    the <em>complement</em> — "which O's escape?" — is one border flood. The same
+    solve-the-complement-from-the-boundary move as Pacific Atlantic (above). The in-board 'S' marker
+    doubles as the visited set, and the final sweep resolves everything in one pass.
+    Mirror: <code>code/15-graphs-basics/SurroundedRegions.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc909">
+  <summary><span class="badge medium">medium</span> Snakes and Ladders — LeetCode 909</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> An n×n board numbered 1..n² boustrophedon-style (bottom row
+    left→right, next row right→left, …). From square s you may move to s+1..s+6; landing on a snake
+    or ladder teleports you. Minimum dice rolls from 1 to n², or −1.</p>
+    <p><strong>Example.</strong> The standard 6×6 test board → 4 rolls.</p>
+    <p class="code-title">BFS over squares; the grid is just a lookup table · O(n²)</p>
+<pre class="code"><code>public static int snakesAndLadders(int[][] board) {
+    int n = board.length;
+    boolean[] visited = new boolean[n * n + 1];
+    Queue&lt;Integer&gt; q = new ArrayDeque&lt;&gt;();
+    q.offer(1);
+    visited[1] = true;
+    int moves = 0;
+    while (!q.isEmpty()) {
+        int size = q.size();
+        for (int i = 0; i &lt; size; i++) {
+            int square = q.poll();
+            if (square == n * n) return moves;
+            for (int die = 1; die &lt;= 6 &amp;&amp; square + die &lt;= n * n; die++) {
+                int next = square + die;
+                int dest = value(board, n, next);       // snake/ladder reroute
+                int land = dest == -1 ? next : dest;
+                // visited is keyed on where you LAND, after the teleport
+                if (!visited[land]) {
+                    visited[land] = true;
+                    q.offer(land);
+                }
+            }
+        }
+        moves++;
+    }
+    return -1;
+}
+
+// Square number -&gt; cell: numbering starts at the BOTTOM row and alternates.
+private static int value(int[][] board, int n, int square) {
+    int idx = square - 1;
+    int rowFromBottom = idx / n;
+    int r = n - 1 - rowFromBottom;
+    int c = idx % n;
+    if (rowFromBottom % 2 == 1)                 // odd rows run right-to-left
+        c = n - 1 - c;
+    return board[r][c];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The graph is <em>implicit</em> — nodes are square numbers, edges
+    are dice rolls — and the 2D board exists only as a coordinate-translation nuisance. Isolating
+    that translation in one function keeps the BFS textbook-clean. Two classic bugs: marking visited
+    on the pre-teleport square, and taking a ladder "partially" (you must follow it).
+    Mirror: <code>code/15-graphs-basics/SnakesAndLadders.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc127">
+  <summary><span class="badge hard">hard</span> Word Ladder — LeetCode 127</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Transform beginWord into endWord, one letter per step, every
+    intermediate word in the dictionary. Return the shortest chain's length (counting both ends), or
+    0.</p>
+    <p><strong>Example.</strong> hit → cog via ["hot","dot","dog","lot","log","cog"] → 5
+    (hit→hot→dot→dog→cog).</p>
+    <p class="code-title">BFS, generating 25·L neighbors per word · O(N · L · 26)</p>
+<pre class="code"><code>public static int ladderLength(String beginWord, String endWord, List&lt;String&gt; wordList) {
+    Set&lt;String&gt; dict = new HashSet&lt;&gt;(wordList);
+    if (!dict.contains(endWord)) return 0;
+
+    Queue&lt;String&gt; q = new ArrayDeque&lt;&gt;();
+    q.offer(beginWord);
+    Set&lt;String&gt; visited = new HashSet&lt;&gt;();
+    visited.add(beginWord);
+    int steps = 1;                              // words in the chain so far
+    while (!q.isEmpty()) {
+        int size = q.size();
+        for (int i = 0; i &lt; size; i++) {
+            String word = q.poll();
+            if (word.equals(endWord)) return steps;
+            char[] chars = word.toCharArray();
+            for (int pos = 0; pos &lt; chars.length; pos++) {
+                char original = chars[pos];
+                for (char c = 'a'; c &lt;= 'z'; c++) {
+                    if (c == original) continue;
+                    chars[pos] = c;             // try each one-letter mutation
+                    String next = new String(chars);
+                    if (dict.contains(next) &amp;&amp; visited.add(next))
+                        q.offer(next);
+                }
+                chars[pos] = original;          // restore before next position
+            }
+        }
+        steps++;
+    }
+    return 0;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The modeling step is the hard part: words are nodes, one-letter
+    edits are edges, and "shortest transformation" is unweighted shortest path = BFS. Then an
+    efficiency insight: don't compare all word pairs (O(N²·L)) — <em>generate</em> each word's 25·L
+    mutations and test set membership. Named follow-up: bidirectional BFS, expanding the smaller
+    frontier from both ends, cuts the search space roughly to its square root.
+    Mirror: <code>code/15-graphs-basics/WordLadder.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Visited on enqueue, not on poll</strong> (BFS). Repeat it like a mantra — it's the most common graph bug in interviews.</li>
