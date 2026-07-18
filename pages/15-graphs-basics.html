@@ -46,13 +46,7 @@
   <li><a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a> — BFS runs on a queue, iterative DFS on a stack</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li>Can you <strong>build the graph</strong> from the problem's raw input (edge list, grid, word list) before traversing it?</li>
-  <li>Do you place the <strong>visited check at the right moment</strong> (the #1 graph bug — details below)?</li>
-  <li>Do you know <strong>BFS gives shortest paths</strong> in unweighted graphs, and why DFS doesn't?</li>
-  <li>Can you state <strong>O(V + E)</strong> and explain it (each node and each edge touched once)?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> nearly every senior loop includes a graph question; building the graph and placing the visited check correctly are the tested skills.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -251,33 +245,51 @@ for (int[] e : edges) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/flood-fill/">Flood Fill</a>
-    <span class="hint">The paint bucket: DFS from the start pixel, repaint everything connected with the same color.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/number-of-islands/">Number of Islands</a>
-    <span class="hint">Worked below — count components; sink each island as you find it.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/max-area-of-island/">Max Area of Island</a>
-    <span class="hint">Same flood fill, but the DFS returns 1 + sum of neighbor areas.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/rotting-oranges/">Rotting Oranges</a>
-    <span class="hint">Worked below — multi-source BFS; layers are minutes.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/clone-graph/">Clone Graph</a>
-    <span class="hint">Worked below — the original→clone HashMap doubles as the visited set.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/01-matrix/">01 Matrix</a>
-    <span class="hint">Distance-to-nearest-0 for every cell: seed ALL zeros (multi-source BFS), never BFS per cell.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/pacific-atlantic-water-flow/">Pacific Atlantic Water Flow</a>
-    <span class="hint">Reverse the flow: DFS inland from each ocean's border cells; answer = cells reached by both.</span></div>
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/shortest-path-in-binary-matrix/">Shortest Path in Binary Matrix</a>
-    <span class="hint">8-directional BFS — worked on <a href="17-shortest-paths.html">page 17</a> as the BFS-vs-DP showcase.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>Worked solution: Number of Islands (DFS flood fill) — Medium</summary>
+  <summary><span class="badge easy">easy</span> Flood Fill — LeetCode 733</summary>
   <div class="sol-body">
-    <p><strong>Problem.</strong> Grid of '1' (land) and '0' (water) — count islands (4-directionally connected land).</p>
-    <p><strong>Idea.</strong> The grid IS a graph; islands are connected components. Scan every cell; each time you
-    find un-visited land, that's a new island — flood-fill (DFS) sinks the whole component so it's never recounted.</p>
+    <p><strong>The problem.</strong> The paint-bucket tool: starting from pixel (sr, sc), recolor it and
+    every 4-directionally connected pixel <em>of the same original color</em> to the new color.</p>
+    <p><strong>Example.</strong> image <code>[[1,1,1],[1,1,0],[1,0,1]]</code>, start (1,1), color 2 →
+    <code>[[2,2,2],[2,2,0],[2,0,1]]</code> (the bottom-right 1 isn't connected).</p>
+    <p class="code-title">DFS recolor · O(m·n) time, O(m·n) stack worst case</p>
+<pre class="code"><code>public static int[][] floodFill(int[][] image, int sr, int sc, int color) {
+    int original = image[sr][sc];
+    // Edge case that catches everyone: if the new color EQUALS the old,
+    // recursion would re-visit painted cells forever. Nothing to do.
+    if (original != color) fill(image, sr, sc, original, color);
+    return image;
+}
+
+private static void fill(int[][] img, int r, int c, int from, int to) {
+    if (r &lt; 0 || r &gt;= img.length || c &lt; 0 || c &gt;= img[0].length
+            || img[r][c] != from)     // off-grid or not part of the region
+        return;
+    img[r][c] = to;                   // paint = mark visited, in one move
+    fill(img, r + 1, c, from, to);
+    fill(img, r - 1, c, from, to);
+    fill(img, r, c + 1, from, to);
+    fill(img, r, c - 1, from, to);
+}</code></pre>
+    <p><strong>Takeaway.</strong> The gentlest possible graph problem: the recolor doubles as the visited
+    marker, so no extra structure is needed. The same-color early return is the one edge case — without it
+    the recursion never terminates. Islands (next) is this exact code with counting on top.
+    Mirror: <code>code/15-graphs-basics/FloodFill.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Number of Islands — LeetCode 200</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Grid of '1' (land) and '0' (water) — count the islands
+    (4-directionally connected groups of land).</p>
+    <p><strong>Example.</strong> <code>[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]</code>
+    → <code>3</code>.</p>
+    <p class="code-title">Scan + sink each new island · O(m·n)</p>
 <pre class="code"><code>public static int numIslands(char[][] grid) {
     int rows = grid.length, cols = grid[0].length;
     int islands = 0;
@@ -304,19 +316,55 @@ private static void sink(char[][] grid, int r, int c) {
     sink(grid, r, c + 1);         // right
     sink(grid, r, c - 1);         // left
 }</code></pre>
-    <p><strong>Complexity.</strong> Time O(rows·cols) — each cell visited a constant number of times. Space
-    O(rows·cols) worst case for the recursion (one giant snake-shaped island). Mention that mutating the input is a
-    choice — offer a separate <code>boolean[][] visited</code> if the interviewer objects.</p>
+    <p><strong>Takeaway.</strong> "Count the islands" = "count connected components": each un-visited land
+    cell you meet starts exactly one component, and sinking it guarantees it's never recounted. Offer a
+    separate <code>boolean[][] visited</code> if mutating the input is off-limits — or union-find
+    (<a href="16-graphs-advanced.html">page 16</a>) if islands must merge dynamically.
+    Mirror: <code>code/15-graphs-basics/NumberOfIslands.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Rotting Oranges (multi-source BFS) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Max Area of Island — LeetCode 695</summary>
   <div class="sol-body">
-    <p><strong>Problem.</strong> Fresh (1) and rotten (2) oranges; each minute rot spreads to adjacent fresh oranges.
-    Minutes until nothing fresh remains, or −1 if impossible.</p>
-    <p><strong>Idea.</strong> Seed the queue with ALL initially-rotten oranges (they all rot outward simultaneously),
-    then expand one BFS layer per minute — BFS layers ARE elapsed time.</p>
+    <p><strong>The problem.</strong> Same grid setup (1 = land), but return the <em>area</em> of the largest
+    island (0 if there's no land).</p>
+    <p><strong>Example.</strong> A grid whose biggest connected patch has six 1s → <code>6</code>.</p>
+    <p class="code-title">Flood fill that returns its size · O(m·n)</p>
+<pre class="code"><code>public static int maxAreaOfIsland(int[][] grid) {
+    int best = 0;
+    for (int r = 0; r &lt; grid.length; r++)
+        for (int c = 0; c &lt; grid[0].length; c++)
+            if (grid[r][c] == 1)
+                best = Math.max(best, area(grid, r, c));
+    return best;
+}
+
+// Like sink(), but each call RETURNS the size of what it consumed:
+// this cell (1) plus everything reachable in the four directions.
+private static int area(int[][] g, int r, int c) {
+    if (r &lt; 0 || r &gt;= g.length || c &lt; 0 || c &gt;= g[0].length || g[r][c] != 1)
+        return 0;                          // contributes nothing
+    g[r][c] = 0;                           // consume the cell
+    return 1 + area(g, r + 1, c) + area(g, r - 1, c)
+             + area(g, r, c + 1) + area(g, r, c - 1);
+}</code></pre>
+    <p><strong>Takeaway.</strong> One structural change from Islands: the DFS <em>returns a value</em>
+    (1 + children's areas) instead of just marking. That count-what-you-consume shape is the bottom-up
+    pattern from trees (<a href="11-trees.html">page 11</a>) transplanted to a grid.
+    Mirror: <code>code/15-graphs-basics/MaxAreaIsland.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Rotting Oranges — LeetCode 994</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Fresh (1) and rotten (2) oranges in a grid; every minute, rot spreads to
+    fresh oranges adjacent to rotten ones. Return the minutes until nothing fresh remains, or −1 if some
+    orange can never rot.</p>
+    <p><strong>Example.</strong> <code>[[2,1,1],[1,1,0],[0,1,1]]</code> → <code>4</code>.
+    <code>[[2,1,1],[0,1,1],[1,0,1]]</code> → <code>-1</code> (bottom-left orange is cut off).</p>
+    <p class="code-title">Multi-source BFS — layers are minutes · O(m·n)</p>
 <pre class="code"><code>public static int orangesRotting(int[][] grid) {
     int rows = grid.length, cols = grid[0].length;
     Queue&lt;int[]&gt; queue = new ArrayDeque&lt;&gt;();
@@ -350,18 +398,68 @@ private static void sink(char[][] grid, int r, int c) {
     }
     return fresh == 0 ? minutes : -1; // stranded fresh orange -&gt; impossible
 }</code></pre>
-    <p><strong>Complexity.</strong> Time O(rows·cols), space O(rows·cols) for the queue. The
-    <code>fresh &gt; 0</code> loop guard avoids counting a final minute where nothing spreads.</p>
+    <p><strong>Takeaway.</strong> When spreading starts from <em>many</em> sources at once, seed them all
+    before the loop — BFS then computes time-to-nearest-source everywhere in one pass, no per-source rerun.
+    The frozen-layer trick (<a href="11-trees.html">page 11</a>) converts layers into minutes.
+    Mirror: <code>code/15-graphs-basics/RottingOranges.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Clone Graph (BFS + HashMap) — Medium</summary>
+  <summary><span class="badge medium">medium</span> 01 Matrix — LeetCode 542</summary>
   <div class="sol-body">
-    <p><strong>Problem.</strong> Deep-copy an undirected graph given one node reference.</p>
-    <p><strong>Idea.</strong> The trap is cycles — blind recursion clones forever. Keep a HashMap
-    original → clone that doubles as the visited set: clone a node the first time you see it, and always wire edges
-    between <em>clones</em>.</p>
+    <p><strong>The problem.</strong> For every cell of a binary matrix, compute the distance to the nearest 0
+    (steps in 4 directions).</p>
+    <p><strong>Example.</strong> <code>[[0,0,0],[0,1,0],[1,1,1]]</code> →
+    <code>[[0,0,0],[0,1,0],[1,2,1]]</code>.</p>
+
+    <p class="code-title">Variation 1 — BFS from each 1 · O((m·n)²), too slow</p>
+<pre class="code"><code>// Running a fresh BFS from every 1-cell repeats enormous work: two
+// adjacent 1s explore nearly identical regions. Flip the direction —
+// don't ask "how far is each 1 from a 0?", ask "how far does each 0 reach?"</code></pre>
+
+    <p class="code-title">Variation 2 — one multi-source BFS from all zeros (optimal) · O(m·n)</p>
+<pre class="code"><code>public static int[][] updateMatrix(int[][] mat) {
+    int m = mat.length, n = mat[0].length;
+    int[][] dist = new int[m][n];
+    Queue&lt;int[]&gt; queue = new ArrayDeque&lt;&gt;();
+
+    // Seed EVERY zero at distance 0; mark unknowns with -1 ("unvisited").
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++) {
+            if (mat[r][c] == 0) queue.offer(new int[]{r, c});
+            else dist[r][c] = -1;
+        }
+
+    int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
+    while (!queue.isEmpty()) {
+        int[] cell = queue.poll();
+        for (int[] d : dirs) {
+            int nr = cell[0] + d[0], nc = cell[1] + d[1];
+            if (nr &lt; 0 || nr &gt;= m || nc &lt; 0 || nc &gt;= n
+                    || dist[nr][nc] != -1) continue;   // out of grid or settled
+            // First arrival wins: BFS guarantees this is the shortest way in
+            dist[nr][nc] = dist[cell[0]][cell[1]] + 1;
+            queue.offer(new int[]{nr, nc});
+        }
+    }
+    return dist;
+}</code></pre>
+    <p><strong>Takeaway.</strong> "Distance to the nearest X, for everyone" is the signature of multi-source
+    BFS: seed all X at 0 and expand once. The reversal — search <em>from</em> the targets instead of from
+    each query point — is a general trick (Pacific Atlantic below uses it too).
+    Mirror: <code>code/15-graphs-basics/ZeroOneMatrix.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Clone Graph — LeetCode 133</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Deep-copy an undirected graph from one node reference: new node objects,
+    identical wiring.</p>
+    <p><strong>Example.</strong> The square 1–2–3–4–1 must come back as four <em>new</em> nodes wired the
+    same way.</p>
+    <p class="code-title">BFS + original→clone map · O(V+E)</p>
 <pre class="code"><code>static class Node {
     int val;
     List&lt;Node&gt; neighbors = new ArrayList&lt;&gt;();
@@ -389,20 +487,89 @@ public static Node cloneGraph(Node node) {
     }
     return clones.get(node);
 }</code></pre>
-    <p><strong>Complexity.</strong> Time O(V + E), space O(V) for the map + queue. The same map-as-visited trick
-    powers "Copy List with Random Pointer" (<a href="08-linked-lists.html">page 08</a>) — say so for pattern credit.</p>
+    <p><strong>Takeaway.</strong> Cycles are the trap — blind recursion clones forever. The original→clone
+    map breaks them by doubling as the visited set, the same trick as Copy List with Random Pointer
+    (<a href="08-linked-lists.html">page 08</a>).
+    Mirror: <code>code/15-graphs-basics/CloneGraph.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Pacific Atlantic Water Flow — LeetCode 417</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Heights on an island; the Pacific touches the top and left edges, the
+    Atlantic the bottom and right. Water flows from a cell to a neighbor of <em>equal or lower</em> height.
+    Return all cells from which water can reach <strong>both</strong> oceans.</p>
+    <p><strong>Example.</strong> For the classic 5×5 heights grid, the answer is the ridge cells like (0,4),
+    (1,3), (1,4), (2,2), (3,0), (3,1), (4,0).</p>
+    <p class="code-title">Reverse the flow: DFS uphill from each ocean's coast · O(m·n)</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; pacificAtlantic(int[][] heights) {
+    int m = heights.length, n = heights[0].length;
+    // reachable[ocean][r][c]: can water from (r,c) reach that ocean?
+    // We compute it BACKWARDS: walk uphill from the coastlines.
+    boolean[][] pac = new boolean[m][n];
+    boolean[][] atl = new boolean[m][n];
+
+    for (int r = 0; r &lt; m; r++) {
+        climb(heights, pac, r, 0);          // Pacific: left edge
+        climb(heights, atl, r, n - 1);      // Atlantic: right edge
+    }
+    for (int c = 0; c &lt; n; c++) {
+        climb(heights, pac, 0, c);          // Pacific: top edge
+        climb(heights, atl, m - 1, c);      // Atlantic: bottom edge
+    }
+
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++)
+            if (pac[r][c] &amp;&amp; atl[r][c])     // reaches BOTH oceans
+                res.add(List.of(r, c));
+    return res;
+}
+
+// DFS marking every cell that can drain to this ocean. Because we walk
+// FROM the ocean, the move condition flips: we may only step UPHILL
+// (neighbor height &gt;= current) — the reverse of water flowing down.
+private static void climb(int[][] h, boolean[][] seen, int r, int c) {
+    if (seen[r][c]) return;
+    seen[r][c] = true;
+    int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
+    for (int[] d : dirs) {
+        int nr = r + d[0], nc = c + d[1];
+        if (nr &lt; 0 || nr &gt;= h.length || nc &lt; 0 || nc &gt;= h[0].length) continue;
+        if (h[nr][nc] &gt;= h[r][c])           // uphill or flat — water could
+            climb(h, seen, nr, nc);         // have flowed the other way
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Simulating flow from every cell is O((mn)²); flowing <em>backwards from
+    the oceans</em> makes it two traversals total. Reversing the direction of search — from targets instead
+    of sources, flipping the edge condition — is one of the highest-leverage graph tricks.
+    Mirror: <code>code/15-graphs-basics/PacificAtlantic.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Shortest Path in Binary Matrix — LeetCode 1091</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Shortest 8-directionally connected path of 0-cells from the top-left to
+    the bottom-right corner of an n×n grid (path length counts cells), or −1.</p>
+    <p><strong>Example.</strong> <code>[[0,1],[1,0]]</code> → 2 (a diagonal step).</p>
+    <p>This is the flagship "BFS, not DP" problem — fully worked on
+    <a href="17-shortest-paths.html#problems">page 17</a>, where the free 8-directional movement (vs
+    the right/down-only movement that permits grid DP) is exactly the decision being taught.
+    Mirror: <code>code/17-shortest-paths/ShortestPathBinaryMatrix.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Visited on enqueue, not on poll</strong> (BFS). Repeat it like a mantra — it's the most common graph bug in interviews.</li>
   <li><strong>Build the graph first.</strong> Don't traverse edge lists directly; spend the O(E) to build an adjacency list and the rest of the code writes itself.</li>
-  <li><strong>Deep recursion can crash.</strong> A 300×300 grid can recurse ~90,000 deep — beyond Java's default stack. Mention the iterative (explicit stack) rewrite; writing it is rarely required, knowing it is.</li>
+  <li><strong>Deep recursion can crash.</strong> A 300×300 grid can recurse ~90,000 deep — beyond Java's default stack. Know the iterative (explicit stack) rewrite.</li>
   <li><strong>Directions array beats eight ifs.</strong> <code>int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}}</code> — less code, fewer typos, easy 8-direction upgrade.</li>
   <li><strong>Weighted edges ⇒ BFS is wrong.</strong> The moment steps have different costs, switch to Dijkstra — that's the opening insight of <a href="17-shortest-paths.html">page 17</a>.</li>
-  <li><strong>Say the complexity as a formula:</strong> "O(V + E) — every node dequeued once, every edge relaxed once (twice if undirected)."</li>
+  <li><strong>The complexity formula:</strong> O(V + E) — every node dequeued once, every edge examined once (twice if undirected).</li>
 </ul>
 
 <nav class="pager">
