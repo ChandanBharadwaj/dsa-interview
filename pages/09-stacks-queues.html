@@ -419,6 +419,62 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc496">
+  <summary><span class="badge easy">easy</span> Next Greater Element I — LeetCode 496</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> nums1 is a subset of nums2 (all values distinct). For each
+    element of nums1, find the first greater element to its right <em>in nums2</em> (−1 if none).</p>
+    <p><strong>Example.</strong> nums1 <code>[4,1,2]</code>, nums2 <code>[1,3,4,2]</code> →
+    <code>[-1,3,-1]</code>.</p>
+    <p class="code-title">Monotonic decreasing stack + answer map · O(n)</p>
+<pre class="code"><code>public static int[] nextGreaterElement(int[] nums1, int[] nums2) {
+    Map&lt;Integer, Integer&gt; nextGreater = new HashMap&lt;&gt;();
+    Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();     // values, decreasing
+    for (int x : nums2) {
+        // x arriving resolves EVERY smaller value still waiting:
+        while (!stack.isEmpty() &amp;&amp; stack.peek() &lt; x)
+            nextGreater.put(stack.pop(), x);
+        stack.push(x);                             // x now waits for ITS greater
+    }
+    int[] out = new int[nums1.length];             // still on the stack -&gt; -1
+    for (int i = 0; i &lt; nums1.length; i++)
+        out[i] = nextGreater.getOrDefault(nums1[i], -1);
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The monotonic stack's hello-world: each element is pushed once and
+    popped once, so "next greater for everyone" costs O(n) total — not O(n²). Daily Temperatures
+    (below) is the same loop storing indices; the circular variant (LC 503) just runs the array
+    twice. If you can narrate <em>why</em> the stack stays decreasing, you own the pattern.
+    Mirror: <code>code/09-stacks-queues/NextGreaterElementI.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc225">
+  <summary><span class="badge easy">easy</span> Implement Stack using Queues — LeetCode 225</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Build a LIFO stack using only queue operations (offer, poll,
+    peek, isEmpty).</p>
+    <p><strong>Example.</strong> push(1), push(2), top() → 2, pop() → 2, empty() → false.</p>
+    <p class="code-title">One queue, rotate after each push · push O(n), pop/top O(1)</p>
+<pre class="code"><code>private final Queue&lt;Integer&gt; q = new ArrayDeque&lt;&gt;();
+
+public void push(int x) {
+    q.offer(x);
+    for (int i = 0; i &lt; q.size() - 1; i++)   // rotate the older elements
+        q.offer(q.poll());                   // around behind x
+}
+
+public int pop() { return q.poll(); }        // head is always the newest
+public int top() { return q.peek(); }
+public boolean empty() { return q.isEmpty(); }</code></pre>
+    <p><strong>Takeaway.</strong> The inverse of Implement Queue using Stacks (above), and the
+    asymmetry is the lesson: two stacks give queues <em>amortized</em> O(1), but queues can't return
+    the favor — one adapter direction is cheap, the other pays O(n) somewhere. Choosing where to pay
+    (push vs pop) is the interview follow-up; rotating on push keeps all reads O(1).
+    Mirror: <code>code/09-stacks-queues/StackUsingQueues.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc150">
   <summary><span class="badge medium">medium</span> Evaluate Reverse Polish Notation — LeetCode 150</summary>
   <div class="sol-body">
@@ -571,6 +627,155 @@ private static void build(List&lt;String&gt; res, StringBuilder sb, int open, in
     invalid prefix — the <code>close &lt; open</code> guard is the stack invariant enforced at build time.
     Pruning during generation beats generate-then-filter (2²ⁿ strings) by an enormous margin.
     Mirror: <code>code/09-stacks-queues/GenerateParentheses.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc735">
+  <summary><span class="badge medium">medium</span> Asteroid Collision — LeetCode 735</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Asteroids in a row; sign is direction (+ right, − left),
+    magnitude is size. Equal sizes destroy both; otherwise the smaller explodes. Return the
+    survivors.</p>
+    <p><strong>Example.</strong> <code>[5,10,-5]</code> → <code>[5,10]</code>.
+    <code>[10,2,-5]</code> → <code>[10]</code>. <code>[8,-8]</code> → <code>[]</code>.</p>
+    <p class="code-title">Stack of survivors; resolve on right-meets-left · O(n)</p>
+<pre class="code"><code>public static int[] asteroidCollision(int[] asteroids) {
+    Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+    for (int a : asteroids) {
+        boolean alive = true;
+        // Only "stack top → right, newcomer ← left" ever collides.
+        while (alive &amp;&amp; a &lt; 0 &amp;&amp; !stack.isEmpty() &amp;&amp; stack.peek() &gt; 0) {
+            int top = stack.peek();
+            if (top &lt; -a)                // top smaller — it explodes,
+                stack.pop();             // newcomer keeps plowing left
+            else if (top == -a) {        // equal — both explode
+                stack.pop();
+                alive = false;
+            } else                       // top bigger — newcomer dies
+                alive = false;
+        }
+        if (alive) stack.push(a);
+    }
+    int[] out = new int[stack.size()];   // bottom-to-top = left-to-right
+    for (int i = out.length - 1; i &gt;= 0; i--)
+        out[i] = stack.pop();
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> A monotonic-stack cousin where the "pop condition" is a physics
+    rule instead of a comparison: the stack holds asteroids whose fate isn't settled, and each
+    newcomer resolves as many as it can. The enumeration discipline — exactly one of four
+    sign-pairs collides — is where solutions go wrong; -2,-1 sailing past 1,2 (no collision) is the
+    test to check. Mirror: <code>code/09-stacks-queues/AsteroidCollision.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc394">
+  <summary><span class="badge medium">medium</span> Decode String — LeetCode 394</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Decode <code>k[segment]</code> notation, where segment repeats k
+    times and brackets nest arbitrarily.</p>
+    <p><strong>Example.</strong> "3[a]2[bc]" → "aaabcbc". "3[a2[c]]" → "accaccacc".</p>
+    <p class="code-title">Two stacks: pending counts + pending prefixes · O(output)</p>
+<pre class="code"><code>public static String decodeString(String s) {
+    Deque&lt;Integer&gt; counts = new ArrayDeque&lt;&gt;();
+    Deque&lt;StringBuilder&gt; prefixes = new ArrayDeque&lt;&gt;();
+    StringBuilder curr = new StringBuilder();
+    int num = 0;
+    for (char c : s.toCharArray()) {
+        if (c &gt;= '0' &amp;&amp; c &lt;= '9') {
+            num = num * 10 + (c - '0');       // multi-digit counts ("10[a]")
+        } else if (c == '[') {
+            counts.push(num);                 // save the outer context
+            prefixes.push(curr);
+            num = 0;
+            curr = new StringBuilder();       // build the inner segment fresh
+        } else if (c == ']') {
+            StringBuilder inner = curr;
+            curr = prefixes.pop();            // restore the outer segment
+            int k = counts.pop();
+            for (int i = 0; i &lt; k; i++)       // append k copies of the inner
+                curr.append(inner);
+        } else {
+            curr.append(c);
+        }
+    }
+    return curr.toString();
+}</code></pre>
+    <p><strong>Takeaway.</strong> Nesting = recursion = a stack; here the "call frame" is the pair
+    (pending count, string built so far), saved at '[' and restored at ']'. This save/restore shape
+    is exactly how interpreters and JSON/XML parsers handle nested structure. Watch multi-digit
+    numbers — "10[a]" breaks the <code>num = c - '0'</code> shortcut.
+    Mirror: <code>code/09-stacks-queues/DecodeString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc71">
+  <summary><span class="badge medium">medium</span> Simplify Path — LeetCode 71</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Canonicalize a Unix path: collapse "//", drop ".", resolve
+    ".." (which cannot go above root). Names like "..." are legal directories.</p>
+    <p><strong>Example.</strong> "/home//foo/" → "/home/foo". "/a/./b/../../c/" → "/c".
+    "/../" → "/".</p>
+    <p class="code-title">Split on '/', stack the real names · O(n)</p>
+<pre class="code"><code>public static String simplifyPath(String path) {
+    Deque&lt;String&gt; stack = new ArrayDeque&lt;&gt;();
+    for (String seg : path.split("/")) {
+        if (seg.isEmpty() || seg.equals("."))
+            continue;                        // "//" and "." change nothing
+        if (seg.equals("..")) {
+            if (!stack.isEmpty())            // ".." above root is a no-op
+                stack.pollLast();
+        } else {
+            stack.offerLast(seg);            // a real directory name
+        }
+    }
+    return "/" + String.join("/", stack);    // bottom-to-top = the path
+}</code></pre>
+    <p><strong>Takeaway.</strong> ".." undoing the most recent directory is textbook LIFO — the same
+    reason editors implement undo with a stack. Splitting first turns character-level parsing into
+    clean token handling; the deque-as-stack (offerLast/pollLast) keeps left-to-right output order
+    for the final join. Every OS's realpath() and every browser's URL normalizer runs this loop.
+    Mirror: <code>code/09-stacks-queues/SimplifyPath.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc227">
+  <summary><span class="badge medium">medium</span> Basic Calculator II — LeetCode 227</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Evaluate an expression with +, −, *, /, spaces and non-negative
+    integers (no parentheses), honoring precedence, without eval().</p>
+    <p><strong>Example.</strong> "3+2*2" → 7. " 3/2 " → 1. "14-3/2" → 13.</p>
+    <p class="code-title">Stack of signed terms; * and / bind immediately · O(n)</p>
+<pre class="code"><code>public static int calculate(String s) {
+    Deque&lt;Integer&gt; terms = new ArrayDeque&lt;&gt;();
+    int num = 0;
+    char pendingOp = '+';                    // operator waiting to apply to num
+    for (int i = 0; i &lt; s.length(); i++) {
+        char c = s.charAt(i);
+        if (c &gt;= '0' &amp;&amp; c &lt;= '9')
+            num = num * 10 + (c - '0');
+        // On an operator (or the last char), resolve the PENDING op:
+        if ((c != ' ' &amp;&amp; (c &lt; '0' || c &gt; '9')) || i == s.length() - 1) {
+            switch (pendingOp) {
+                case '+': terms.push(num); break;          // decide later
+                case '-': terms.push(-num); break;         // sign travels along
+                case '*': terms.push(terms.pop() * num); break;  // binds NOW
+                case '/': terms.push(terms.pop() / num); break;  // binds NOW
+            }
+            pendingOp = c;
+            num = 0;
+        }
+    }
+    int sum = 0;
+    for (int t : terms) sum += t;            // only +/- remain — just add up
+    return sum;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Precedence handled without a parser: high-precedence ops (*, /)
+    collapse into the previous term <em>immediately</em>, low-precedence ones (+, −) defer by
+    pushing signed terms — the stack holds a sum-in-waiting. This one-pass trick generalizes to the
+    full calculator family (LC 224 adds parentheses = save/restore like Decode String). RPN (above)
+    is what you get when the expression arrives pre-flattened.
+    Mirror: <code>code/09-stacks-queues/BasicCalculatorII.java</code>.</p>
   </div>
 </details>
 

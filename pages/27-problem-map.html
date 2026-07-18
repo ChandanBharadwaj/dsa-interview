@@ -224,11 +224,17 @@
   <tr><td><a href="08-linked-lists.html#lc21">Merge Two Sorted Lists</a></td><td>21</td><td><span class="badge easy">easy</span></td><td>Dummy head + tail-append merge.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc141">Linked List Cycle</a></td><td>141</td><td><span class="badge easy">easy</span></td><td>Floyd: the fast pointer catches the slow one iff a cycle exists.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc876">Middle of the Linked List</a></td><td>876</td><td><span class="badge easy">easy</span></td><td>Fast moves 2, slow moves 1 — slow stops at the middle.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc83">Remove Duplicates from Sorted List</a></td><td>83</td><td><span class="badge easy">easy</span></td><td>Sorted = duplicates adjacent; splice without advancing.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc234">Palindrome Linked List</a></td><td>234</td><td><span class="badge easy">easy</span></td><td>Middle + reverse second half + lockstep compare — three skills chained.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc160">Intersection of Two Linked Lists</a></td><td>160</td><td><span class="badge easy">easy</span></td><td>Pointer-switch: both travel a+c+b steps and align on the shared tail.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc19">Remove Nth Node From End</a></td><td>19</td><td><span class="badge medium">medium</span></td><td>Two pointers n apart reach the end and the target together.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc2">Add Two Numbers</a></td><td>2</td><td><span class="badge medium">medium</span></td><td>Schoolbook digit-by-digit addition with a carry.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc143">Reorder List</a></td><td>143</td><td><span class="badge medium">medium</span></td><td>Middle + reverse the second half + interleave.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc138">Copy List with Random Pointer</a></td><td>138</td><td><span class="badge medium">medium</span></td><td>Interleave copies between originals (or an old→new map).</td></tr>
   <tr><td><a href="08-linked-lists.html#lc142">Linked List Cycle II</a></td><td>142</td><td><span class="badge medium">medium</span></td><td>After the meeting, reset one pointer to head; they meet at the cycle start.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc24">Swap Nodes in Pairs</a></td><td>24</td><td><span class="badge medium">medium</span></td><td>k-group reversal with k=2 — the arrow-order rehearsal.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc86">Partition List</a></td><td>86</td><td><span class="badge medium">medium</span></td><td>Two builder lists then stitch; sever the old tail link.</td></tr>
+  <tr><td><a href="08-linked-lists.html#lc61">Rotate List</a></td><td>61</td><td><span class="badge medium">medium</span></td><td>Close into a ring, cut at n − k%n.</td></tr>
   <tr><td><a href="08-linked-lists.html#lc25">Reverse Nodes in k-Group</a></td><td>25</td><td><span class="badge hard">hard</span></td><td>Reverse k nodes at a time; count the group before committing.</td></tr>
 </table>
 </div>
@@ -241,10 +247,16 @@
   <tr><td><a href="09-stacks-queues.html#lc20">Valid Parentheses</a></td><td>20</td><td><span class="badge easy">easy</span></td><td>A stack of expected closing brackets.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc155">Min Stack</a></td><td>155</td><td><span class="badge medium">medium</span></td><td>Each node stores min-so-far alongside its value.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc232">Implement Queue using Stacks</a></td><td>232</td><td><span class="badge easy">easy</span></td><td>Two stacks: transfer reverses order, amortized O(1).</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc496">Next Greater Element I</a></td><td>496</td><td><span class="badge easy">easy</span></td><td>The monotonic-stack hello-world: each arrival resolves all smaller waiters.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc225">Implement Stack using Queues</a></td><td>225</td><td><span class="badge easy">easy</span></td><td>One queue, rotate after push — the O(n) lives on the write side.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc150">Evaluate Reverse Polish Notation</a></td><td>150</td><td><span class="badge medium">medium</span></td><td>Postfix evaluation: push operands, pop two per operator.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc739">Daily Temperatures</a></td><td>739</td><td><span class="badge medium">medium</span></td><td>Monotonic decreasing stack of not-yet-answered days.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc853">Car Fleet</a></td><td>853</td><td><span class="badge medium">medium</span></td><td>Sort by position; fleets form where arrival times collide.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc22">Generate Parentheses</a></td><td>22</td><td><span class="badge medium">medium</span></td><td>Backtracking on open/close counts — the call stack is the stack.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc735">Asteroid Collision</a></td><td>735</td><td><span class="badge medium">medium</span></td><td>A monotonic stack whose pop condition is a physics rule.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc394">Decode String</a></td><td>394</td><td><span class="badge medium">medium</span></td><td>Nesting = a stack of (count, prefix) call frames.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc71">Simplify Path</a></td><td>71</td><td><span class="badge medium">medium</span></td><td>“..” undoes the latest directory — textbook LIFO.</td></tr>
+  <tr><td><a href="09-stacks-queues.html#lc227">Basic Calculator II</a></td><td>227</td><td><span class="badge medium">medium</span></td><td>* and / bind to the previous term now; + and − defer as signed pushes.</td></tr>
   <tr><td><a href="09-stacks-queues.html#lc84">Largest Rectangle in Histogram</a></td><td>84</td><td><span class="badge hard">hard</span></td><td>Monotonic stack finds each bar’s nearer-smaller boundaries.</td></tr>
 </table>
 </div>
@@ -260,7 +272,12 @@
   <tr><td><a href="10-recursion-backtracking.html#lc39">Combination Sum</a></td><td>39</td><td><span class="badge medium">medium</span></td><td>Reuse allowed → stay on the same index after choosing it.</td></tr>
   <tr><td><a href="10-recursion-backtracking.html#lc79">Word Search</a></td><td>79</td><td><span class="badge medium">medium</span></td><td>Grid DFS with mark-and-unmark of the visited cell.</td></tr>
   <tr><td><a href="10-recursion-backtracking.html#lc131">Palindrome Partitioning</a></td><td>131</td><td><span class="badge medium">medium</span></td><td>Cut at every palindromic prefix, recurse on the remainder.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc77">Combinations</a></td><td>77</td><td><span class="badge medium">medium</span></td><td>The start index forcing ascending picks = the sets-not-sequences switch.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc90">Subsets II</a></td><td>90</td><td><span class="badge medium">medium</span></td><td>Sort + skip the same value at the same level (i > start).</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc40">Combination Sum II</a></td><td>40</td><td><span class="badge medium">medium</span></td><td>Combination Sum with i+1 (single use) plus the level-dedup line.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc93">Restore IP Addresses</a></td><td>93</td><td><span class="badge medium">medium</span></td><td>Four segments of length 1–3; validation is the whole game.</td></tr>
   <tr><td><a href="10-recursion-backtracking.html#lc51">N-Queens</a></td><td>51</td><td><span class="badge hard">hard</span></td><td>Column/diagonal sets prune before each queen is placed.</td></tr>
+  <tr><td><a href="10-recursion-backtracking.html#lc37">Sudoku Solver</a></td><td>37</td><td><span class="badge hard">hard</span></td><td>Choose/recurse/erase with a boolean threading “solved” up the stack.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> config-space search, dependency resolution back-off, puzzle/route solvers (<a href="25-real-world-systems.html#maps">navigation</a>).</p>
@@ -273,11 +290,18 @@
   <tr><td><a href="11-trees.html#lc226">Invert Binary Tree</a></td><td>226</td><td><span class="badge easy">easy</span></td><td>Swap the children at every node.</td></tr>
   <tr><td><a href="11-trees.html#lc100">Same Tree</a></td><td>100</td><td><span class="badge easy">easy</span></td><td>Compare both trees node-by-node in lockstep.</td></tr>
   <tr><td><a href="11-trees.html#lc543">Diameter of Binary Tree</a></td><td>543</td><td><span class="badge easy">easy</span></td><td>Diameter through a node = left depth + right depth; track a global max.</td></tr>
+  <tr><td><a href="11-trees.html#lc101">Symmetric Tree</a></td><td>101</td><td><span class="badge easy">easy</span></td><td>Recurse on pairs with crossed children: outer-outer, inner-inner.</td></tr>
+  <tr><td><a href="11-trees.html#lc110">Balanced Binary Tree</a></td><td>110</td><td><span class="badge easy">easy</span></td><td>One post-order pass; −1 smuggles “unbalanced” up the stack.</td></tr>
+  <tr><td><a href="11-trees.html#lc572">Subtree of Another Tree</a></td><td>572</td><td><span class="badge easy">easy</span></td><td>Outer walk picks the anchor, inner Same-Tree checks it.</td></tr>
   <tr><td><a href="11-trees.html#lc102">Binary Tree Level Order Traversal</a></td><td>102</td><td><span class="badge medium">medium</span></td><td>BFS with a per-level size snapshot.</td></tr>
   <tr><td><a href="11-trees.html#lc98">Validate Binary Search Tree</a></td><td>98</td><td><span class="badge medium">medium</span></td><td>Pass down (min,max) bounds — parent-child checks are not enough.</td></tr>
   <tr><td><a href="11-trees.html#lc235">Lowest Common Ancestor of a BST</a></td><td>235</td><td><span class="badge medium">medium</span></td><td>BST order: the LCA is where p and q split.</td></tr>
   <tr><td><a href="11-trees.html#lc230">Kth Smallest Element in a BST</a></td><td>230</td><td><span class="badge medium">medium</span></td><td>In-order traversal visits a BST in sorted order; stop at k.</td></tr>
+  <tr><td><a href="11-trees.html#lc199">Binary Tree Right Side View</a></td><td>199</td><td><span class="badge medium">medium</span></td><td>Level order keeping each level’s last node.</td></tr>
+  <tr><td><a href="11-trees.html#lc105">Construct Binary Tree from Preorder and Inorder</a></td><td>105</td><td><span class="badge medium">medium</span></td><td>Preorder hands out roots in order; inorder splits the spans.</td></tr>
+  <tr><td><a href="11-trees.html#lc236">Lowest Common Ancestor of a Binary Tree</a></td><td>236</td><td><span class="badge medium">medium</span></td><td>Post-order reports: the node where both sides answer is the LCA.</td></tr>
   <tr><td><a href="11-trees.html#lc297">Serialize and Deserialize Binary Tree</a></td><td>297</td><td><span class="badge hard">hard</span></td><td>Preorder with null markers round-trips the exact shape.</td></tr>
+  <tr><td><a href="11-trees.html#lc124">Binary Tree Maximum Path Sum</a></td><td>124</td><td><span class="badge hard">hard</span></td><td>Arch (both sides, record) vs segment (one side, return up).</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> B-tree indexes and file systems (<a href="25-real-world-systems.html#db">databases</a>), DOM/AST processing (<a href="25-real-world-systems.html#git">Git trees</a>).</p>

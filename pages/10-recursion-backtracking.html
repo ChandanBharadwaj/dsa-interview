@@ -546,6 +546,134 @@ private static boolean isPalindrome(String p) {   // two pointers, page 02
   </div>
 </details>
 
+<details class="sol" id="lc77">
+  <summary><span class="badge medium">medium</span> Combinations — LeetCode 77</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> All ways to choose k numbers from 1..n (order inside a
+    combination doesn't matter).</p>
+    <p><strong>Example.</strong> n=4, k=2 → [1,2],[1,3],[1,4],[2,3],[2,4],[3,4] — C(4,2)=6 sets.</p>
+    <p class="code-title">Ascending picks via a start index + a counting prune · O(C(n,k))</p>
+<pre class="code"><code>private static void backtrack(int start, int n, int k,
+                              List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; res) {
+    if (path.size() == k) {                  // picked enough — record
+        res.add(new ArrayList&lt;&gt;(path));
+        return;
+    }
+    // Prune: we still need (k − path.size()) numbers; starting beyond
+    // n − need + 1 can't possibly supply them.
+    int need = k - path.size();
+    for (int i = start; i &lt;= n - need + 1; i++) {
+        path.add(i);                         // choose
+        backtrack(i + 1, n, k, path, res);   // explore strictly above i
+        path.remove(path.size() - 1);        // unchoose
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The <code>start</code> parameter forcing ascending picks is
+    <em>the</em> combination-vs-permutation switch: it makes {2,1} unreachable, so each set appears
+    once. The "not enough numbers left" prune is small but real — for k close to n it removes most of
+    the wasted tree. Subsets, Combination Sum, and this are one template with different stop rules.
+    Mirror: <code>code/10-recursion-backtracking/Combinations.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc90">
+  <summary><span class="badge medium">medium</span> Subsets II — LeetCode 90</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> All subsets when the input may contain duplicates — the result
+    must not repeat a subset.</p>
+    <p><strong>Example.</strong> <code>[1,2,2]</code> → [], [1], [1,2], [1,2,2], [2], [2,2] —
+    6 subsets, not 8.</p>
+    <p class="code-title">Sort + skip same value at the same level · O(2ⁿ)</p>
+<pre class="code"><code>private static void backtrack(int[] nums, int start,
+                              List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; res) {
+    res.add(new ArrayList&lt;&gt;(path));          // every node IS a subset
+    for (int i = start; i &lt; nums.length; i++) {
+        // Duplicate subsets come from making the SAME choice at the SAME
+        // tree level. Sorting groups equal values; skip repeats per level:
+        if (i &gt; start &amp;&amp; nums[i] == nums[i - 1])
+            continue;
+        path.add(nums[i]);
+        backtrack(nums, i + 1, path, res);
+        path.remove(path.size() - 1);
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The dedup line deserves precision: <code>i &gt; start</code> (not
+    <code>i &gt; 0</code>) allows the <em>first</em> 2 at each level — so [2,2] survives — while
+    banning a <em>second</em> 2 as an alternative at the same level — so [2] doesn't appear twice.
+    This exact sorted-skip line reappears in Combination Sum II and Permutations II; learn it once,
+    reuse three times. Mirror: <code>code/10-recursion-backtracking/SubsetsII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc40">
+  <summary><span class="badge medium">medium</span> Combination Sum II — LeetCode 40</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Combinations summing to target where each candidate may be used
+    <em>once</em> and the input contains duplicates; no duplicate combinations in the output.</p>
+    <p><strong>Example.</strong> <code>[10,1,2,7,6,1,5], target=8</code> →
+    [1,1,6], [1,2,5], [1,7], [2,6].</p>
+    <p class="code-title">Sort + level dedup + advance past i · O(2ⁿ) worst case</p>
+<pre class="code"><code>private static void backtrack(int[] cand, int start, int remain,
+                              List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; res) {
+    if (remain == 0) {                       // exact hit — record
+        res.add(new ArrayList&lt;&gt;(path));
+        return;
+    }
+    for (int i = start; i &lt; cand.length; i++) {
+        if (i &gt; start &amp;&amp; cand[i] == cand[i - 1])
+            continue;                        // dedup at this level (SubsetsII line)
+        if (cand[i] &gt; remain)
+            break;                           // sorted: all later values too big
+        path.add(cand[i]);
+        backtrack(cand, i + 1, remain - cand[i], path, res);  // i+1 = use once
+        path.remove(path.size() - 1);
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Exactly two characters separate this from Combination Sum I:
+    recursing with <code>i + 1</code> instead of <code>i</code> (single use vs unlimited reuse), plus
+    the duplicate-skip line. Being able to state that diff from memory is the sign you understand the
+    template rather than the problems. The sorted early-<code>break</code> (not continue) is the
+    third micro-optimization worth saying aloud.
+    Mirror: <code>code/10-recursion-backtracking/CombinationSumII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc93">
+  <summary><span class="badge medium">medium</span> Restore IP Addresses — LeetCode 93</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> All valid IPv4 addresses formed by inserting three dots into a
+    digit string. Segments are 0–255 with no leading zeros.</p>
+    <p><strong>Example.</strong> "25525511135" → "255.255.11.135" and "255.255.111.35".
+    "0000" → "0.0.0.0".</p>
+    <p class="code-title">Four segments of length 1–3, validated as you go · ≤ 3⁴ paths</p>
+<pre class="code"><code>private static void backtrack(String s, int pos, int segment,
+                              StringBuilder path, List&lt;String&gt; res) {
+    if (segment == 4) {
+        if (pos == s.length())                   // all digits consumed
+            res.add(path.substring(0, path.length() - 1));  // drop last dot
+        return;
+    }
+    for (int len = 1; len &lt;= 3 &amp;&amp; pos + len &lt;= s.length(); len++) {
+        String part = s.substring(pos, pos + len);
+        if (part.length() &gt; 1 &amp;&amp; part.charAt(0) == '0')
+            break;                               // leading zero: "01" invalid
+        if (Integer.parseInt(part) &gt; 255)
+            break;                               // longer would be bigger still
+        int mark = path.length();
+        path.append(part).append('.');           // choose
+        backtrack(s, pos + len, segment + 1, path, res);
+        path.setLength(mark);                    // unchoose (rewind the builder)
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The search space is tiny (at most 3×3×3×3 shapes) — the problem is
+    really about <em>validation discipline</em>: leading zeros, the 255 cap, and consuming exactly
+    the whole string. Both invalid cases <code>break</code> rather than continue, since longer
+    segments only get worse. Palindrome Partitioning (above) is the same "cut the string into valid
+    pieces" scheme with a different validity predicate.
+    Mirror: <code>code/10-recursion-backtracking/RestoreIPAddresses.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc51">
   <summary><span class="badge hard">hard</span> N-Queens — LeetCode 51</summary>
   <div class="sol-body">
@@ -601,6 +729,51 @@ private static List&lt;String&gt; render(int[] queenCol, int n) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc37">
+  <summary><span class="badge hard">hard</span> Sudoku Solver — LeetCode 37</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Fill a partially completed 9×9 Sudoku board (guaranteed to have
+    exactly one solution), in place.</p>
+    <p><strong>Example.</strong> The classic puzzle starting "53..7...." fills to the unique valid
+    grid.</p>
+    <p class="code-title">Constraint backtracking: try, recurse, erase · fast in practice</p>
+<pre class="code"><code>public static boolean solveSudoku(char[][] board) {
+    for (int r = 0; r &lt; 9; r++)
+        for (int c = 0; c &lt; 9; c++) {
+            if (board[r][c] != '.') continue;    // filled — keep scanning
+            for (char d = '1'; d &lt;= '9'; d++) {
+                if (valid(board, r, c, d)) {
+                    board[r][c] = d;             // choose
+                    if (solveSudoku(board))      // did downstream solve it?
+                        return true;
+                    board[r][c] = '.';           // unchoose — dead end
+                }
+            }
+            return false;   // empty cell, no legal digit -&gt; force backtrack
+        }
+    return true;            // no empty cells left: solved
+}
+
+private static boolean valid(char[][] b, int r, int c, char d) {
+    for (int i = 0; i &lt; 9; i++) {
+        if (b[r][i] == d) return false;                      // row clash
+        if (b[i][c] == d) return false;                      // column clash
+        if (b[3 * (r / 3) + i / 3][3 * (c / 3) + i % 3] == d)
+            return false;                                    // 3×3 box clash
+    }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> N-Queens' bigger sibling: the same choose/recurse/unchoose spine,
+    with the box-index formula <code>3·(r/3) + i/3, 3·(c/3) + i%3</code> as the only genuinely fiddly
+    line (it walks the 9 cells of the cell's box). The boolean return threading the "solved!" signal
+    up the stack — stopping all exploration instantly — is the difference from enumerate-everything
+    problems. Real solvers add constraint propagation (bitmasks per row/column/box, most-constrained-
+    cell-first) — worth mentioning, not required.
+    Mirror: <code>code/10-recursion-backtracking/SudokuSolver.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong><code>result.add(path)</code> without copying</strong> — the #1 bug. Every stored reference points at the same list, which unwinds to empty. Always <code>new ArrayList&lt;&gt;(path)</code> at the base case.</li>
