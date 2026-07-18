@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>18 · Dynamic Programming 1D — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Dynamic Programming 1D: Recursion + Remembering</h1>
+<p class="subtitle">DP has a scary reputation it doesn't deserve. It is exactly the recursion you already know from page 10, plus a cache — nothing more. This page builds that idea from Fibonacci up to Coin Change and LIS, one gentle rung at a time.</p>
+<p>
+  <span class="badge phase">Phase 7 · Weeks 11–12</span>
+  <span class="badge freq">The most feared topic — and a fixture of every senior loop</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Many optimization problems ("minimum cost", "number of ways", "longest such-and-such") have brute-force
+  solutions that re-solve the <em>same</em> smaller problem millions of times. DP is the observation that if you
+  <strong>write each subproblem's answer down once</strong>, exponential blow-ups collapse to linear or quadratic work.
+  You've done this professionally for years — it's memoization, the same instinct as caching an expensive service call.
+  Interviews love DP because it tests whether you can <em>define</em> the subproblem, not just code a loop.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a> — DP is recursion with a cache; the recursion-tree picture is essential.</li>
+  <li><a href="00-foundations.html">00 · Foundations</a> — you'll be comparing O(2ⁿ) vs O(n) constantly.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you define the state in words?</strong> "dp[i] = the best answer for the first i items" — saying this sentence out loud is 70% of the solution.</li>
+  <li><strong>Can you derive the recurrence</strong> from a choice ("rob it or skip it"), not memorize it?</li>
+  <li><strong>Do you spot when greedy fails</strong> and DP is required (overlapping choices where a local best isn't globally safe)?</li>
+  <li><strong>Do you know both directions</strong> — top-down memoization and bottom-up tabulation — and when to space-optimize?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 17 ended with DP on a DAG: min path sum works with a plain loop because restricted movement means no cycles —
+  each cell's answer depends only on already-solved cells. That is the whole of DP: <strong>solve subproblems in an
+  order where dependencies are always ready</strong>. Backtracking (page 10) explored a tree of choices and kept every
+  path; DP notices that many branches of that tree are <em>the same subproblem</em> and refuses to solve any of them twice.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. The moment DP clicks: Fibonacci's exploding tree</h3>
+<p class="lead">
+  Plain recursive <code>fib(n) = fib(n-1) + fib(n-2)</code> is correct and hopeless: the call tree doubles at every
+  level, O(2ⁿ). Look at the tree for <code>fib(5)</code> — count how often <code>fib(2)</code> is recomputed:
+</p>
+
+<div class="anim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Recursion tree of fib(5) with repeated subproblems highlighted">
+    <!-- edges -->
+    <line x1="320" y1="42" x2="180" y2="90" class="edge"></line>
+    <line x1="320" y1="42" x2="460" y2="90" class="edge"></line>
+    <line x1="180" y1="102" x2="100" y2="150" class="edge"></line>
+    <line x1="180" y1="102" x2="260" y2="150" class="edge"></line>
+    <line x1="460" y1="102" x2="400" y2="150" class="edge"></line>
+    <line x1="460" y1="102" x2="520" y2="150" class="edge"></line>
+    <line x1="100" y1="162" x2="55" y2="210" class="edge"></line>
+    <line x1="100" y1="162" x2="145" y2="210" class="edge"></line>
+    <line x1="260" y1="162" x2="225" y2="210" class="edge"></line>
+    <line x1="260" y1="162" x2="295" y2="210" class="edge"></line>
+    <line x1="400" y1="162" x2="365" y2="210" class="edge"></line>
+    <line x1="400" y1="162" x2="435" y2="210" class="edge"></line>
+    <line x1="55" y1="222" x2="25" y2="262" class="edge"></line>
+    <line x1="55" y1="222" x2="85" y2="262" class="edge"></line>
+    <!-- first-time computations (blue) -->
+    <circle cx="320" cy="30" r="16" class="box active"></circle><text x="320" y="35" text-anchor="middle" class="lbl onfill">5</text>
+    <circle cx="180" cy="90" r="16" class="box active"></circle><text x="180" y="95" text-anchor="middle" class="lbl onfill">4</text>
+    <circle cx="100" cy="150" r="16" class="box active"></circle><text x="100" y="155" text-anchor="middle" class="lbl onfill">3</text>
+    <circle cx="55" cy="210" r="16" class="box active"></circle><text x="55" y="215" text-anchor="middle" class="lbl onfill">2</text>
+    <circle cx="25" cy="262" r="14" class="box active"></circle><text x="25" y="267" text-anchor="middle" class="lbl onfill">1</text>
+    <circle cx="85" cy="262" r="14" class="box active"></circle><text x="85" y="267" text-anchor="middle" class="lbl onfill">0</text>
+    <circle cx="145" cy="210" r="14" class="box active"></circle><text x="145" y="215" text-anchor="middle" class="lbl onfill">1</text>
+    <!-- repeats (amber): with a memo these return instantly, whole subtrees vanish -->
+    <circle cx="260" cy="150" r="16" class="box frontier"></circle><text x="260" y="155" text-anchor="middle" class="lbl onfill">2</text>
+    <circle cx="225" cy="210" r="14" class="box frontier dim"></circle><text x="225" y="215" text-anchor="middle" class="lbl">1</text>
+    <circle cx="295" cy="210" r="14" class="box frontier dim"></circle><text x="295" y="215" text-anchor="middle" class="lbl">0</text>
+    <circle cx="460" cy="90" r="16" class="box frontier"></circle><text x="460" y="95" text-anchor="middle" class="lbl onfill">3</text>
+    <circle cx="400" cy="150" r="16" class="box frontier dim"></circle><text x="400" y="155" text-anchor="middle" class="lbl">2</text>
+    <circle cx="365" cy="210" r="14" class="box frontier dim"></circle><text x="365" y="215" text-anchor="middle" class="lbl">1</text>
+    <circle cx="435" cy="210" r="14" class="box frontier dim"></circle><text x="435" y="215" text-anchor="middle" class="lbl">0</text>
+    <circle cx="520" cy="150" r="16" class="box frontier dim"></circle><text x="520" y="155" text-anchor="middle" class="lbl">1</text>
+    <!-- legend -->
+    <circle cx="360" cy="255" r="9" class="box active"></circle>
+    <text x="376" y="260" class="small">computed once (only n+1 of these exist)</text>
+    <circle cx="360" cy="280" r="9" class="box frontier"></circle>
+    <text x="376" y="285" class="small">repeat — a memo answers instantly and its whole subtree never runs</text>
+  </svg>
+  <div class="anim-caption">Static view: fib(5)'s call tree. Every amber node is a subproblem already solved somewhere to its left. Cache the answers and the tree collapses to the n+1 blue nodes — O(2ⁿ) becomes O(n).</div>
+  <div class="anim-controls"></div>
+</div>
+
+<p>
+  There are only <strong>n+1 distinct subproblems</strong> (<code>fib(0)</code>…<code>fib(n)</code>), yet the naive tree
+  performs ~2ⁿ calls. DP = keep the tree's <em>logic</em>, delete the <em>duplicate work</em>. The two properties that
+  make this legal are worth naming in an interview: <strong>overlapping subproblems</strong> (the same call recurs) and
+  <strong>optimal substructure</strong> (the best answer for n is built from best answers for smaller inputs).
+</p>
+
+<h3>2. Two directions, one idea: memoization vs tabulation</h3>
+<p>
+  Take <em>Climbing Stairs</em> (LeetCode 70): you climb 1 or 2 steps at a time; how many distinct ways to reach step n?
+  The last move was a 1-step from n−1 or a 2-step from n−2, so <code>ways(n) = ways(n−1) + ways(n−2)</code> — Fibonacci
+  in a costume. Here is the <em>same recurrence</em> solved both ways:
+</p>
+
+<p class="code-title">Top-down — write the recursion you believe in, then cache it</p>
+<pre class="code"><code>public static int climbMemo(int n) {
+    int[] memo = new int[n + 1];          // memo[i] = ways to reach step i (0 = not computed yet)
+    return waysTo(n, memo);
+}
+
+private static int waysTo(int i, int[] memo) {
+    if (i &lt;= 2) return i;                 // base cases: 1 way to step 1, 2 ways to step 2
+    if (memo[i] != 0) return memo[i];     // already solved this subproblem? reuse the answer
+    // Last move was either a 1-step from i-1 or a 2-step from i-2 — add both worlds
+    memo[i] = waysTo(i - 1, memo) + waysTo(i - 2, memo);
+    return memo[i];
+}</code></pre>
+
+<p class="code-title">Bottom-up — same recurrence, but fill an array smallest-first with a loop</p>
+<pre class="code"><code>public static int climbTab(int n) {
+    if (n &lt;= 2) return n;
+    int[] dp = new int[n + 1];            // dp[i] = number of distinct ways to reach step i
+    dp[1] = 1;                            // base case: one way to stand on step 1
+    dp[2] = 2;                            // base case: 1+1 or 2
+    for (int i = 3; i &lt;= n; i++) {
+        dp[i] = dp[i - 1] + dp[i - 2];    // arrive via a 1-step or via a 2-step
+    }
+    return dp[n];
+}</code></pre>
+
+<div class="note">
+  <strong>They are the same algorithm.</strong> Memoization solves subproblems in the order recursion discovers them
+  (lazily, top-down); tabulation solves them in an order you choose (eagerly, bottom-up). Same states, same recurrence,
+  same O(n). In an interview, derive top-down first — it mirrors how you think — then convert to a loop if the
+  interviewer wants it or if recursion depth (n ≈ 10⁵ would overflow Java's stack) is a risk.
+</div>
+
+<h3>3. The 4-step recipe (use it on every DP problem, forever)</h3>
+<div class="card">
+  <ol>
+    <li><strong>State, in words.</strong> "dp[i] = &lt;the answer to the question&gt; restricted to the first i elements / amount i / prefix of length i." If you can't say it in one plain sentence, the design isn't done.</li>
+    <li><strong>Recurrence.</strong> Stand at state i and list the <em>last choices</em> that could have led here; combine their subanswers with max/min/sum.</li>
+    <li><strong>Base cases.</strong> The smallest states where the answer is known without any choice (empty prefix, amount 0). Get these wrong and everything downstream is wrong.</li>
+    <li><strong>Order &amp; answer.</strong> Fill states so dependencies are ready before they're needed (usually left→right for 1D); say which cell holds the final answer.</li>
+  </ol>
+</div>
+
+<h3>4. Space optimization: look at what you actually read</h3>
+<p>
+  Climbing Stairs reads only <code>dp[i-1]</code> and <code>dp[i-2]</code> — so the array is a luxury. Keep two variables
+  and slide them. This "shrink the table to what the recurrence touches" move applies to most 1D DPs and to 2D tables
+  row-by-row (page 19):
+</p>
+
+<p class="code-title">O(1) space — the array was never needed</p>
+<pre class="code"><code>public static int climb(int n) {
+    if (n &lt;= 2) return n;
+    int prev2 = 1, prev1 = 2;             // ways to reach steps 1 and 2
+    for (int i = 3; i &lt;= n; i++) {
+        int cur = prev1 + prev2;          // the recurrence, without the array
+        prev2 = prev1;                    // slide the two-cell window forward
+        prev1 = cur;
+    }
+    return prev1;
+}</code></pre>
+
+<h3>5. A real choice per state: House Robber, animated</h3>
+<p>
+  Climbing Stairs had no decision — just counting. <em>House Robber</em> (LeetCode 198) adds the ingredient that makes
+  DP feel like DP: at each house you <strong>choose</strong> — rob it (then house i−1 must be skipped, so add
+  <code>dp[i-2]</code>) or skip it (carry <code>dp[i-1]</code>). Watch <code>dp[]</code> fill for
+  <code>[2, 7, 9, 3, 1]</code>:
+</p>
+
+<div class="anim" id="robAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="House Robber dp array filling left to right">
+    <!-- houses -->
+    <rect id="h0" x="60"  y="60" width="80" height="60" rx="8" class="box"></rect>
+    <rect id="h1" x="170" y="60" width="80" height="60" rx="8" class="box"></rect>
+    <rect id="h2" x="280" y="60" width="80" height="60" rx="8" class="box"></rect>
+    <rect id="h3" x="390" y="60" width="80" height="60" rx="8" class="box"></rect>
+    <rect id="h4" x="500" y="60" width="80" height="60" rx="8" class="box"></rect>
+    <text x="100" y="97" text-anchor="middle" class="lbl">$2</text>
+    <text x="210" y="97" text-anchor="middle" class="lbl">$7</text>
+    <text x="320" y="97" text-anchor="middle" class="lbl">$9</text>
+    <text x="430" y="97" text-anchor="middle" class="lbl">$3</text>
+    <text x="540" y="97" text-anchor="middle" class="lbl">$1</text>
+    <text x="100" y="48" text-anchor="middle" class="small">house 0</text>
+    <text x="210" y="48" text-anchor="middle" class="small">house 1</text>
+    <text x="320" y="48" text-anchor="middle" class="small">house 2</text>
+    <text x="430" y="48" text-anchor="middle" class="small">house 3</text>
+    <text x="540" y="48" text-anchor="middle" class="small">house 4</text>
+    <!-- dp cells -->
+    <text x="30" y="180" class="small">dp[]</text>
+    <rect id="d0" x="60"  y="155" width="80" height="40" rx="6" class="box"></rect>
+    <rect id="d1" x="170" y="155" width="80" height="40" rx="6" class="box"></rect>
+    <rect id="d2" x="280" y="155" width="80" height="40" rx="6" class="box"></rect>
+    <rect id="d3" x="390" y="155" width="80" height="40" rx="6" class="box"></rect>
+    <rect id="d4" x="500" y="155" width="80" height="40" rx="6" class="box"></rect>
+    <text id="dt0" x="100" y="181" text-anchor="middle" class="lbl"></text>
+    <text id="dt1" x="210" y="181" text-anchor="middle" class="lbl"></text>
+    <text id="dt2" x="320" y="181" text-anchor="middle" class="lbl"></text>
+    <text id="dt3" x="430" y="181" text-anchor="middle" class="lbl"></text>
+    <text id="dt4" x="540" y="181" text-anchor="middle" class="lbl"></text>
+    <!-- the running calculation -->
+    <text id="calc" x="320" y="245" text-anchor="middle" class="lbl" style="font-size:17px"></text>
+    <text x="320" y="278" text-anchor="middle" class="small">dp[i] = max( dp[i-1] ,  dp[i-2] + nums[i] )  —  skip vs rob</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>6. Why greedy fails — the coins that break it</h3>
+<p>
+  With coins <code>[1, 3, 4]</code> and amount <code>6</code>, the greedy habit ("always take the biggest coin") gives
+  <code>4 + 1 + 1</code> = 3 coins. The optimum is <code>3 + 3</code> = <strong>2 coins</strong>. Greedy commits to the
+  4 and can never un-commit; DP keeps <em>every</em> amount's best answer alive, so the 3+3 world survives. This tiny
+  counterexample is the fastest way to justify DP to an interviewer — memorize it. (US-style coin systems happen to be
+  greedy-safe, which is exactly why the habit feels right; page 21 covers when greedy is provably fine.)
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — top-down memoization (derive this first in interviews)</p>
+<pre class="code"><code>// 1) STATE: solve(i) answers the question for input restricted to "i" (prefix, amount, index...)
+// 2) memo: one slot per distinct state; a sentinel (-1) marks "not computed"
+int[] memo;                                    // size = number of states, filled with -1
+
+int solve(int i) {
+    if (i is a base case) return baseAnswer;   // 3) BASE: known without any choice
+    if (memo[i] != -1) return memo[i];         // cache hit: this subtree vanishes
+    int best = WORST;                          // identity for max/min/sum
+    for (each choice c available at state i) {
+        // 4) RECURRENCE: last choice c reduces state i to a smaller state
+        best = combine(best, cost(c) + solve(smaller(i, c)));
+    }
+    return memo[i] = best;                     // store before returning — the whole point
+}</code></pre>
+
+<p class="code-title">Template 2 — bottom-up tabulation (mechanical conversion of template 1)</p>
+<pre class="code"><code>int[] dp = new int[n + 1];                     // dp[i] = same meaning as solve(i) above
+dp[base states] = base answers;                // base cases go in FIRST
+for (int i = smallest non-base; i &lt;= n; i++) { // ORDER: dependencies (smaller states) already filled
+    for (each choice c at state i) {
+        dp[i] = combine(dp[i], cost(c) + dp[smaller(i, c)]);
+    }
+}
+return dp[n];                                  // ANSWER: state matching the original question
+// Space bonus: if dp[i] only reads dp[i-1], dp[i-2] — keep 2 variables, drop the array.</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Technique</th><th>Use when…</th><th>Cost</th><th>Watch out</th></tr>
+  <tr><td><strong>DP</strong></td><td>best value / count of ways; choices overlap (same subproblem reachable many ways)</td><td>states × choices per state</td><td>must define state precisely; order matters bottom-up</td></tr>
+  <tr><td><strong>Greedy</strong> (page 21)</td><td>a local choice is <em>provably</em> safe (exchange argument)</td><td>usually O(n log n)</td><td>coins [1,3,4] amount 6 — test small counterexamples first</td></tr>
+  <tr><td><strong>Backtracking</strong> (page 10)</td><td>you need <em>all</em> solutions enumerated, not one best value</td><td>exponential, pruned</td><td>if only the best value is asked, you're overpaying — switch to DP</td></tr>
+  <tr><td><strong>Memoization</strong> (top-down)</td><td>state space sparse (only reachable states computed); recurrence easier to write</td><td>same big-O as tabulation</td><td>recursion depth — Java stack dies around ~10⁴–10⁵ frames</td></tr>
+  <tr><td><strong>Tabulation</strong> (bottom-up)</td><td>dense state space; want space optimization or no recursion</td><td>same big-O</td><td>computes every state even if unreachable; ordering bugs</td></tr>
+</table>
+</div>
+
+<p><strong>Decision cues:</strong> "minimum/maximum cost", "number of ways", "can it be done" over sequences or amounts → think DP.
+"Fewest coins", "how many ways to climb", "longest subsequence" are all one-sentence states away from the recipe. If the
+problem asks to <em>list</em> every combination, that's backtracking; if a sorted-and-commit strategy survives your
+counterexamples, that's greedy.</p>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>TeX / LaTeX line breaking</h4>
+    <p class="small">Knuth-Plass paragraph justification is a 1D DP: dp[i] = minimum "badness" of typesetting the first
+    i words, choosing where the last line break goes. Greedy (break as late as possible — what most word processors do)
+    produces visibly worse paragraphs; TeX's DP output is why math papers look good.</p>
+  </div>
+  <div class="card">
+    <h4>Retry &amp; workflow planning</h4>
+    <p class="small">Choosing checkpoint/retry points in batch pipelines (Spark stage recomputation, workflow engines)
+    is a min-cost DP over the step sequence: each state is "completed through step i", each choice is where to place
+    the next checkpoint, balancing snapshot cost vs recompute-on-failure cost.</p>
+  </div>
+  <div class="card">
+    <h4>Reinforcement learning</h4>
+    <p class="small">Value iteration — the algorithm behind classic RL and MDP solvers — is literally the Bellman
+    equation: V(s) = max over actions of reward + V(next state). Richard Bellman coined "dynamic programming" in the
+    1950s; the fancy name was chosen partly to sound impressive to funders.</p>
+  </div>
+  <div class="card">
+    <h4>Diff &amp; spell-check tooling</h4>
+    <p class="small">git diff, spell correction and fuzzy search are the two-string cousins of this page's DPs
+    (LCS / edit distance — page 19). The 1D skills — state definition, recurrence, base cases — transfer directly;
+    the table just grows a second dimension.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span> <a class="t" href="https://leetcode.com/problems/climbing-stairs/">Climbing Stairs</a>
+    <span class="hint">ways(n) = ways(n−1) + ways(n−2) — the "hello world" of DP; do it memo, tab, then O(1) space.</span></div>
+  <div class="prob"><span class="badge easy">easy</span> <a class="t" href="https://leetcode.com/problems/min-cost-climbing-stairs/">Min Cost Climbing Stairs</a>
+    <span class="hint">Same skeleton but with min instead of sum: dp[i] = cost[i] + min(dp[i−1], dp[i−2]).</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/house-robber/">House Robber</a>
+    <span class="hint">First real choice per state: rob (dp[i−2]+nums[i]) vs skip (dp[i−1]).</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/coin-change/">Coin Change</a>
+    <span class="hint">dp over amounts, unbounded coins; the [1,3,4]/6 example shows why greedy dies.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/word-break/">Word Break</a>
+    <span class="hint">dp over prefixes: dp[i] true if some earlier true cut j has s[j..i) in the dictionary.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/longest-increasing-subsequence/">Longest Increasing Subsequence</a>
+    <span class="hint">dp[i] = LIS ending at i (O(n²)); then meet the tails/patience trick for O(n log n).</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/maximum-product-subarray/">Maximum Product Subarray</a>
+    <span class="hint">Track BOTH max and min product ending here — a negative number swaps their roles.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/house-robber-ii/">House Robber II</a>
+    <span class="hint">Circular street: run House Robber twice — once excluding house 0, once excluding the last — take the max.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution — Climbing Stairs (all three versions)</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> climbing 1 or 2 steps at a time, count the distinct ways to reach step n.</p>
+    <p><strong>Idea:</strong> partition all ways by the <em>last</em> move: it was a 1-step (from n−1) or a 2-step (from n−2),
+    and these sets don't overlap, so add them. That single sentence is the recurrence; the three versions in
+    §2 and §4 above (memo → tab → two variables) are the full solution ladder. See
+    <code>code/18-dp-1d/ClimbingStairs.java</code> for all three together with tests.</p>
+    <p><strong>Complexity:</strong> time O(n); space O(n) memo/tab, O(1) optimized.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Min Cost Climbing Stairs</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> each step has a fee paid when you leave it; start at step 0 or 1; reach the top (one past the last step) as cheaply as possible.</p>
+    <p><strong>Idea:</strong> same two-predecessor shape as Climbing Stairs, but combining with <code>min</code> instead of
+    <code>+</code>. Define dp[i] = cheapest cost to <em>stand on</em> step i (folding the fee into arrival); the top is
+    reachable from either of the last two steps. Only two previous values are read → two variables suffice.</p>
+    <p class="code-title">MinCostClimbingStairs.java</p>
+<pre class="code"><code>// dp[i] = cheapest total cost to STAND ON step i (you pay cost[i] when you leave it,
+// so we fold the payment into arriving: dp[i] = cost[i] + min(dp[i-1], dp[i-2])).
+public static int minCostClimbingStairs(int[] cost) {
+    int n = cost.length;
+    // Only the last two dp values matter — keep two variables instead of an array.
+    int prev2 = cost[0];                       // cheapest way to be on step 0
+    int prev1 = cost[1];                       // cheapest way to be on step 1
+    for (int i = 2; i &lt; n; i++) {
+        int cur = cost[i] + Math.min(prev1, prev2);  // arrive from i-1 or i-2, whichever is cheaper
+        prev2 = prev1;
+        prev1 = cur;
+    }
+    // The "top" is one past the last step; we can jump there from either of the last two steps.
+    return Math.min(prev1, prev2);
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n), space O(1).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — House Robber</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> maximize loot from a row of houses where robbing two adjacent houses trips the alarm.</p>
+    <p><strong>Idea:</strong> dp[i] = best loot after <em>considering</em> houses 0..i (considered, not necessarily robbed —
+    precision here prevents bugs). Rob house i → add nums[i] to dp[i−2]; skip → keep dp[i−1]. Take the max. The
+    animation in §5 walks this exact array.</p>
+    <p class="code-title">HouseRobber.java</p>
+<pre class="code"><code>// dp[i] = the most money you can have after CONSIDERING houses 0..i
+// At each house you face one binary choice:
+//   rob it  -&gt; you must have skipped i-1, so you get dp[i-2] + nums[i]
+//   skip it -&gt; you keep whatever was best through i-1, i.e. dp[i-1]
+public static int rob(int[] nums) {
+    int n = nums.length;
+    if (n == 1) return nums[0];
+    int prev2 = nums[0];                        // best through house 0
+    int prev1 = Math.max(nums[0], nums[1]);     // best through house 1
+    for (int i = 2; i &lt; n; i++) {
+        int robIt  = prev2 + nums[i];           // take this house + best two houses back
+        int skipIt = prev1;                     // pass, carry the previous best forward
+        int cur = Math.max(robIt, skipIt);      // the DP choice
+        prev2 = prev1;                          // slide the 2-value window
+        prev1 = cur;
+    }
+    return prev1;                               // best after considering every house
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n), space O(1). Note skipping <em>two</em> houses in a row can be optimal
+    (try [2,1,1,2]) — the recurrence handles it automatically because dp[i−1] already contains that world.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Coin Change</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> fewest coins (each denomination reusable) summing to <code>amount</code>, or −1 if impossible.</p>
+    <p><strong>Idea:</strong> dp[a] = fewest coins making amount a. The last coin used was some c, leaving the subproblem
+    a−c: dp[a] = 1 + min over c of dp[a−c]. Fill amounts small→large so every dp[a−c] is ready. An unreachable
+    amount keeps a sentinel value larger than any real answer.</p>
+    <p class="code-title">CoinChange.java</p>
+<pre class="code"><code>// dp[a] = fewest coins that sum to amount a (unbounded: each coin reusable).
+// Recurrence: dp[a] = 1 + min over coins c of dp[a - c].
+public static int coinChange(int[] coins, int amount) {
+    int[] dp = new int[amount + 1];
+    Arrays.fill(dp, amount + 1);            // "infinity" sentinel: no way found yet
+    dp[0] = 0;                              // base case: zero coins make amount 0
+    for (int a = 1; a &lt;= amount; a++) {     // solve every amount from small to large
+        for (int c : coins) {
+            if (c &lt;= a &amp;&amp; dp[a - c] + 1 &lt; dp[a]) {
+                // Use one coin c on top of the best solution for the remainder.
+                dp[a] = dp[a - c] + 1;
+            }
+        }
+    }
+    // If dp[amount] still holds the sentinel, the amount is unreachable.
+    return dp[amount] &gt; amount ? -1 : dp[amount];
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(amount × coins), space O(amount). This is "unbounded knapsack" — coins may
+    repeat because dp[a−c] can itself already use coin c. Compare the 0/1 version on page 19 where the loop direction flips.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Word Break</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> can string s be split entirely into words from a dictionary (words reusable)?</p>
+    <p><strong>Idea:</strong> dp over <em>prefixes</em>: dp[i] = "the first i characters can be segmented". For prefix i,
+    guess the last word: it spans s[j..i) for some cut j where dp[j] is already true. Bounding j by the longest
+    dictionary word keeps the inner scan short.</p>
+    <p class="code-title">WordBreak.java</p>
+<pre class="code"><code>// dp[i] = "can the first i characters s[0..i) be segmented into dictionary words?"
+// dp[i] is true if SOME earlier true cut j exists where s[j..i) is a word.
+public static boolean wordBreak(String s, List&lt;String&gt; wordDict) {
+    Set&lt;String&gt; dict = new HashSet&lt;&gt;(wordDict);   // O(1) word lookups
+    int maxLen = 0;                               // longest dictionary word — bounds the inner scan
+    for (String w : dict) maxLen = Math.max(maxLen, w.length());
+
+    int n = s.length();
+    boolean[] dp = new boolean[n + 1];
+    dp[0] = true;                                 // base case: the empty prefix is always "segmented"
+    for (int i = 1; i &lt;= n; i++) {                // for every prefix length i...
+        // try every possible LAST word s[j..i); no word is longer than maxLen
+        for (int j = Math.max(0, i - maxLen); j &lt; i; j++) {
+            if (dp[j] &amp;&amp; dict.contains(s.substring(j, i))) {
+                dp[i] = true;                     // prefix j was breakable + one more word reaches i
+                break;                            // one witness is enough — stop scanning
+            }
+        }
+    }
+    return dp[n];                                 // can we segment the WHOLE string?
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n × maxLen) substring checks (each up to O(maxLen) to hash) — commonly quoted
+    O(n²) without the maxLen bound; space O(n) plus the dictionary set.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Longest Increasing Subsequence (O(n²) and O(n log n))</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> length of the longest strictly increasing subsequence (not necessarily contiguous).</p>
+    <p><strong>Idea 1 (O(n²)):</strong> dp[i] = LIS length <em>ending exactly at</em> index i. To extend, look at every
+    earlier j with nums[j] &lt; nums[i] and take the best dp[j] + 1. The answer is the max over all i — an LIS can end anywhere.</p>
+    <p><strong>Idea 2 (O(n log n)):</strong> keep <code>tails[k]</code> = the <em>smallest possible tail value</em> of any
+    increasing subsequence of length k+1. Read that twice — it's the subtle part. Smaller tails are strictly better
+    (easier to extend later), and tails is always sorted, so each new element binary-searches the first tail ≥ it and
+    improves that slot; if it beats every tail, the LIS just got longer. The array's <em>length</em> is the answer
+    (its contents are generally NOT an actual LIS).</p>
+    <p class="code-title">LongestIncreasingSubsequence.java</p>
+<pre class="code"><code>// ---------- O(n^2) DP: dp[i] = length of the longest increasing subsequence ENDING at i ----------
+public static int lengthOfLIS(int[] nums) {
+    int n = nums.length;
+    int[] dp = new int[n];
+    Arrays.fill(dp, 1);                       // every element alone is an LIS of length 1
+    int best = 1;
+    for (int i = 1; i &lt; n; i++) {
+        for (int j = 0; j &lt; i; j++) {         // try appending nums[i] to every earlier LIS...
+            if (nums[j] &lt; nums[i]) {          // ...that it can legally extend
+                dp[i] = Math.max(dp[i], dp[j] + 1);
+            }
+        }
+        best = Math.max(best, dp[i]);         // the answer can end anywhere, so track the max
+    }
+    return best;
+}
+
+// ---------- O(n log n) "patience" version ----------
+// tails[k] = the SMALLEST possible tail value of any increasing subsequence of length k+1.
+// tails is always sorted, so each element binary-searches its landing spot.
+public static int lengthOfLISFast(int[] nums) {
+    int[] tails = new int[nums.length];
+    int size = 0;                             // how many pile tails are in use
+    for (int x : nums) {
+        // find the FIRST tail &gt;= x (lower bound) — that pile's tail can be improved to x
+        int lo = 0, hi = size;
+        while (lo &lt; hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (tails[mid] &lt; x) lo = mid + 1;
+            else hi = mid;
+        }
+        tails[lo] = x;                        // replace (improve) that tail, or...
+        if (lo == size) size++;               // ...x beats every tail: a longer subsequence exists
+    }
+    return size;                              // number of piles = LIS length
+}</code></pre>
+    <p><strong>Complexity:</strong> O(n²)/O(n) for the DP; O(n log n)/O(n) for tails. Using lower-bound
+    (first ≥ x) makes the subsequence strictly increasing — equal elements replace rather than extend.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Say the state sentence before writing code.</strong> Most DP failures are a fuzzy state ("dp[i] is... the answer... at i?"). If dp[i] is "best ending AT i" (LIS) the final answer is a max over all cells; if it's "best considering 0..i" (robber) the answer is the last cell. Know which yours is.</li>
+  <li><strong>Base cases off-by-one:</strong> dp[0] usually means the <em>empty</em> prefix/amount, not the first element. Coin Change's dp[0]=0 and Word Break's dp[0]=true both encode "the empty problem is trivially solved".</li>
+  <li><strong>Memoize before returning.</strong> Computing the value and forgetting <code>memo[i] = best</code> keeps the code correct but exponential — the classic "my DP times out" bug.</li>
+  <li><strong>Java recursion depth:</strong> top-down on n = 10⁵ states can overflow the default JVM stack. Convert to tabulation, or mention <code>-Xss</code> — the interviewer will nod either way.</li>
+  <li><strong>Use a safe "infinity":</strong> <code>Integer.MAX_VALUE</code> overflows the moment you add 1 to it. Use a domain bound (Coin Change's <code>amount + 1</code>) or <code>MAX_VALUE / 2</code>.</li>
+  <li><strong>Counting problems overflow int:</strong> "number of ways" answers grow like Fibonacci — climbing stairs overflows int at n = 46. Ask about constraints; switch to <code>long</code> or a modulus when counting.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="17-shortest-paths.html"><span class="dir">⟵ Prev</span><span class="name">17 · Shortest Paths &amp; MST</span></a>
+  <a class="next" href="19-dp-2d.html"><span class="dir">Next ⟶</span><span class="name">19 · Dynamic Programming 2D</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('robAnim', {
+  totalSteps: 7,
+  intervalMs: 2200,
+  captions: [
+    'Five houses with loot [2, 7, 9, 3, 1]. dp[i] will hold the best loot after considering houses 0..i. We fill it left to right — each cell needs only the two cells before it.',
+    'House 0: no choice yet. Base case dp[0] = 2 (rob the only house you have seen).',
+    'House 1: rob it (7, but then house 0 must be skipped) or skip it (keep 2). dp[1] = max(2, 7) = 7.',
+    'House 2: skip keeps dp[1] = 7; rob gives dp[0] + 9 = 2 + 9 = 11. Robbing wins: dp[2] = 11.',
+    'House 3: skip keeps 11; rob gives dp[1] + 3 = 7 + 3 = 10. Skipping wins: dp[3] = 11. Note we never re-examined houses 0-2 — their best is already baked into dp.',
+    'House 4: skip keeps 11; rob gives dp[2] + 1 = 11 + 1 = 12. Robbing wins: dp[4] = 12.',
+    'Done: the answer is dp[4] = 12, robbing houses 0, 2 and 4 (green). One O(1) choice per house — O(n) total, versus 2^n for trying every subset.'
+  ],
+  apply: function (svg, step) {
+    var dpVals = ['2', '7', '11', '11', '12'];
+    var calcs = [
+      '',
+      'dp[0] = 2',
+      'dp[1] = max(2, 7) = 7',
+      'dp[2] = max(7, 2 + 9) = 11',
+      'dp[3] = max(11, 7 + 3) = 11',
+      'dp[4] = max(11, 11 + 1) = 12',
+      'answer = dp[4] = 12'
+    ];
+    var robbed = {0: true, 2: true, 4: true};   // optimal set, revealed at the end
+    for (var i = 0; i < 5; i++) {
+      var filled = step >= i + 1;               // house i's dp cell is filled from step i+1 on
+      var current = step === i + 1;             // house being decided right now
+      Stepper.setText(svg, '#dt' + i, filled ? dpVals[i] : '');
+      Stepper.setClass(svg, '#d' + i, 'done', filled && !current);
+      Stepper.setClass(svg, '#d' + i, 'active', current);
+      Stepper.setClass(svg, '#h' + i, 'active', current);
+      Stepper.setClass(svg, '#h' + i, 'done', step === 6 && !!robbed[i]);
+      Stepper.setClass(svg, '#h' + i, 'dim', step === 6 && !robbed[i]);
+    }
+    Stepper.setText(svg, '#calc', calcs[step]);
+  }
+});
+</script>
+
+</body>
+</html>

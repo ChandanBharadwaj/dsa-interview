@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>23 · Math &amp; Geometry — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Math &amp; Geometry Essentials</h1>
+<p class="subtitle">GCD, primes, modular arithmetic, fast power, and the two randomized algorithms interviews actually ask — cheap points if you've seen them once.</p>
+<p>
+  <span class="badge phase">Phase 8 · Week 13</span>
+  <span class="badge freq">Sprinkled through every topic — small toolbox, high return</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Math questions in interviews aren't math-competition questions — they're a short list of standard tools:
+  Euclid's GCD, a prime sieve, "answer modulo 10⁹+7", fast exponentiation, and a correct shuffle. Each takes
+  ten minutes to learn and appears verbatim for years. This page is deliberately a toolbox, not a theory course.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — Big-O, and the integer-overflow warning we now weaponize</li>
+  <li><a href="18-dp-1d.html">18 · DP 1D</a> — Pascal's-triangle-style tabulation reappears for combinatorics</li>
+  <li><a href="07-binary-search.html">07 · Binary Search</a> — the halving instinct returns as fast exponentiation</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li>Do you know <strong>Euclid's algorithm</strong> cold, including <em>why</em> it works?</li>
+  <li>Can you handle <strong>"return the answer mod 10⁹+7"</strong> without overflow bugs — the #1 trap in counting problems?</li>
+  <li>Do you know a <strong>provably fair shuffle</strong> and <strong>sampling from a stream</strong> — favorites for data-infra roles?</li>
+  <li>Geometry-lite: overlap checks and distances — do you reduce them to <strong>per-axis interval logic</strong> instead of trigonometry?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Bit manipulation (page 22) taught you to see numbers as structures. This page adds number <em>theory</em>:
+  divisibility (GCD), primality (sieve), and arithmetic in a modular world. Fast exponentiation even reuses page 22's
+  bit-walk: exponentiation by squaring reads the exponent bit by bit.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. GCD — Euclid's two-liner</h3>
+<p>
+  <strong>Why it works:</strong> any number dividing both a and b also divides a − b, hence also a mod b.
+  So gcd(a, b) = gcd(b, a mod b) — the pair shrinks fast (the argument at least halves every two steps ⇒
+  O(log min(a,b))). LCM comes free: <code>lcm = a / gcd(a,b) * b</code> — divide <em>first</em> to dodge overflow.
+</p>
+<pre class="code"><code>static long gcd(long a, long b) {
+    return b == 0 ? a : gcd(b, a % b);   // when b hits 0, a holds the answer
+}</code></pre>
+
+<h3>2. Primes — trial division vs the sieve</h3>
+<p>
+  One number? Trial-divide by 2..√n — O(√n), because a factor above √n implies a partner below it.
+  <em>Many</em> numbers (or "count primes below n")? The <strong>sieve of Eratosthenes</strong>: repeatedly take the
+  next unmarked number (a prime) and cross out its multiples. Total work n/2 + n/3 + n/5 + … = <strong>O(n log log n)</strong> —
+  effectively linear.
+</p>
+
+<div class="anim" id="sieveAnim">
+  <svg viewBox="0 0 640 250" id="sieveSvg">
+    <!-- cells 2..49 injected by script -->
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. Modular arithmetic — surviving "answer mod 10⁹+7"</h3>
+<p>
+  Counting problems overflow <code>long</code> almost immediately, so answers are requested modulo a large prime.
+  The rules: take mod after every add and every multiply; <strong>multiply in <code>long</code></strong>
+  (two ints near 10⁹ overflow int on multiplication); and for subtraction use <code>((a - b) % M + M) % M</code>
+  because Java's <code>%</code> can return negatives.
+</p>
+<pre class="code"><code>static final int MOD = 1_000_000_007;
+long sum = (a + b) % MOD;               // a, b already reduced
+long prod = (a * b) % MOD;              // a, b are longs — the product fits
+long diff = ((a - b) % MOD + MOD) % MOD; // Java % keeps sign of the dividend!</code></pre>
+
+<h3>4. Fast exponentiation — xⁿ in O(log n)</h3>
+<p>
+  x¹³ isn't 13 multiplications: 13 = 1101₂, so x¹³ = x⁸·x⁴·x¹. <strong>Square-and-multiply</strong>: walk the
+  exponent's bits (page 22!), squaring the base each step, multiplying it in when the bit is 1. This is also how
+  RSA computes mod-exponents on 2048-bit numbers — the same 15-line loop.
+</p>
+
+<h3>5. Randomized algorithms — the two that get asked</h3>
+<p>
+  <strong>Fisher-Yates shuffle:</strong> walk i from n−1 down to 1, swap a[i] with a random index in [0..i]. Every
+  permutation gets probability 1/n! — provably uniform. The tempting "swap each i with any random j in [0..n−1]"
+  is <em>biased</em> (it generates nⁿ equally likely outcomes, which n! doesn't divide evenly).
+  <strong>Reservoir sampling:</strong> pick a uniform random item from a stream of unknown length in O(1) space —
+  keep the k-th item with probability 1/k. Proof sketch: item i survives with (1/i)·(i/(i+1))·…·((n−1)/n) = 1/n. ∎
+</p>
+
+<h3>6. Geometry-lite — intervals per axis</h3>
+<p>
+  Interview geometry is rarely trigonometry. Two axis-aligned rectangles overlap ⇔ their x-intervals overlap AND
+  their y-intervals overlap — reuse <a href="21-greedy-intervals.html">page 21</a>'s interval logic per axis
+  (<code>a.left &lt; b.right &amp;&amp; b.left &lt; a.right</code>). Circle vs point: compare <em>squared</em>
+  distances (<code>dx*dx + dy*dy &lt;= r*r</code>) — no <code>sqrt</code>, no floating-point drama.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Fast power with modulus — the exact loop to memorize</p>
+<pre class="code"><code>static long powMod(long base, long exp, long mod) {
+    long result = 1;
+    base %= mod;
+    while (exp &gt; 0) {
+        if ((exp &amp; 1) == 1)            // current bit of the exponent is 1
+            result = result * base % mod;   // multiply this power of x in
+        base = base * base % mod;      // x -&gt; x^2 -&gt; x^4 -&gt; x^8 ...
+        exp &gt;&gt;= 1;                     // next bit
+    }
+    return result;
+}</code></pre>
+
+<p class="code-title">nCk via Pascal's rule — safe small-scale combinatorics (it's just DP)</p>
+<pre class="code"><code>// C(n,k) = C(n-1,k-1) + C(n-1,k): "use item n or don't" — House Robber logic in disguise
+long[][] c = new long[n + 1][n + 1];
+for (int i = 0; i &lt;= n; i++) {
+    c[i][0] = 1;                                   // one way to choose nothing
+    for (int j = 1; j &lt;= i; j++)
+        c[i][j] = (c[i-1][j-1] + c[i-1][j]) % MOD; // mod every add — factorials explode fast
+}</code></pre>
+
+<p class="code-title">Java randomness — which class when</p>
+<pre class="code"><code>Random r = new Random();          // interviews & reproducible tests (seedable)
+ThreadLocalRandom.current();      // production hot paths — no contention between threads
+new SecureRandom();               // tokens/crypto ONLY — slower, unpredictable
+r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs(nextInt() % bound): biased AND breaks on MIN_VALUE</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Situation</th><th>Tool</th><th>Cost</th><th>Watch out for</th></tr>
+  <tr><td>one primality check</td><td>trial division to √n</td><td>O(√n)</td><td>loop <code>i * i &lt;= n</code> with long i</td></tr>
+  <tr><td>primes below n / many queries</td><td>sieve of Eratosthenes</td><td>O(n log log n)</td><td>start crossing at p·p; boolean[n] memory</td></tr>
+  <tr><td>"number of ways … mod 10⁹+7"</td><td>modular DP + powMod</td><td>—</td><td>multiply as long; fix negative %</td></tr>
+  <tr><td>xⁿ (n huge or modular)</td><td>square-and-multiply</td><td>O(log n)</td><td><code>Math.pow</code> is double — precision loss ⇒ wrong answers</td></tr>
+  <tr><td>uniform shuffle</td><td>Fisher-Yates</td><td>O(n)</td><td>bound must be i+1, not n — that's the whole fairness proof</td></tr>
+  <tr><td>sample from a stream, unknown length</td><td>reservoir sampling</td><td>O(n) time, O(k) space</td><td>replace with probability k/i at item i</td></tr>
+  <tr><td>rectangle/circle overlap</td><td>per-axis intervals / squared distance</td><td>O(1)</td><td>strict vs inclusive edges; avoid sqrt</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Cryptography runs on powMod</h4>
+    <p class="small">RSA encryption/decryption is modular exponentiation on 2048-bit numbers; Diffie-Hellman key
+    exchange is g^secret mod p. The square-and-multiply loop above — plus BigInteger — is the beating heart of TLS
+    handshakes securing every HTTPS request.</p>
+  </div>
+  <div class="card">
+    <h4>Sampling in observability &amp; ML</h4>
+    <p class="small">Metrics agents keep a fair sample of latencies from an unbounded stream via reservoir sampling
+    (it's in Dropwizard/Micrometer histograms); ML training pipelines Fisher-Yates-shuffle datasets every epoch so
+    batches stay i.i.d.</p>
+  </div>
+  <div class="card">
+    <h4>Sharding &amp; hashing</h4>
+    <p class="small">shard = hash(key) mod N is the first-cut partitioner in every distributed store (and why prime
+    table sizes and good hash mixing matter); GCD/LCM logic sizes ring buffers and aligns rate windows
+    (<a href="25-real-world-systems.html">capstone</a>).</p>
+  </div>
+  <div class="card">
+    <h4>Games, graphics &amp; geo</h4>
+    <p class="small">Collision detection is per-axis interval overlap (AABB checks) exactly as above; map apps
+    pre-filter "restaurants within 2 km" with squared-distance bounding boxes before any precise math; card games
+    ship Fisher-Yates verbatim.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/greatest-common-divisor-of-strings/">Greatest Common Divisor of Strings</a>
+    <span class="hint">Slick fact: if s+t equals t+s the answer has length gcd(|s|,|t|) — Euclid on string lengths.</span></div>
+  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/excel-sheet-column-number/">Excel Sheet Column Number</a>
+    <span class="hint">Base-26 positional notation: result = result*26 + (c-'A'+1).</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/count-primes/">Count Primes</a>
+    <span class="hint">Worked below — the sieve, exactly as animated above.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/powx-n/">Pow(x, n)</a>
+    <span class="hint">Worked below — square-and-multiply; the trap is n = Integer.MIN_VALUE.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/shuffle-an-array/">Shuffle an Array</a>
+    <span class="hint">Worked below — Fisher-Yates; keep an untouched copy for reset().</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/rotate-array/">Rotate Array</a>
+    <span class="hint">Reverse whole array, then reverse the two pieces — O(1) space elegance.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/random-pick-with-weight/">Random Pick with Weight</a>
+    <span class="hint">Prefix sums (page 04) + binary search (page 07) on a random dart — a beautiful three-topic combo.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/linked-list-random-node/">Linked List Random Node</a>
+    <span class="hint">Reservoir sampling with k=1 over a single pass — cite the 1/n proof.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Count Primes (sieve of Eratosthenes) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Count primes strictly less than n (n up to 5·10⁶ — trial division per number is too slow).</p>
+    <p><strong>Idea.</strong> One shared boolean array; every prime crosses out its multiples starting at p·p
+    (smaller multiples were already crossed out by smaller primes). What survives is prime.</p>
+<pre class="code"><code>public static int countPrimes(int n) {
+    if (n &lt; 3) return 0;                       // no primes below 2
+    boolean[] composite = new boolean[n];      // false = presumed prime
+    int count = 0;
+    for (int i = 2; i &lt; n; i++) {
+        if (composite[i]) continue;            // already crossed out — skip
+        count++;                               // i survived every smaller prime -&gt; prime
+        // Cross out multiples starting at i*i: anything below that, like 2*i or 3*i,
+        // was already handled by the smaller prime factor (2, 3, ...).
+        for (long m = (long) i * i; m &lt; n; m += i)  // long: i*i overflows int for i ~ 50k
+            composite[(int) m] = true;
+    }
+    return count;
+}</code></pre>
+    <p><strong>Complexity.</strong> Time O(n log log n), space O(n). Two crossable details interviewers look for:
+    starting at <code>i*i</code>, and the <code>long</code> cast that prevents <code>i*i</code> overflowing int.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Pow(x, n) (fast exponentiation) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Implement xⁿ for integer n (which may be negative — or Integer.MIN_VALUE).</p>
+    <p><strong>Idea.</strong> Square-and-multiply over n's bits: O(log n) multiplications. Negative n means 1/x^|n| —
+    but |MIN_VALUE| doesn't fit in an int, so widen to long <em>first</em>.</p>
+<pre class="code"><code>public static double myPow(double x, int n) {
+    long e = n;                       // widen BEFORE negating: -(MIN_VALUE) overflows int
+    if (e &lt; 0) {
+        x = 1 / x;                    // x^-e = (1/x)^e
+        e = -e;
+    }
+    double result = 1;
+    while (e &gt; 0) {
+        if ((e &amp; 1) == 1)             // this bit of the exponent is set
+            result *= x;              // fold the current power of x into the answer
+        x *= x;                       // x -&gt; x^2 -&gt; x^4 -&gt; x^8 ...
+        e &gt;&gt;= 1;                      // move to the next bit
+    }
+    return result;
+}</code></pre>
+    <p><strong>Complexity.</strong> O(log n) time, O(1) space. Mentioning the MIN_VALUE widening unprompted is an
+    instant credibility point — it's the entire reason this "easy" problem is rated Medium.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Shuffle an Array (Fisher-Yates) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Design a class with <code>shuffle()</code> returning a uniformly random permutation
+    and <code>reset()</code> returning the original array.</p>
+    <p><strong>Idea.</strong> Fisher-Yates: for i from the end down, swap a[i] with a random index in [0..i].
+    Each of the n! permutations is produced by exactly one random-choice sequence ⇒ uniform.</p>
+<pre class="code"><code>private final int[] original;          // pristine copy for reset()
+private int[] current;
+private final Random rand = new Random();
+
+public ShuffleArray(int[] nums) {
+    original = nums.clone();           // defensive copies — don't alias caller's array
+    current = nums.clone();
+}
+
+public int[] reset() {
+    current = original.clone();        // hand back (a copy of) the original order
+    return current;
+}
+
+public int[] shuffle() {
+    for (int i = current.length - 1; i &gt; 0; i--) {
+        int j = rand.nextInt(i + 1);   // uniform in [0..i] — the i+1 bound IS the algorithm
+        int t = current[i]; current[i] = current[j]; current[j] = t;
+    }
+    return current;
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n) per shuffle, O(n) space for the pristine copy. If asked "why not
+    <code>rand.nextInt(n)</code> every time?": that yields nⁿ equally likely runs, and n! doesn't divide nⁿ —
+    some permutations must come up more often. The [0..i] bound is what makes it exactly n! outcomes.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Java's <code>%</code> can be negative:</strong> <code>-7 % 3 == -1</code>. Normalize with <code>((a % m) + m) % m</code> whenever a subtraction is involved.</li>
+  <li><strong>Multiply before you mod — in a long.</strong> Two ints ≈ 10⁹ multiply to ≈ 10¹⁸: fits long, destroys int. Declare accumulators long by reflex.</li>
+  <li><strong><code>Math.pow</code> is for doubles.</strong> Integer exponentiation via Math.pow silently loses precision around 2⁵³ — always the square-and-multiply loop for exact/modular work.</li>
+  <li><strong><code>Math.abs</code> can return a negative:</strong> <code>Math.abs(Integer.MIN_VALUE)</code> is still MIN_VALUE. This poisons "abs then mod" hashing tricks — mask instead.</li>
+  <li><strong>Compare squared distances</strong>, never <code>sqrt</code> results — faster and immune to floating-point equality traps.</li>
+  <li><strong>Say the sieve's complexity right:</strong> it's O(n log log n) — knowing that odd little bound (and starting the crossing at p·p) is the whole signal.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="22-bit-manipulation.html"><span class="dir">⟵ Previous</span><span class="name">22 · Bit Manipulation</span></a>
+  <a class="next" href="24-advanced-structures.html"><span class="dir">Next ⟶</span><span class="name">24 · Advanced Structures &amp; Design</span></a>
+</nav>
+
+</div>
+
+<script>
+/* Sieve of Eratosthenes on 2..49 */
+(function () {
+  var svg = document.querySelector('#sieveSvg');
+  var COLS = 8, W = 68, H = 34, X0 = 40, Y0 = 16;
+  var ns = 'http://www.w3.org/2000/svg';
+  var nums = [];
+  for (var v = 2; v <= 49; v++) nums.push(v);
+  nums.forEach(function (v, idx) {
+    var r = Math.floor(idx / COLS), c = idx % COLS;
+    var rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('id', 's-' + v);
+    rect.setAttribute('class', 'box');
+    rect.setAttribute('x', X0 + c * W); rect.setAttribute('y', Y0 + r * H);
+    rect.setAttribute('width', W - 6); rect.setAttribute('height', H - 6);
+    rect.setAttribute('rx', 6);
+    svg.appendChild(rect);
+    var t = document.createElementNS(ns, 'text');
+    t.setAttribute('class', 'lbl');
+    t.setAttribute('x', X0 + c * W + (W - 6) / 2); t.setAttribute('y', Y0 + r * H + 22);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '13');
+    t.textContent = v;
+    svg.appendChild(t);
+  });
+
+  // smallest prime factor for 2..49
+  function spf(v) { for (var p = 2; p * p <= v; p++) if (v % p === 0) return p; return v; }
+  var primes = [2, 3, 5, 7];
+
+  new Stepper('sieveAnim', {
+    totalSteps: 6,
+    intervalMs: 2000,
+    captions: [
+      'The numbers 2..49, all presumed prime. We only need to process primes up to √49 = 7.',
+      'Take 2 — unmarked, so it is prime (green). Cross out every multiple of 2 (dimmed): half the board falls instantly.',
+      '3 is still unmarked → prime. Cross out its multiples starting at 3×3=9 (6 was already gone via 2 — that is why we start at p²).',
+      '5 → prime. Its first useful crossing is 5×5=25; smaller multiples all had smaller prime factors.',
+      '7 → prime. Cross out 49 (7×7). We have now processed every prime up to √49.',
+      'Everything still unmarked is prime: 2,3,5,7,11,13,17,19,23,29,31,37,41,43,47 — fifteen primes, found in O(n log log n).'
+    ],
+    apply: function (svg, step) {
+      var processed = primes.slice(0, Math.min(step, 4));
+      nums.forEach(function (v) {
+        var f = spf(v);
+        var composite = f < v && processed.indexOf(f) >= 0;
+        var isPrime = f === v;
+        Stepper.setClass(svg, '#s-' + v, 'dim', composite);
+        Stepper.setClass(svg, '#s-' + v, 'done',
+          (isPrime && processed.indexOf(v) >= 0) || (step === 5 && isPrime));
+        Stepper.setClass(svg, '#s-' + v, 'active', step >= 1 && step <= 4 && v === primes[step - 1]);
+      });
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

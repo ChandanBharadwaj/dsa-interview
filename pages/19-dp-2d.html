@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>19 · Dynamic Programming 2D — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Dynamic Programming 2D: Grids, Two Strings, Knapsacks</h1>
+<p class="subtitle">When the state needs two coordinates — a position pair, two string indices, or item-and-capacity — the dp array becomes a table. Same four-step recipe as page 18; the table is just where the answers live.</p>
+<p>
+  <span class="badge phase">Phase 7 · Weeks 11–12</span>
+  <span class="badge freq">Grid DP + LCS/edit distance are interview canon — asked for decades</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Most famous DP interview questions aren't 1D: comparing two strings (diff, spell-check), walking a grid, or packing a
+  budget all need <em>two</em> moving quantities to describe "where you are". The leap from page 18 is small — the state
+  sentence gains one clause ("dp[i][j] = … first i of A and first j of B") — but it unlocks LCS, edit distance and
+  knapsack, three templates that between them cover an enormous share of real DP interviews.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="18-dp-1d.html">18 · Dynamic Programming 1D</a> — the 4-step recipe (state → recurrence → base cases → order) is used verbatim here.</li>
+  <li><a href="05-matrix.html">05 · Matrix &amp; 2D Simulation</a> — row/column indexing discipline.</li>
+  <li><a href="17-shortest-paths.html">17 · Shortest Paths &amp; MST</a> — the "when is a grid problem DP vs BFS" decision.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you name the two dimensions?</strong> "Rows = prefix of word1, columns = prefix of word2" — stating what each axis means is the whole design.</li>
+  <li><strong>Do you handle row 0 / column 0</strong> (the empty-prefix base cases) deliberately, or do you off-by-one your way into a wrong table?</li>
+  <li><strong>Can you recognize a disguise?</strong> Partition Equal Subset Sum <em>is</em> knapsack; diff <em>is</em> LCS. Naming the reduction scores senior points.</li>
+  <li><strong>Space awareness:</strong> can you drop an O(m·n) table to one row — and explain why 0/1 knapsack's row must be filled right-to-left?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 18's states were "the first i elements" — one number located every subproblem. Here a single number can't:
+  aligning <code>"horse"</code> against <code>"ros"</code> requires knowing how much of <em>each</em> string is
+  consumed. Two indices → a 2D table, filled so that the cells a recurrence reads (up, left, diagonal) are computed
+  before the cell that reads them — the same "dependencies first" ordering, one dimension richer.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Grid DP: counting and choosing on a lattice</h3>
+<p class="lead">
+  A robot walks from the top-left of an m×n grid to the bottom-right moving only <strong>right or down</strong>.
+  Every cell's answer depends only on its top and left neighbors — cells that are always computed first if you sweep
+  row by row.
+</p>
+<p>
+  <em>Unique Paths</em> (counting): <code>paths(r,c) = paths(r−1,c) + paths(r,c−1)</code> — arrive from above or from
+  the left; the two sets of paths are disjoint, so add. Base cases: the whole first row and first column are 1 (only
+  one straight-line way). <em>Minimum Path Sum</em> (choosing): same neighbors, but combine with
+  <code>min</code> and pay the cell's cost. Same table, different verb — exactly the Climbing Stairs → Min Cost
+  ladder from page 18, now in 2D.
+</p>
+
+<div class="note">
+  <strong>Why is this DP and not BFS/Dijkstra?</strong> (The classic LC&nbsp;64 confusion, resolved.) Movement restricted to
+  right/down means you can never revisit a cell — the grid is a <strong>DAG</strong>, and a row-by-row sweep is a
+  topological order, so plain DP works and is optimal. Allow all 4 directions (or ask for fewest <em>steps</em> in an
+  unweighted maze) and cycles appear: now it's a graph problem — BFS for unweighted, Dijkstra for weighted
+  (page 17's decision guide). Restricted movement → DP; free movement → graph search.
+</div>
+
+<p class="code-title">Minimum Path Sum — the grid-DP shape in full (MinPathSum.java)</p>
+<pre class="code"><code>// dp[r][c] = cheapest total to reach cell (r,c) moving only right/down.
+// Movement is restricted -&gt; the grid is a DAG -&gt; plain DP works (no BFS/Dijkstra needed).
+public static int minPathSum(int[][] grid) {
+    int m = grid.length, n = grid[0].length;
+    int[][] dp = new int[m][n];
+    dp[0][0] = grid[0][0];                                 // start cell: no choice, pay its cost
+    for (int c = 1; c &lt; n; c++)                            // top row: can only arrive from the left
+        dp[0][c] = dp[0][c - 1] + grid[0][c];
+    for (int r = 1; r &lt; m; r++)                            // left column: can only arrive from above
+        dp[r][0] = dp[r - 1][0] + grid[r][0];
+    for (int r = 1; r &lt; m; r++) {
+        for (int c = 1; c &lt; n; c++) {
+            // Two possible predecessors; take the cheaper one, then pay this cell's cost.
+            dp[r][c] = grid[r][c] + Math.min(dp[r - 1][c], dp[r][c - 1]);
+        }
+    }
+    return dp[m - 1][n - 1];                               // cheapest path into the bottom-right
+}</code></pre>
+
+<p>
+  <strong>Obstacles variant</strong> (Unique Paths II): an obstacle cell simply gets dp = 0 ways (or ∞ cost) — the
+  recurrence flows around it. No new machinery, which is why interviewers like it as a follow-up.
+</p>
+
+<h3>2. Two-string DP: LCS, the master template</h3>
+<p>
+  <em>Longest Common Subsequence</em>: the longest sequence of characters appearing in both strings in order (gaps
+  allowed). State: <code>dp[i][j]</code> = LCS length of the <strong>first i chars of A</strong> and the
+  <strong>first j chars of B</strong>. Compare the last characters:
+</p>
+<ul>
+  <li><strong>They match</strong> → they end some common subsequence: <code>dp[i][j] = dp[i−1][j−1] + 1</code> (diagonal + 1).</li>
+  <li><strong>They differ</strong> → at least one of them is useless here; drop A's last <em>or</em> B's last and keep the better world: <code>dp[i][j] = max(dp[i−1][j], dp[i][j−1])</code>.</li>
+</ul>
+<p>
+  Row 0 and column 0 (empty prefixes) are 0 — the base cases come free. Watch the table build for
+  <code>"ABCBDAB"</code> × <code>"BDCAB"</code>, then the traceback that recovers the actual subsequence:
+</p>
+
+<div class="anim" id="lcsAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="LCS table filling row by row, then traceback">
+    <!--LCSGRID-->
+    <text x="360" y="60" class="small">rows: text1 = "ABCBDAB" (prefixes of A)</text>
+    <text x="360" y="80" class="small">cols: text2 = "BDCAB" (prefixes of B)</text>
+    <text x="360" y="118" class="small">match  → dp[i][j] = dp[i-1][j-1] + 1  (diagonal)</text>
+    <text x="360" y="138" class="small">differ → dp[i][j] = max(up, left)</text>
+    <circle cx="368" cy="170" r="8" class="box active"></circle>
+    <text x="384" y="175" class="small">cell set by a MATCH (diagonal + 1)</text>
+    <circle cx="368" cy="194" r="8" class="box frontier"></circle>
+    <text x="384" y="199" class="small">traceback path (shown at the end)</text>
+    <text id="lcsres" x="360" y="240" class="lbl" style="font-size:16px"></text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<p class="code-title">LCS — the two-string recurrence in code (LongestCommonSubsequence.java)</p>
+<pre class="code"><code>// dp[i][j] = length of the LCS of the first i chars of a and the first j chars of b.
+// The master two-string recurrence:
+//   chars match  -&gt; extend the diagonal:      dp[i][j] = dp[i-1][j-1] + 1
+//   no match     -&gt; skip one char, best side: dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+public static int longestCommonSubsequence(String a, String b) {
+    int m = a.length(), n = b.length();
+    int[][] dp = new int[m + 1][n + 1];        // row 0 / col 0 = empty prefix = 0 (free base case)
+    for (int i = 1; i &lt;= m; i++) {
+        for (int j = 1; j &lt;= n; j++) {
+            if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                // Last chars match: they surely belong to some LCS — count them, shrink both.
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                // They can't both end the LCS: drop a's last char OR b's — keep the better world.
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    return dp[m][n];                           // LCS of the two full strings
+}</code></pre>
+
+<div class="tip">
+  <strong>LCS is how diff works.</strong> <code>git diff</code> computes (a variant of) the LCS of the two file
+  versions: everything in the LCS is "unchanged", everything else becomes <code>-</code> or <code>+</code> lines.
+  When you review a PR, you're reading the complement of an LCS. (Git's default is the Myers algorithm — an
+  LCS-equivalent formulation optimized for mostly-similar files.)
+</div>
+
+<p>
+  <strong>Substring vs subsequence:</strong> longest common <em>substring</em> demands contiguity. One recurrence
+  change: on a match <code>dp[i][j] = dp[i−1][j−1] + 1</code>, on a mismatch <code>dp[i][j] = 0</code> (the run is
+  broken — no max(up,left) rescue), and the answer is the max cell anywhere, not the corner. Interviewers love asking
+  which one you actually need.
+</p>
+
+<h3>3. Edit distance: three ops = three neighbors</h3>
+<p>
+  <em>Edit Distance</em> (Levenshtein): minimum insert/delete/replace operations to turn word1 into word2. Same axes
+  as LCS. The beautiful bit: each of the three allowed operations corresponds to exactly one neighbor cell —
+  delete = up, insert = left, replace = diagonal. Base cases are real work now: turning i characters into the empty
+  string costs i deletions (column 0), and building j characters from nothing costs j insertions (row 0).
+</p>
+
+<p class="code-title">Edit Distance — EditDistance.java</p>
+<pre class="code"><code>// dp[i][j] = minimum operations (insert/delete/replace) to turn the first i chars
+// of word1 into the first j chars of word2. The three ops are the three neighbors:
+//   delete  word1[i-1]           -&gt; dp[i-1][j]   + 1   (cell above)
+//   insert  word2[j-1] into w1   -&gt; dp[i][j-1]   + 1   (cell left)
+//   replace word1[i-1]-&gt;w2[j-1]  -&gt; dp[i-1][j-1] + 1   (diagonal)
+public static int minDistance(String word1, String word2) {
+    int m = word1.length(), n = word2.length();
+    int[][] dp = new int[m + 1][n + 1];
+    for (int i = 0; i &lt;= m; i++) dp[i][0] = i;   // turn i chars into "" -&gt; i deletions
+    for (int j = 0; j &lt;= n; j++) dp[0][j] = j;   // turn "" into j chars -&gt; j insertions
+    for (int i = 1; i &lt;= m; i++) {
+        for (int j = 1; j &lt;= n; j++) {
+            if (word1.charAt(i - 1) == word2.charAt(j - 1)) {
+                dp[i][j] = dp[i - 1][j - 1];     // last chars agree: free move along the diagonal
+            } else {
+                // 1 + cheapest of the three edits (delete, insert, replace)
+                dp[i][j] = 1 + Math.min(dp[i - 1][j - 1],
+                               Math.min(dp[i - 1][j], dp[i][j - 1]));
+            }
+        }
+    }
+    return dp[m][n];
+}</code></pre>
+
+<h3>4. 0/1 knapsack: item × capacity</h3>
+<p>
+  The third great 2D family. n items with weights and values, a capacity W, each item usable <strong>at most once</strong>:
+  maximize value. State: <code>dp[i][w]</code> = best value using the <strong>first i items</strong> within capacity w.
+  Per item, one binary choice — <em>leave it</em> (<code>dp[i−1][w]</code>) or <em>take it</em>
+  (<code>dp[i−1][w−weight] + value</code>, only if it fits). House Robber's rob/skip, with a capacity axis.
+</p>
+<p>
+  <strong>Space-optimize to 1D — and why the loop reverses.</strong> Row i reads only row i−1, so keep one array and
+  overwrite in place. But if you sweep capacities <em>left to right</em>, <code>dp[w−weight]</code> may already contain
+  <em>this</em> item — you'd take it twice. Sweeping <strong>right to left</strong> guarantees every value you read is
+  still last-row (item not yet used) data. Flip that reasoning and you get the unbounded variants on purpose: Coin
+  Change (page 18) and Coin Change II below loop <em>forward</em> precisely because reuse is allowed.
+</p>
+
+<p class="code-title">Subset-sum flavor of 0/1 knapsack — PartitionEqualSubsetSum.java</p>
+<pre class="code"><code>// Knapsack in disguise: can some subset hit target = totalSum / 2?
+// dp[s] = "is sum s reachable using the items considered so far?"
+public static boolean canPartition(int[] nums) {
+    int total = 0;
+    for (int x : nums) total += x;
+    if (total % 2 != 0) return false;          // odd total can never split into two equal halves
+    int target = total / 2;
+
+    boolean[] dp = new boolean[target + 1];
+    dp[0] = true;                              // base case: the empty subset reaches sum 0
+    for (int num : nums) {                     // 0/1: consider each item exactly once
+        // REVERSE loop so this iteration reads only LAST iteration's values —
+        // forward would let one item be counted twice (that's the unbounded variant).
+        for (int s = target; s &gt;= num; s--) {
+            if (dp[s - num]) dp[s] = true;     // reach s by adding num to a reachable s-num
+        }
+    }
+    return dp[target];
+}</code></pre>
+
+<p class="code-title">The forward-loop contrast: unbounded counting — CoinChangeII.java</p>
+<pre class="code"><code>// Count the COMBINATIONS of coins that make `amount` (order doesn't matter).
+// dp[a] = number of ways to build amount a with the coins processed SO FAR.
+// Loop order is the whole trick:
+//   coins OUTER, amounts inner  -&gt; each way is built in one fixed coin order = combinations
+//   amounts outer, coins inner  -&gt; 1+2 and 2+1 both counted = permutations (a different problem!)
+public static int change(int amount, int[] coins) {
+    int[] dp = new int[amount + 1];
+    dp[0] = 1;                                 // one way to make 0: use no coins
+    for (int coin : coins) {                   // commit to coins one at a time...
+        for (int a = coin; a &lt;= amount; a++) { // FORWARD loop = unbounded (coin reusable)
+            dp[a] += dp[a - coin];             // ways that use at least one more of this coin
+        }
+    }
+    return dp[amount];
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template — the universal 2D table fill</p>
+<pre class="code"><code>// 1) STATE: dp[i][j] = answer for (first i of thing-1, first j of thing-2)
+//    thing-1/thing-2 = string prefixes, grid coordinates, or items/capacity
+int[][] dp = new int[m + 1][n + 1];
+
+// 2) BASE CASES: row 0 and column 0 = "one side is empty" — write them explicitly
+//    (LCS: all 0.  Edit distance: i and j.  Grid: running sums.  Knapsack: 0.)
+
+// 3) RECURRENCE: each cell from up / left / diagonal neighbors — already filled
+for (int i = 1; i &lt;= m; i++) {
+    for (int j = 1; j &lt;= n; j++) {
+        dp[i][j] = combine(dp[i - 1][j],        // "skip from side 1" or "arrive from above"
+                           dp[i][j - 1],        // "skip from side 2" or "arrive from left"
+                           dp[i - 1][j - 1]);   // "consume from both" (match/replace/take)
+    }
+}
+// 4) ANSWER: usually dp[m][n]; max over cells for "ending here" states (common substring)
+
+// SPACE: row i depends only on row i-1  =&gt;  one 1D row suffices.
+//   reading dp[i-1][...] from indices &lt;= current  =&gt;  iterate j DESCENDING (0/1 knapsack)
+//   reading dp[i][...]   from indices &lt;  current  =&gt;  iterate j ascending  (unbounded)</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Signal in the problem</th><th>Family</th><th>State</th><th>Prototype</th></tr>
+  <tr><td>one sequence, "first i elements" suffices</td><td>1D DP (page 18)</td><td>dp[i]</td><td>House Robber, Coin Change</td></tr>
+  <tr><td>grid + restricted movement (right/down)</td><td>grid DP</td><td>dp[r][c]</td><td>Unique Paths, Min Path Sum</td></tr>
+  <tr><td>grid + free movement / fewest steps</td><td><em>not DP</em> — BFS/Dijkstra</td><td>dist[r][c]</td><td>page 17's decision guide</td></tr>
+  <tr><td><strong>two strings</strong> + align/compare/transform</td><td>two-string DP</td><td>dp[i][j] over prefixes</td><td>LCS, Edit Distance</td></tr>
+  <tr><td>pick items under a budget, each once</td><td>0/1 knapsack</td><td>dp[item][capacity], 1D reverse loop</td><td>Partition Equal Subset Sum</td></tr>
+  <tr><td>pick items under a budget, unlimited reuse</td><td>unbounded knapsack</td><td>dp[capacity], forward loop</td><td>Coin Change I &amp; II</td></tr>
+  <tr><td>bounded copies of each item</td><td>bounded knapsack</td><td>0/1 with items duplicated (or binary-split)</td><td>rarer in interviews — name it and move on</td></tr>
+</table>
+</div>
+
+<p><strong>1D or 2D — how to tell:</strong> ask "what must I know to finish the rest of the problem from here?" If one
+number answers it (position, amount), 1D. If you need two independent quantities (progress in <em>each</em> string;
+items considered <em>and</em> budget left), the state is a pair → 2D. The recipe never changes; only the address of a
+subproblem does.</p>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>git diff &amp; code review</h4>
+    <p class="small">Every diff you've ever read is an LCS complement: common lines form the LCS, the rest are shown as
+    additions/removals. Git uses Myers' O(ND) algorithm — an LCS solver tuned for the "files are mostly identical"
+    case — plus heuristics for prettier hunks.</p>
+  </div>
+  <div class="card">
+    <h4>Spell-check &amp; fuzzy search</h4>
+    <p class="small">Elasticsearch/Lucene's fuzzy queries rank candidates by Levenshtein distance — the exact
+    edit-distance table above, often bounded ("distance ≤ 2") so only a narrow diagonal band of the table is computed.
+    Same trick powers "did you mean…" suggestions.</p>
+  </div>
+  <div class="card">
+    <h4>DNA sequence alignment</h4>
+    <p class="small">Needleman-Wunsch — bioinformatics' foundational algorithm — is edit distance with a biochemical
+    scoring matrix (match/mismatch/gap penalties). Aligning genomes, BLAST-style search seeds, and Covid variant
+    tracking all sit on this 2D table.</p>
+  </div>
+  <div class="card">
+    <h4>Budgeting &amp; resource allocation</h4>
+    <p class="small">Choosing projects under a fixed budget, ad placements under an inventory cap, or cargo under a
+    weight limit are 0/1 knapsacks. Real optimizers add constraints and go to ILP solvers, but the knapsack DP is the
+    exact-solution core (and the interview version).</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/unique-paths/">Unique Paths</a>
+    <span class="hint">Count paths on a DAG grid: add the two predecessor cells; first row/col are all 1.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/minimum-path-sum/">Minimum Path Sum</a>
+    <span class="hint">Same grid, min instead of sum-of-ways — and it's DP (not BFS) because movement is restricted.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/longest-common-subsequence/">Longest Common Subsequence</a>
+    <span class="hint">The master template: diagonal+1 on match, max(up, left) otherwise.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/edit-distance/">Edit Distance</a>
+    <span class="hint">Three ops = three neighbor cells; don't forget row/col 0 cost real operations.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/partition-equal-subset-sum/">Partition Equal Subset Sum</a>
+    <span class="hint">Knapsack in disguise: subset-sum to total/2, 1D boolean dp filled right-to-left.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/coin-change-ii/">Coin Change II</a>
+    <span class="hint">Unbounded + counting: coins outer, amounts inner, forward loop = combinations not permutations.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/interleaving-string/">Interleaving String</a>
+    <span class="hint">dp[i][j] = can i chars of s1 + j chars of s2 interleave into the first i+j of s3?</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <a class="t" href="https://leetcode.com/problems/longest-palindromic-subsequence/">Longest Palindromic Subsequence</a>
+    <span class="hint">Sneaky reduction: LCS of s and reverse(s) — or interval DP on [i..j] (page 20).</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution — Unique Paths</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> count distinct right/down paths from the top-left to the bottom-right of an m×n grid.</p>
+    <p><strong>Idea:</strong> every path enters a cell from above or from the left, and those path sets are disjoint —
+    so ways(r,c) = ways(r−1,c) + ways(r,c−1). Since each row only reads the previous row, one rolling 1D row is
+    enough: <code>dp[c]</code> (stale value) <em>is</em> "from above", <code>dp[c−1]</code> (fresh value) is "from the left".</p>
+    <p class="code-title">UniquePaths.java</p>
+<pre class="code"><code>// dp[c] (rolling 1D row) = number of paths from the top-left to the current cell.
+// Full 2D recurrence: paths(r,c) = paths(r-1,c) + paths(r,c-1)  — arrive from above or from the left.
+public static int uniquePaths(int m, int n) {
+    int[] dp = new int[n];                 // dp holds ONE row of the m x n table
+    java.util.Arrays.fill(dp, 1);          // top row: only one way to any cell (keep going right)
+    for (int r = 1; r &lt; m; r++) {          // build each following row from the previous one
+        for (int c = 1; c &lt; n; c++) {
+            // dp[c] currently holds "paths from above" (previous row, same column);
+            // dp[c-1] already holds "paths from the left" (current row, previous column).
+            dp[c] = dp[c] + dp[c - 1];
+        }
+        // dp[0] stays 1: the left column has exactly one path (straight down)
+    }
+    return dp[n - 1];                      // bottom-right cell
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(m·n), space O(n). (There's also a closed form C(m+n−2, m−1) — mention it,
+    but the DP is what generalizes to obstacles.)</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Minimum Path Sum</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> cheapest right/down path from top-left to bottom-right, paying each visited cell's value.</p>
+    <p><strong>Idea:</strong> dp[r][c] = cheapest cost to reach (r,c); take the cheaper of the two predecessors and add
+    this cell's cost. First row/column have only one predecessor, so they're running sums. Full code and the
+    DP-vs-BFS reasoning are in §1 above (<code>MinPathSum.java</code>).</p>
+    <p><strong>Complexity:</strong> time O(m·n), space O(m·n), reducible to O(n) with a rolling row exactly like Unique Paths.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Longest Common Subsequence</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> length of the longest sequence appearing in both strings in order (not necessarily contiguously).</p>
+    <p><strong>Idea:</strong> compare last characters of the two prefixes: match → diagonal + 1; differ → best of
+    dropping one character from either string. The animation in §2 builds the full table for "ABCBDAB" × "BDCAB"
+    (answer 4 = "BCAB") and shows the traceback: from the corner, move diagonally on matches (collect the letter),
+    otherwise step toward the larger neighbor. Code in §2 (<code>LongestCommonSubsequence.java</code>).</p>
+    <p><strong>Complexity:</strong> time O(m·n), space O(m·n) — O(min(m,n)) with a rolling row if you only need the
+    length (traceback needs the full table).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Edit Distance</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> minimum single-character inserts, deletes and replaces to turn word1 into word2.</p>
+    <p><strong>Idea:</strong> dp over prefix pairs; on matching last characters the diagonal transfers for free, otherwise
+    pay 1 + the cheapest of the three neighbor subproblems (delete → up, insert → left, replace → diagonal).
+    Base cases are the real content: against an empty string, the distance is the other prefix's length.
+    Code in §3 (<code>EditDistance.java</code>).</p>
+    <p><strong>Complexity:</strong> time O(m·n), space O(m·n) → O(n) rolling row. "horse" → "ros" costs 3;
+    "intention" → "execution" costs 5 — good test values to state aloud.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Partition Equal Subset Sum</summary>
+  <div class="sol-body">
+    <p><strong>Problem:</strong> can the array split into two subsets with equal sums?</p>
+    <p><strong>Idea:</strong> if some subset reaches total/2, the remaining elements are the other half — so this is
+    subset-sum, i.e. 0/1 knapsack where value doesn't matter, only reachability. Boolean dp over sums, one pass per
+    item, capacities swept <em>right-to-left</em> so no item is used twice. Odd totals fail immediately.
+    Code in §4 (<code>PartitionEqualSubsetSum.java</code>).</p>
+    <p><strong>Complexity:</strong> time O(n · total/2), space O(total/2). Pseudo-polynomial — it depends on the
+    <em>numeric</em> target, not just n; saying that word earns points (subset-sum is NP-complete in general).</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>dp indices are prefix lengths, not char indices.</strong> dp[i][j] speaks of the first i and j characters, so the characters compared are <code>a.charAt(i-1)</code> and <code>b.charAt(j-1)</code>. Mixing these up is the #1 two-string DP bug.</li>
+  <li><strong>Write row 0 and column 0 first, on the whiteboard.</strong> LCS: zeros. Edit distance: 0..m and 0..n. Grids: running sums. Knapsack: base row all 0 / dp[0]=true. Wrong borders poison the whole table silently.</li>
+  <li><strong>0/1 knapsack in 1D must loop capacity downward.</strong> If your subset-sum accepts an element twice, you forgot the reverse loop. Conversely, unbounded problems <em>need</em> the forward loop — direction is semantics, not style.</li>
+  <li><strong>Coin Change II loop order:</strong> coins outer counts combinations; amounts outer counts permutations. Both are legitimate problems — know which one is being asked (LC 377 "Combination Sum IV" is the permutations one, despite its name).</li>
+  <li><strong>Movement rules decide DP vs BFS.</strong> Right/down only → DAG → DP. Four directions → graph search (page 17). Say the reason out loud; that sentence is often the whole point of the question.</li>
+  <li><strong>Space-optimize only after it works.</strong> Get the 2D table correct, state the answer, then offer the rolling-row optimization. Optimizing first is how you lose both versions in the time limit.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="18-dp-1d.html"><span class="dir">⟵ Prev</span><span class="name">18 · Dynamic Programming 1D</span></a>
+  <a class="next" href="20-dp-advanced.html"><span class="dir">Next ⟶</span><span class="name">20 · DP Advanced</span></a>
+</nav>
+
+</div>
+
+<script>
+/* Build the 8x6 LCS grid (rows: "" + ABCBDAB prefixes, cols: "" + BDCAB prefixes) */
+(function () {
+  var svg = document.querySelector('#lcsAnim svg');
+  var ns = 'http://www.w3.org/2000/svg';
+  var rowLbl = ['∅', 'A', 'B', 'C', 'B', 'D', 'A', 'B'];
+  var colLbl = ['∅', 'B', 'D', 'C', 'A', 'B'];
+  var X0 = 62, Y0 = 46, W = 44, H = 31;
+  colLbl.forEach(function (ch, j) {
+    var t = document.createElementNS(ns, 'text');
+    t.setAttribute('class', 'small');
+    t.setAttribute('x', X0 + j * W + (W - 6) / 2); t.setAttribute('y', Y0 - 8);
+    t.setAttribute('text-anchor', 'middle');
+    t.textContent = ch;
+    svg.appendChild(t);
+  });
+  for (var i = 0; i <= 7; i++) {
+    var r = document.createElementNS(ns, 'text');
+    r.setAttribute('class', 'small');
+    r.setAttribute('x', X0 - 12); r.setAttribute('y', Y0 + i * H + 20);
+    r.setAttribute('text-anchor', 'middle');
+    r.textContent = rowLbl[i];
+    svg.appendChild(r);
+    for (var j = 0; j <= 5; j++) {
+      var c = document.createElementNS(ns, 'rect');
+      c.setAttribute('id', 'lc' + i + 'x' + j);
+      c.setAttribute('class', 'box');
+      c.setAttribute('x', X0 + j * W); c.setAttribute('y', Y0 + i * H);
+      c.setAttribute('width', W - 5); c.setAttribute('height', H - 5);
+      c.setAttribute('rx', 5);
+      svg.appendChild(c);
+      var t2 = document.createElementNS(ns, 'text');
+      t2.setAttribute('id', 'lt' + i + 'x' + j);
+      t2.setAttribute('class', 'lbl');
+      t2.setAttribute('x', X0 + j * W + (W - 5) / 2); t2.setAttribute('y', Y0 + i * H + 18);
+      t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '13');
+      svg.appendChild(t2);
+    }
+  }
+})();
+
+new Stepper('lcsAnim', {
+  totalSteps: 9,
+  intervalMs: 2400,
+  captions: [
+    'The empty table: row 0 and column 0 are the empty-prefix base cases — an empty string shares nothing with anything, so they are all 0, for free.',
+    'Row 1 (prefix "A" of text1): scanning "B","D","C","A","B" — only column A matches, so the diagonal 0 + 1 = 1 appears there and carries right.',
+    'Row 2 (prefix "AB"): B matches at columns 1 and 5 (blue). At col 5 the diagonal holds 1 ("A" matched earlier), so B extends it: 1 + 1 = 2. Elsewhere, max(up, left) just carries the best so far.',
+    'Row 3 (prefix "ABC"): C matches at column 3 — diagonal 1 + 1 = 2. Notice how a match reaches BACK to the best answer that used strictly earlier characters of both strings.',
+    'Row 4 (prefix "ABCB"): the second B matches column 5 again: diagonal (row 3, col 4) holds 2, so 2 + 1 = 3. Same letter, better diagonal, better result.',
+    'Row 5 (prefix "ABCBD"): D matches column 2, but its diagonal is only 1, giving 2 — no improvement over what we carry. Matching is not always progress; max(up, left) protects us.',
+    'Row 6 (prefix "ABCBDA"): A matches column 4: diagonal 2 + 1 = 3.',
+    'Row 7 (all of "ABCBDAB"): final B matches column 5: diagonal (row 6, col 4) holds 3 — so dp[7][5] = 4. The LCS has length 4.',
+    'Traceback from the corner (amber): on a match move diagonally and COLLECT the letter (B, A, C, B backwards); otherwise step to the larger of up/left. Result: LCS = "BCAB".'
+  ],
+  apply: function (svg, step) {
+    var vals = [
+      [0,0,0,0,0,0],
+      [0,0,0,0,1,1],
+      [0,1,1,1,1,2],
+      [0,1,1,2,2,2],
+      [0,1,1,2,2,3],
+      [0,1,2,2,2,3],
+      [0,1,2,2,3,3],
+      [0,1,2,2,3,4]
+    ];
+    var match = {'1,4':1,'2,1':1,'2,5':1,'3,3':1,'4,1':1,'4,5':1,'5,2':1,'6,4':1,'7,1':1,'7,5':1};
+    var path  = {'7,5':1,'6,4':1,'5,3':1,'4,3':1,'3,3':1,'2,2':1,'2,1':1};
+    for (var i = 0; i <= 7; i++) {
+      for (var j = 0; j <= 5; j++) {
+        var vis = (i === 0) || (step >= i);
+        var key = i + ',' + j;
+        var cell = svg.querySelector('#lc' + i + 'x' + j);
+        var txt = svg.querySelector('#lt' + i + 'x' + j);
+        cell.style.opacity = vis ? 1 : 0.12;
+        txt.style.opacity = vis ? 1 : 0;
+        txt.textContent = vals[i][j];
+        Stepper.setClass(svg, '#lc' + i + 'x' + j, 'active', vis && !!match[key] && step < 8);
+        Stepper.setClass(svg, '#lc' + i + 'x' + j, 'frontier', step === 8 && !!path[key]);
+        Stepper.setClass(svg, '#lc' + i + 'x' + j, 'dim', step === 8 && !path[key]);
+      }
+    }
+    Stepper.setText(svg, '#lcsres', step === 8 ? 'LCS = "BCAB" (length 4)' : '');
+  }
+});
+</script>
+
+</body>
+</html>

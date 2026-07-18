@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13 · Tries — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Tries: The Prefix Tree</h1>
+<p class="subtitle">The data structure behind every autocomplete box you've ever typed into — and the one tool that answers "what starts with…?" in time proportional to the prefix, not the dictionary.</p>
+<p>
+  <span class="badge phase">Phase 4 · Weeks 6–7</span>
+  <span class="badge freq">Niche but high-signal — the autocomplete classic</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  You already have <code>HashSet</code> for "is this exact word stored?" — O(1), unbeatable. But ask it
+  "how many stored words start with <code>ca</code>?" and it has nothing: hashing scrambles keys precisely so that
+  similar keys land far apart. A trie does the opposite — it stores words <em>by their shared structure</em>, so
+  every prefix question becomes a short walk from the root. Interviewers love tries because they test whether you can
+  pick a structure for the <em>query shape</em>, not just for lookup speed.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — you should know why HashMap lookups are O(1) and what that trade costs.</li>
+  <li><a href="11-trees.html">11 · Trees &amp; BSTs</a> — a trie is a tree; node-with-children navigation should feel routine.</li>
+  <li><a href="10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a> — the wildcard search below is a small DFS.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you recognize the prefix signal?</strong> The words "starts with", "autocomplete", "typeahead", or "shortest root" should trigger "trie" instantly.</li>
+  <li><strong>Can you design a node?</strong> The children-array-vs-map decision, and the word-end flag, are the whole design — they want to hear you reason about both.</li>
+  <li><strong>Can you state costs honestly?</strong> Insert/search are O(L) in the word length — and the memory bill is real; saying so is senior-level candor.</li>
+  <li><strong>Can you compose it?</strong> Word Search II (trie + grid DFS) tests whether the trie is a tool you can bolt onto other patterns.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Heaps (page 12) organized data by <em>priority</em>; tries organize it by <em>shared structure</em>. Both answer a query
+  that a plain HashMap can't. The tree mechanics are ones you already own from page 11 — a trie is just a tree where the
+  <em>edges</em> carry the information (one letter each) and a path from the root spells a prefix. Nothing new to learn
+  about traversal; everything new is in what the shape lets you ask.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Why HashMap-of-words fails prefix queries</h3>
+<p class="lead">
+  A <code>HashSet&lt;String&gt;</code> with a million words answers <code>contains("cat")</code> in O(1). But
+  <code>startsWith("ca")</code> forces a full scan: hash codes of <code>"ca"</code>, <code>"cat"</code> and
+  <code>"car"</code> are unrelated <em>by design</em>. Your only HashSet option is to check all million entries — O(n·L).
+</p>
+<p>
+  A trie flips the storage: instead of one bucket per word, it builds <strong>one node per prefix</strong>. All words
+  starting with <code>"ca"</code> literally hang below the same node, so the prefix query is: walk two edges, done —
+  O(L) where L is the <em>prefix</em> length, no matter whether you stored ten words or ten million.
+</p>
+
+<div class="anim" id="trieAnim">
+  <svg viewBox="0 0 640 330" role="img" aria-label="Inserting car, cat, code into a trie, then walking the prefix ca">
+    <!-- edges (center to center; circles drawn on top) -->
+    <line id="eC" x1="320" y1="40"  x2="320" y2="105" class="edge" opacity="0"></line>
+    <line id="eA" x1="320" y1="105" x2="250" y2="170" class="edge" opacity="0"></line>
+    <line id="eO" x1="320" y1="105" x2="390" y2="170" class="edge" opacity="0"></line>
+    <line id="eR" x1="250" y1="170" x2="195" y2="240" class="edge" opacity="0"></line>
+    <line id="eT" x1="250" y1="170" x2="305" y2="240" class="edge" opacity="0"></line>
+    <line id="eD" x1="390" y1="170" x2="390" y2="240" class="edge" opacity="0"></line>
+    <line id="eE" x1="390" y1="240" x2="390" y2="300" class="edge" opacity="0"></line>
+    <!-- root -->
+    <circle cx="320" cy="40" r="17" class="box"></circle>
+    <text x="320" y="45" text-anchor="middle" class="lbl" font-size="11">root</text>
+    <text x="360" y="36" class="small">= empty prefix ""</text>
+    <!-- word-end rings -->
+    <circle id="wR" cx="195" cy="240" r="23" class="edge done" opacity="0"></circle>
+    <circle id="wT" cx="305" cy="240" r="23" class="edge done" opacity="0"></circle>
+    <circle id="wE" cx="390" cy="300" r="23" class="edge done" opacity="0"></circle>
+    <!-- letter nodes -->
+    <g id="gC" opacity="0"><circle id="nC" cx="320" cy="105" r="17" class="box"></circle><text id="lC" x="320" y="110" text-anchor="middle" class="lbl">c</text></g>
+    <g id="gA" opacity="0"><circle id="nA" cx="250" cy="170" r="17" class="box"></circle><text id="lA" x="250" y="175" text-anchor="middle" class="lbl">a</text></g>
+    <g id="gO" opacity="0"><circle id="nO" cx="390" cy="170" r="17" class="box"></circle><text id="lO" x="390" y="175" text-anchor="middle" class="lbl">o</text></g>
+    <g id="gR" opacity="0"><circle id="nR" cx="195" cy="240" r="17" class="box"></circle><text id="lR" x="195" y="245" text-anchor="middle" class="lbl">r</text></g>
+    <g id="gT" opacity="0"><circle id="nT" cx="305" cy="240" r="17" class="box"></circle><text id="lT" x="305" y="245" text-anchor="middle" class="lbl">t</text></g>
+    <g id="gD" opacity="0"><circle id="nD" cx="390" cy="240" r="17" class="box"></circle><text id="lD" x="390" y="245" text-anchor="middle" class="lbl">d</text></g>
+    <g id="gE" opacity="0"><circle id="nE" cx="390" cy="300" r="17" class="box"></circle><text id="lE" x="390" y="305" text-anchor="middle" class="lbl">e</text></g>
+    <!-- legend -->
+    <text x="30" y="46" class="small">ring = word ends here</text>
+    <circle cx="20" cy="42" r="7" class="edge done"></circle>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>2. The node: children[26] vs a HashMap of children</h3>
+<p>
+  A trie node needs exactly two things: <strong>where can I go next?</strong> and <strong>does a word end here?</strong>
+  The "where next" part has two classic implementations, and interviewers like hearing you weigh them:
+</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Design</th><th>Child lookup</th><th>Memory per node</th><th>Use when…</th></tr>
+  <tr><td><code>Node[26] children</code></td><td>O(1), a raw array index</td><td>26 references (~208 bytes) even if only 1 child exists</td><td>lowercase a–z guaranteed (most LeetCode problems)</td></tr>
+  <tr><td><code>HashMap&lt;Character,Node&gt;</code></td><td>O(1) average, hash overhead</td><td>proportional to actual children</td><td>Unicode, mixed alphabets, sparse branching</td></tr>
+</table>
+</div>
+<p>
+  The array wins interviews for a–z inputs: less code, no boxing, cache-friendly. Mention the map variant in one
+  sentence to show you know the array is a special case.
+</p>
+
+<h3>3. The three operations — all O(L)</h3>
+<p>
+  <code>insert</code>, <code>search</code>, and <code>startsWith</code> are the same loop: start at the root, follow one
+  child edge per character. Insert <em>creates</em> missing nodes; the two queries <em>fail</em> on missing nodes. The
+  only subtlety is the ending: <code>search</code> additionally requires the final node's <code>isWord</code> flag —
+  otherwise <code>search("ca")</code> would return true just because <code>"cat"</code> passes through. That flag is the
+  single most common trie bug; the animation's rings above are exactly that flag.
+</p>
+
+<h3>4. Counts at nodes → ranked autocomplete</h3>
+<p>
+  Nothing stops you storing more than a boolean at each node. Keep an <code>int passCount</code> incremented on every
+  insert that walks through, and you can answer "how many words start with this prefix?" in O(L). Keep a small
+  <strong>top-K list of popular completions</strong> at each node and you've built the heart of a search-box typeahead —
+  production systems precompute exactly this (heaps from page 12 doing the ranking; the capstone,
+  <a href="25-real-world-systems.html">page 25</a>, assembles the full pipeline).
+</p>
+
+<h3>5. Wildcard search: a DFS branch at every dot</h3>
+<p>
+  If the query may contain <code>'.'</code> meaning "any one letter" (LeetCode 211 below), a plain walk no longer works —
+  at a dot you must try <em>all existing children</em>. That turns the walk into a depth-first search: normal letters
+  follow one branch, dots fan out into up to 26 recursive calls. Worst case for a query of all dots is O(26<sup>L</sup>),
+  and saying that out loud is worth points.
+</p>
+
+<div class="warn">
+  <strong>The honest downside: memory.</strong> A trie can hold <em>more</em> node objects than there are characters in
+  your dictionary would suggest — each node is an object with a 26-slot array. A HashSet of the same words is often
+  several times smaller. Tries buy prefix-shaped queries with memory; if you only ever need exact-match lookup, the
+  HashSet wins and you should say so. (Production systems compress tries into radix trees / DAWGs for this reason.)
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">The trie skeleton — memorize this shape</p>
+<pre class="code"><code>class Trie {
+    // The node: 26 outgoing edges + "does a word end here?".
+    // Everything else in trie-land is a variation of this.
+    static class Node {
+        Node[] children = new Node[26];
+        boolean isWord;
+        int passCount;      // optional: #words whose prefix passes here
+    }
+
+    final Node root = new Node();   // root represents the empty prefix
+
+    void insert(String word) {
+        Node cur = root;
+        for (char ch : word.toCharArray()) {
+            int c = ch - 'a';                 // letter -&gt; child slot 0..25
+            if (cur.children[c] == null)      // create missing branch
+                cur.children[c] = new Node();
+            cur = cur.children[c];            // descend
+            cur.passCount++;                  // this prefix gained a word
+        }
+        cur.isWord = true;                    // flag the final node
+    }
+
+    // Both queries are the same walk; only the ending differs.
+    Node walk(String s) {                     // null if the path breaks
+        Node cur = root;
+        for (char ch : s.toCharArray()) {
+            cur = cur.children[ch - 'a'];
+            if (cur == null) return null;
+        }
+        return cur;
+    }
+    boolean search(String w)      { Node n = walk(w); return n != null &amp;&amp; n.isWord; }
+    boolean startsWith(String p)  { return walk(p) != null; }
+    int countPrefix(String p)     { Node n = walk(p); return n == null ? 0 : n.passCount; }
+}</code></pre>
+
+<div class="tip">
+  <strong>Say the costs while you code.</strong> "Insert and search are O(L) time — L being the word length — and the
+  trie holds O(total characters) nodes worst case, times 26 references each." That one sentence covers time, space,
+  and the memory caveat in a single breath.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Structure</th><th>Exact lookup</th><th>startsWith / prefix count</th><th>All words with prefix</th><th>Memory</th></tr>
+  <tr><td><code>HashSet&lt;String&gt;</code></td><td>O(L) (hash the key)</td><td><strong>O(n·L)</strong> full scan</td><td>O(n·L)</td><td>compact</td></tr>
+  <tr><td>Sorted array + binary search</td><td>O(L log n)</td><td>O(L log n) to find the range</td><td>O(log n + k) — the matches sit contiguously</td><td>most compact</td></tr>
+  <tr><td>Trie</td><td>O(L)</td><td><strong>O(L)</strong></td><td>O(L + size of subtree)</td><td>heaviest (node objects)</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>Problem says <strong>"starts with", "prefix", "autocomplete", "replace by root"</strong> → trie.</li>
+  <li>Problem says <strong>"is this exact word present"</strong> and nothing else → <code>HashSet</code>; a trie is over-engineering.</li>
+  <li><strong>Static dictionary, memory-tight, prefix queries</strong> → sorted array + binary search is a legitimate trie substitute (matches are adjacent after sorting) — mentioning it shows range.</li>
+  <li>Problem searches <strong>many words in a grid/stream at once</strong> → trie of the words, walk it while you scan (Word Search II).</li>
+  <li>Queries contain <strong>single-character wildcards</strong> → trie + DFS (a HashSet cannot do this at all).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Search-box typeahead</h4>
+    <p class="small">Google-style suggestion services keep a trie (usually compressed) over popular queries, with each
+    node caching its top-K completions by frequency so a keystroke is answered from one node, no subtree walk. Page 12's
+    heaps compute those top-K lists offline; <a href="25-real-world-systems.html">page 25</a> shows the full pipeline.</p>
+  </div>
+  <div class="card">
+    <h4>IP routing: longest-prefix match</h4>
+    <p class="small">A router choosing where to forward a packet matches its destination against thousands of CIDR
+    routes and must pick the <em>longest</em> matching prefix. Routing tables are binary tries over address bits
+    (Linux uses an LC-trie for its FIB) — the "walk and remember the last match" trick is Replace Words, inverted.</p>
+  </div>
+  <div class="card">
+    <h4>Spell-check &amp; T9</h4>
+    <p class="small">Spell-checkers walk a dictionary trie in lock-step with an edit budget — branching like our
+    wildcard DFS — to propose corrections. Old-phone T9 typing mapped digit sequences to trie paths; modern keyboard
+    swipe prediction is the same idea with probabilities on the edges.</p>
+  </div>
+  <div class="card">
+    <h4>Tokenizer vocabularies</h4>
+    <p class="small">LLM tokenizers (BPE/WordPiece) must repeatedly find the longest vocabulary entry matching the
+    upcoming text — a longest-prefix walk over a trie of ~50k tokens. Aho-Corasick, the multi-pattern matcher inside
+    intrusion-detection systems and spam filters, is a trie with failure links (KMP's idea, next page, generalized).</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <span class="t"><a href="https://leetcode.com/problems/longest-common-prefix/">Longest Common Prefix</a></span>
+    <span class="hint">Solvable by plain scanning — but note it's exactly "walk a trie from the root until a node has ≠1 child or is a word-end".</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/implement-trie-prefix-tree/">Implement Trie (Prefix Tree)</a></span>
+    <span class="hint">The canonical build: one Node class, three methods sharing one walk helper. Worked below.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/replace-words/">Replace Words</a></span>
+    <span class="hint">Trie of roots; for each word, stop at the FIRST word-end on the walk — that's the shortest root. Worked below.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/design-add-and-search-words-data-structure/">Design Add and Search Words Data Structure</a></span>
+    <span class="hint">Trie + DFS: a '.' means "recurse into every non-null child". Worked below.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/map-sum-pairs/">Map Sum Pairs</a></span>
+    <span class="hint">Store an int at every node on the path; prefix-sum query = walk + read. Careful: re-inserting a key must apply the delta, not the raw value.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/search-suggestions-system/">Search Suggestions System</a></span>
+    <span class="hint">Ranked autocomplete in miniature: trie with up-to-3 lexicographically-smallest words cached per node (or sort + binary search — compare both!).</span></div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <span class="t"><a href="https://leetcode.com/problems/word-search-ii/">Word Search II</a></span>
+    <span class="hint">Build a trie of ALL query words, then run one grid DFS (<a href="10-recursion-backtracking.html">page 10</a>) moving a trie pointer alongside — dead trie branch ⇒ prune the cell walk. One traversal serves every word at once.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked: Implement Trie (LeetCode 208)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> build a class supporting <code>insert(word)</code>, <code>search(word)</code>, and <code>startsWith(prefix)</code>.</p>
+    <p><strong>Idea.</strong> One node per prefix; each node owns a 26-slot child array and a word-end flag. All three
+    operations are the same root-down walk over the argument's characters — insert creates missing nodes, the queries
+    return failure on missing nodes, and only <code>search</code> demands the final flag. Factoring the shared walk into
+    a helper keeps the code short enough to write flawlessly under pressure.</p>
+    <p class="code-title">code/13-tries/Trie.java</p>
+    <pre class="code"><code>// LeetCode 208 — Implement Trie (Prefix Tree)
+// Supports insert, exact-word search, and prefix search, all in O(L)
+// where L is the length of the word/prefix — independent of how many
+// words are stored.
+public class Trie {
+
+    // One node per character position. children[c - 'a'] is the branch
+    // for letter c; null means "no stored word goes that way".
+    private static class Node {
+        Node[] children = new Node[26]; // lowercase a-z only
+        boolean isWord;                 // does a stored word END here?
+    }
+
+    private final Node root = new Node(); // root = the empty prefix ""
+
+    /** Insert a word: walk letter by letter, creating nodes as needed. */
+    public void insert(String word) {
+        Node cur = root;
+        for (int i = 0; i &lt; word.length(); i++) {
+            int c = word.charAt(i) - 'a';      // map 'a'..'z' -&gt; 0..25
+            if (cur.children[c] == null)       // no branch yet for this letter
+                cur.children[c] = new Node();  // create it (the only allocation)
+            cur = cur.children[c];             // descend one level
+        }
+        cur.isWord = true; // mark the node where the word ends
+    }
+
+    /** True only if the exact word was inserted (not just a prefix of one). */
+    public boolean search(String word) {
+        Node end = walk(word);
+        return end != null &amp;&amp; end.isWord; // must exist AND be a word-end
+    }
+
+    /** True if ANY inserted word starts with this prefix. */
+    public boolean startsWith(String prefix) {
+        return walk(prefix) != null; // reaching a node is enough — no flag check
+    }
+
+    // Shared walk: follow the letters of s down from the root.
+    // Returns the node where s ends, or null if the path breaks.
+    private Node walk(String s) {
+        Node cur = root;
+        for (int i = 0; i &lt; s.length(); i++) {
+            cur = cur.children[s.charAt(i) - 'a'];
+            if (cur == null) return null; // path does not exist
+        }
+        return cur;
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> insert/search/startsWith all O(L) time for a word of length L; space O(total characters inserted) nodes, each holding 26 references.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked: Design Add and Search Words (LeetCode 211)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> add words, then answer searches where <code>'.'</code> matches any single letter.</p>
+    <p><strong>Idea.</strong> Adding is the standard trie insert. Searching becomes a DFS over (position in query, trie
+    node): a concrete letter follows one branch; a dot tries every non-null child and succeeds if <em>any</em> branch
+    matches the rest. The two base cases carry all the correctness: falling off the trie fails, and consuming the whole
+    query succeeds only on a word-end node.</p>
+    <p class="code-title">code/13-tries/WordDictionary.java</p>
+    <pre class="code"><code>// LeetCode 211 — Design Add and Search Words Data Structure
+// A trie where search supports '.' matching ANY single letter.
+// A '.' forces us to try all 26 children — a small DFS branching out.
+public class WordDictionary {
+
+    private static class Node {
+        Node[] children = new Node[26];
+        boolean isWord;
+    }
+
+    private final Node root = new Node();
+
+    /** Standard trie insert — identical to Implement Trie. */
+    public void addWord(String word) {
+        Node cur = root;
+        for (int i = 0; i &lt; word.length(); i++) {
+            int c = word.charAt(i) - 'a';
+            if (cur.children[c] == null) cur.children[c] = new Node();
+            cur = cur.children[c];
+        }
+        cur.isWord = true;
+    }
+
+    /** Search where '.' is a wildcard for exactly one letter. */
+    public boolean search(String word) {
+        return dfs(word, 0, root);
+    }
+
+    // Can word[i..] be matched starting from `node`?
+    private boolean dfs(String word, int i, Node node) {
+        if (node == null) return false;             // walked off the trie -&gt; fail
+        if (i == word.length()) return node.isWord; // all chars consumed: need a word-end HERE
+        char ch = word.charAt(i);
+        if (ch == '.') {
+            // Wildcard: try every existing child. Any success is a match.
+            for (Node child : node.children)
+                if (dfs(word, i + 1, child)) return true;
+            return false; // no branch worked
+        }
+        // Normal letter: follow exactly one branch (null is caught above).
+        return dfs(word, i + 1, node.children[ch - 'a']);
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> addWord O(L); search O(L) with no dots, up to O(26<sup>d</sup>·L) with d dots (worst case O(26<sup>L</sup>) for all-dot queries). Space: the trie itself, plus O(L) recursion depth.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked: Replace Words (LeetCode 648)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given root words and a sentence, replace each sentence word with its shortest root prefix (if any).</p>
+    <p><strong>Idea.</strong> Build a trie of the roots once. For each sentence word, walk down; the moment we stand on a
+    word-end node we've found the <em>shortest</em> root that prefixes this word — return it immediately (checking the
+    flag before descending further is what makes it shortest). If the path breaks or the word ends first, keep the word.
+    This beats checking every root against every word, which would be O(#roots · sentence length).</p>
+    <p class="code-title">code/13-tries/ReplaceWords.java</p>
+    <pre class="code"><code>// LeetCode 648 — Replace Words
+// Given dictionary "roots" and a sentence, replace every word with its
+// SHORTEST root prefix. A trie of roots finds that shortest root in
+// O(length of word): walk the word and stop at the FIRST word-end hit.
+public class ReplaceWords {
+
+    private static class Node {
+        Node[] children = new Node[26];
+        boolean isWord;
+    }
+
+    public static String replaceWords(List&lt;String&gt; dictionary, String sentence) {
+        // Step 1: build a trie of all roots.
+        Node root = new Node();
+        for (String w : dictionary) {
+            Node cur = root;
+            for (int i = 0; i &lt; w.length(); i++) {
+                int c = w.charAt(i) - 'a';
+                if (cur.children[c] == null) cur.children[c] = new Node();
+                cur = cur.children[c];
+            }
+            cur.isWord = true;
+        }
+
+        // Step 2: rewrite each word of the sentence independently.
+        StringBuilder out = new StringBuilder();
+        for (String word : sentence.split(" ")) {
+            if (out.length() &gt; 0) out.append(' ');
+            out.append(shortestRoot(root, word));
+        }
+        return out.toString();
+    }
+
+    // Walk the trie along `word`; the FIRST word-end we meet is the
+    // shortest root (that's why we check isWord before going deeper).
+    private static String shortestRoot(Node root, String word) {
+        Node cur = root;
+        for (int i = 0; i &lt; word.length(); i++) {
+            int c = word.charAt(i) - 'a';
+            if (cur.children[c] == null) return word; // no root prefixes this word
+            cur = cur.children[c];
+            if (cur.isWord) return word.substring(0, i + 1); // shortest root found
+        }
+        return word; // word ran out before any root ended
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> O(total root characters) to build + O(total sentence characters) to rewrite; space O(total root characters) for the trie.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Forgetting the word-end flag</strong> — the #1 trie bug. Without <code>isWord</code>, <code>search("ca")</code> returns true because <code>"cat"</code> passes through. Test exactly this case out loud.</li>
+  <li><strong><code>search</code> vs <code>startsWith</code> differ by ONE condition.</strong> Write the shared <code>walk</code> helper first; both queries become one-liners and the interviewer sees clean design.</li>
+  <li><strong>Index arithmetic:</strong> <code>ch - 'a'</code> assumes lowercase a–z. Confirm the alphabet with the interviewer before writing <code>new Node[26]</code>; digits or uppercase silently corrupt it with negative/out-of-range indexes.</li>
+  <li><strong>Don't claim O(1) search.</strong> Trie operations are O(L) in the key length — so is hashing, actually (computing <code>hashCode</code> reads every char), which is a sharp observation to offer.</li>
+  <li><strong>Own the memory story.</strong> If asked "why not always use a trie?", the answer is node overhead — 26 references per node — and the fix names: radix/Patricia tree (collapse single-child chains), DAWG (share suffixes).</li>
+  <li><strong>In design questions, decorate nodes.</strong> Frequencies, top-K caches, or values at nodes turn the trie into typeahead, prefix-count, or MapSum — say "I'll hang extra data on the nodes" and you've generalized the tool.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="12-heaps.html"><span class="dir">⟵ Prev</span><span class="name">12 · Heaps &amp; Priority Queues</span></a>
+  <a class="next" href="14-strings-advanced.html"><span class="dir">Next ⟶</span><span class="name">14 · String Algorithms</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('trieAnim', {
+  totalSteps: 8,
+  intervalMs: 2400,
+  captions: [
+    'An empty trie is just a root node representing the empty prefix "". Every path down from the root will spell a prefix, one letter per edge.',
+    'insert("car"): no c branch exists yet, so we create nodes c → a → r and mark r as a word-end (green ring). Cost: 3 steps, one per letter.',
+    'insert("cat"): the walk reuses c → a for free — those nodes already exist (green). Only t is new. The shared prefix "ca" is stored ONCE, not once per word.',
+    'insert("code"): reuses c, then branches off with new nodes o → d → e. Words that diverge early share only the part before the split.',
+    'The finished trie: 3 words, 7 letter-nodes. The shared nodes (highlighted) are the whole point — every word starting with "ca" lives in one subtree.',
+    'startsWith("ca"), step 1: from the root, follow the c edge. The child exists, so keep walking.',
+    'Step 2: follow a. We arrived without falling off — so some word starts with "ca", and ALL its completions (car, cat) are exactly the subtree below this node.',
+    'Mind the rings: search("ca") is FALSE — no ring on the a node — while startsWith("ca") is true. The word-end flag is what separates "stored word" from "prefix of one".'
+  ],
+  apply: function (svg, step) {
+    // element -> step at which it first appears
+    var appear = { eC:1, gC:1, eA:1, gA:1, eR:1, gR:1, wR:1,
+                   eT:2, gT:2, wT:2,
+                   eO:3, gO:3, eD:3, gD:3, eE:3, gE:3, wE:3 };
+    Object.keys(appear).forEach(function (id) {
+      svg.querySelector('#' + id).style.opacity = step >= appear[id] ? 1 : 0;
+    });
+    // full node color state per step (idempotent)
+    var states = [
+      {},
+      { nC:'active', nA:'active', nR:'active' },
+      { nC:'done',   nA:'done',   nT:'active' },
+      { nC:'done',   nO:'active', nD:'active', nE:'active' },
+      { nC:'frontier', nA:'frontier' },
+      { nC:'active' },
+      { nC:'done', nA:'active', nR:'frontier', nT:'frontier' },
+      { nC:'done', nA:'active', nR:'frontier', nT:'frontier' }
+    ];
+    ['nC','nA','nR','nT','nO','nD','nE'].forEach(function (id) {
+      var cls = states[step][id] || null;
+      ['active','done','frontier'].forEach(function (c) {
+        Stepper.setClass(svg, '#' + id, c, cls === c);
+      });
+      // white label when the node is colored
+      Stepper.setClass(svg, '#l' + id.slice(1), 'onfill', !!cls);
+    });
+  }
+});
+</script>
+
+</body>
+</html>

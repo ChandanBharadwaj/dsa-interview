@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 · Recursion &amp; Backtracking — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Recursion &amp; Backtracking</h1>
+<p class="subtitle">Learn to trust a function that calls itself, read complexity off the recursion tree, and master the choose → explore → un-choose template that generates every combination interviewers ask for.</p>
+<p>
+  <span class="badge phase">Phase 4 · Weeks 6–7</span>
+  <span class="badge freq">Gateway skill — trees, graphs and DP all build on this</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  After a decade of Java you write loops on autopilot — and that autopilot actively fights recursion.
+  Interviews use recursion as a filter because it predicts everything that follows: tree traversals are recursion,
+  graph DFS is recursion, dynamic programming is recursion plus a cache. Backtracking is the special case that
+  answers "generate <em>all</em> valid X" — subsets, permutations, board placements — which is an entire category
+  of medium questions. Get the mental model right here and pages 11–20 become variations on a theme.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — Big-O, and the fact that the call stack is O(depth) space.</li>
+  <li><a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a> — recursion literally runs on a stack; you'll convert between the two.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you define the base case first?</strong> Most broken recursive code fails at "when do we stop", not at the clever part.</li>
+  <li><strong>Do you trust the recursive call?</strong> Seniors state "assume <code>f(n-1)</code> returns the right answer" and build on it; juniors try to trace every frame and drown.</li>
+  <li><strong>Can you count the work?</strong> Reading O(n·2ⁿ) or O(n·n!) off a recursion tree, unprompted, is a strong signal.</li>
+  <li><strong>Is your state restored?</strong> Forgetting the un-choose step (or sharing a mutated list) is the classic backtracking bug — interviewers watch for it.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 09 made you operate stacks by hand. Recursion is the JVM operating a stack <em>for</em> you: every call pushes a
+  frame (parameters + locals), every return pops one. That's why deep recursion throws
+  <code>StackOverflowError</code>, why recursion depth counts as space complexity, and why any recursive algorithm can be
+  rewritten with an explicit <code>ArrayDeque</code> — you're just managing the frames yourself.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Recursion mechanics: base case + leap of faith</h3>
+<p class="lead">
+  A recursive function is a contract: <strong>"given a smaller input, I return the right answer."</strong>
+  You only ever write two things — the smallest input answered directly (base case), and one step that
+  reduces the problem and <em>trusts the contract</em> for the rest.
+</p>
+
+<p class="code-title">The anatomy, on the simplest possible example</p>
+<pre class="code"><code>// factorial(4) -&gt; 4 * factorial(3) -&gt; ... four stacked frames, then unwinding
+long factorial(int n) {
+    if (n &lt;= 1) return 1;          // BASE CASE: answered directly, no recursion
+    return n * factorial(n - 1);   // LEAP OF FAITH: trust the (n-1) answer, extend it
+}</code></pre>
+
+<div class="tip">
+  <strong>The leap of faith is not laziness — it's induction.</strong> You verify the base case and you verify
+  "if the smaller call is correct, my step is correct". That's a proof by induction; mentally tracing 15 nested frames is
+  not. When stuck in an interview, say out loud: "Assume the recursive call works. What do I do with its answer?"
+</div>
+
+<h3>2. The recursion tree: where complexity comes from</h3>
+<p>
+  Draw every call as a node and its recursive calls as children. Total work = (number of nodes) × (work per node).
+  Three shapes cover almost everything:
+</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Shape</th><th>Example</th><th>Nodes</th><th>Typical cost</th></tr>
+  <tr><td>One child, depth n</td><td><code>factorial</code>, linked-list recursion</td><td>n</td><td>O(n) time, O(n) stack</td></tr>
+  <tr><td>Two children per node, depth n</td><td>subsets (include/exclude), naive fib</td><td>~2ⁿ</td><td>O(2ⁿ) — exponential</td></tr>
+  <tr><td>Branching shrinks per level</td><td>permutations: n, then n−1, …</td><td>~n!</td><td>O(n!) — factorial</td></tr>
+</table>
+</div>
+<div class="note">
+  <strong>Preview of DP.</strong> When the recursion tree contains the <em>same subproblem many times</em>
+  (fib(3) computed five times), caching answers collapses the tree — that's memoization, page
+  <a href="18-dp-1d.html">18</a>. Backtracking problems on this page generate <em>distinct</em> outputs at every leaf,
+  so there is nothing to cache: exponential really is the answer.
+</div>
+
+<h3>3. Converting recursion to iteration</h3>
+<p>
+  Any recursion can become a loop with an explicit stack — push what you would have passed as parameters, pop instead of
+  calling. You'll use this on page <a href="11-trees.html">11</a> for iterative traversals and whenever depth could exceed
+  the JVM's ~10⁴ default frames. Tail-call-style recursions (one call, last statement) convert even easier: a plain
+  <code>while</code> loop. Java does <em>not</em> optimize tail calls — worth saying in interviews.
+</p>
+
+<h3>4. Backtracking = DFS over the tree of choices</h3>
+<p>
+  Backtracking answers "enumerate <strong>all</strong> configurations that satisfy constraints". Frame every such problem
+  as a decision tree: each level decides one thing, each root-to-leaf path is one candidate. Then walk the tree
+  depth-first with the three-beat rhythm — <strong>choose</strong> (mutate shared state), <strong>explore</strong>
+  (recurse), <strong>un-choose</strong> (undo the mutation so siblings start clean). <strong>Pruning</strong> means
+  noticing a partial path can never succeed and abandoning the whole subtree — it's why real backtracking beats brute
+  force by orders of magnitude.
+</p>
+
+<div class="anim" id="subsetTree">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Decision tree generating all subsets of 1,2,3">
+    <!-- edges: root -> level1 -->
+    <g id="lvl1e" style="opacity:0">
+      <line id="eA" class="edge" x1="300" y1="48" x2="172" y2="86"></line>
+      <line id="eB" class="edge" x1="340" y1="48" x2="468" y2="86"></line>
+      <text class="small" x="212" y="62">exclude 1</text><text class="small" x="386" y="62">include 1</text>
+    </g>
+    <!-- edges: level1 -> level2 -->
+    <g id="lvl2e" style="opacity:0">
+      <line id="eAA" class="edge" x1="148" y1="116" x2="92" y2="154"></line>
+      <line id="eAB" class="edge" x1="172" y1="116" x2="228" y2="154"></line>
+      <line id="eBA" class="edge" x1="468" y1="116" x2="412" y2="154"></line>
+      <line id="eBB" class="edge" x1="492" y1="116" x2="548" y2="154"></line>
+      <text class="small" x="248" y="140">±2</text><text class="small" x="500" y="140">±2</text>
+    </g>
+    <!-- edges: level2 -> leaves -->
+    <g id="lvl3e" style="opacity:0">
+      <line id="eL1" class="edge" x1="72" y1="184" x2="42" y2="222"></line>
+      <line id="eL2" class="edge" x1="92" y1="184" x2="122" y2="222"></line>
+      <line id="eL3" class="edge" x1="222" y1="184" x2="202" y2="222"></line>
+      <line id="eL4" class="edge" x1="242" y1="184" x2="282" y2="222"></line>
+      <line id="eL5" class="edge" x1="392" y1="184" x2="362" y2="222"></line>
+      <line id="eL6" class="edge" x1="412" y1="184" x2="442" y2="222"></line>
+      <line id="eL7" class="edge" x1="542" y1="184" x2="522" y2="222"></line>
+      <line id="eL8" class="edge" x1="562" y1="184" x2="602" y2="222"></line>
+      <text class="small" x="308" y="208">±3</text><text class="small" x="600" y="208">±3</text>
+    </g>
+    <!-- root -->
+    <g id="lvl0">
+      <rect id="n0" class="box" x="288" y="20" width="64" height="28" rx="7"></rect>
+      <text id="t0" class="lbl" x="320" y="39" text-anchor="middle">[ ]</text>
+    </g>
+    <!-- level 1: decided element 1 -->
+    <g id="lvl1" style="opacity:0">
+      <rect id="nA" class="box" x="128" y="88" width="64" height="28" rx="7"></rect>
+      <text id="tA" class="lbl" x="160" y="107" text-anchor="middle">[ ]</text>
+      <rect id="nB" class="box" x="448" y="88" width="64" height="28" rx="7"></rect>
+      <text id="tB" class="lbl" x="480" y="107" text-anchor="middle">[1]</text>
+    </g>
+    <!-- level 2: decided element 2 -->
+    <g id="lvl2" style="opacity:0">
+      <rect id="nAA" class="box" x="48" y="156" width="64" height="28" rx="7"></rect>
+      <text id="tAA" class="lbl" x="80" y="175" text-anchor="middle">[ ]</text>
+      <rect id="nAB" class="box" x="198" y="156" width="64" height="28" rx="7"></rect>
+      <text id="tAB" class="lbl" x="230" y="175" text-anchor="middle">[2]</text>
+      <rect id="nBA" class="box" x="368" y="156" width="64" height="28" rx="7"></rect>
+      <text id="tBA" class="lbl" x="400" y="175" text-anchor="middle">[1]</text>
+      <rect id="nBB" class="box" x="518" y="156" width="64" height="28" rx="7"></rect>
+      <text id="tBB" class="lbl" x="550" y="175" text-anchor="middle">[1,2]</text>
+    </g>
+    <!-- level 3: leaves = the 8 subsets -->
+    <g id="lvl3" style="opacity:0">
+      <rect id="nL1" class="box" x="8"   y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL1" class="lbl" x="42"  y="243" text-anchor="middle" style="font-size:11px">[ ]</text>
+      <rect id="nL2" class="box" x="88"  y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL2" class="lbl" x="122" y="243" text-anchor="middle" style="font-size:11px">[3]</text>
+      <rect id="nL3" class="box" x="168" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL3" class="lbl" x="202" y="243" text-anchor="middle" style="font-size:11px">[2]</text>
+      <rect id="nL4" class="box" x="248" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL4" class="lbl" x="282" y="243" text-anchor="middle" style="font-size:11px">[2,3]</text>
+      <rect id="nL5" class="box" x="328" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL5" class="lbl" x="362" y="243" text-anchor="middle" style="font-size:11px">[1]</text>
+      <rect id="nL6" class="box" x="408" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL6" class="lbl" x="442" y="243" text-anchor="middle" style="font-size:11px">[1,3]</text>
+      <rect id="nL7" class="box" x="488" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL7" class="lbl" x="522" y="243" text-anchor="middle" style="font-size:11px">[1,2]</text>
+      <rect id="nL8" class="box" x="568" y="224" width="68" height="28" rx="7"></rect>
+      <text id="tL8" class="lbl" x="602" y="243" text-anchor="middle" style="font-size:11px">[1,2,3]</text>
+    </g>
+    <text class="small" x="8" y="290">Decision tree for subsets of [1,2,3] — each level decides one element, each leaf is one subset.</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>5. The pattern catalog (one tree shape each)</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Problem family</th><th>Decision at each level</th><th>Key state</th><th>Leaves</th></tr>
+  <tr><td>Subsets</td><td>include / exclude element i</td><td>index i, current path</td><td>2ⁿ</td></tr>
+  <tr><td>Permutations</td><td>which unused element fills slot i</td><td><code>boolean[] used</code></td><td>n!</td></tr>
+  <tr><td>Combinations / combination sum</td><td>which candidate ≥ start index to add</td><td>start index (kills duplicate orderings)</td><td>varies</td></tr>
+  <tr><td>N-Queens</td><td>which column gets the queen in row r</td><td>sets of taken columns &amp; both diagonals</td><td>solutions only (heavy pruning)</td></tr>
+  <tr><td>Word search / grid DFS</td><td>which neighbor cell continues the word</td><td>visited marks on the grid</td><td>found / not found</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">The universal backtracking skeleton — memorize this rhythm</p>
+<pre class="code"><code>// result: all complete solutions.  path: the partial solution being built.
+void backtrack(State state, List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; result) {
+    if (isComplete(state)) {                 // BASE CASE: path is a full solution
+        result.add(new ArrayList&lt;&gt;(path));   // COPY IT — path will be mutated later!
+        return;
+    }
+    for (Choice c : legalChoices(state)) {   // candidates for the NEXT decision
+        if (!promising(c, state)) continue;  // PRUNE: this subtree can't succeed
+        apply(c, state, path);               // 1. CHOOSE  (mutate shared state)
+        backtrack(state, path, result);      // 2. EXPLORE (recurse one level deeper)
+        undo(c, state, path);                // 3. UN-CHOOSE (restore, mirror of apply)
+    }
+}</code></pre>
+
+<div class="warn">
+  <strong>Two bugs cause 90% of backtracking failures.</strong>
+  (1) Adding <code>path</code> itself instead of <code>new ArrayList&lt;&gt;(path)</code> — every "solution" in your result
+  mutates into the same empty list as the recursion unwinds. (2) An un-choose that isn't the exact mirror of the choose
+  (wrong order, or forgetting one of two mutations). Write choose and un-choose as adjacent lines <em>first</em>, then fill
+  in the middle.
+</div>
+
+<p class="code-title">Recursion → iteration: the same DFS with an explicit stack</p>
+<pre class="code"><code>// Each stack entry holds what the recursive frame would have held.
+// Useful when depth may exceed the JVM stack, or the interviewer asks for it.
+Deque&lt;Frame&gt; stack = new ArrayDeque&lt;&gt;();
+stack.push(initialFrame);
+while (!stack.isEmpty()) {
+    Frame f = stack.pop();               // "entering the call"
+    if (isComplete(f)) { record(f); continue; }
+    for (Choice c : legalChoices(f))
+        stack.push(f.with(c));           // "recursive call" = push child frame
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Technique</th><th>Answers</th><th>Cost</th><th>Reach for it when…</th></tr>
+  <tr><td>Backtracking (this page)</td><td><em>all</em> valid configurations, or "does any exist" with pruning</td><td>exponential, pruned</td><td>"all subsets / permutations / placements", constraints checkable mid-build</td></tr>
+  <tr><td>Brute-force iteration</td><td>same, but flat loops / bitmask enumeration</td><td>exponential, no pruning</td><td>tiny fixed depth (all pairs, subsets of ≤ ~20 via bitmask — page <a href="22-bit-manipulation.html">22</a>)</td></tr>
+  <tr><td>Dynamic programming</td><td>best value / count of ways — not the solutions themselves</td><td>polynomial</td><td>recursion tree repeats subproblems → cache (page <a href="18-dp-1d.html">18</a>)</td></tr>
+  <tr><td>BFS</td><td>shortest / fewest-steps path to a goal state</td><td>O(states)</td><td>"minimum number of moves" — depth-first finds <em>a</em> path, breadth-first the <em>closest</em> (page <a href="15-graphs-basics.html">15</a>)</td></tr>
+</table>
+</div>
+
+<ul>
+  <li>Problem says <strong>"return all …"</strong> → backtracking, almost always.</li>
+  <li>Problem says <strong>"how many ways"</strong> or <strong>"minimum cost"</strong> and n is large → suspect DP; backtracking would recompute overlapping subproblems.</li>
+  <li>Problem says <strong>"generate combinations"</strong> (order irrelevant) → start-index pattern; <strong>"arrangements"</strong> (order matters) → <code>used[]</code> pattern.</li>
+  <li>n ≤ ~20 in the constraints is the setter whispering <em>exponential is intended</em>.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Dependency resolvers (npm, Maven, apt)</h4>
+    <p class="small">Picking versions that satisfy every package's constraints is a search: choose a version, propagate
+    constraints, and on conflict <em>backtrack</em> to the last choice point and try another. Modern resolvers
+    (npm's arborist, Rust's cargo, Dart's PubGrub) are literally backtracking SAT-style solvers with clever pruning.</p>
+  </div>
+  <div class="card">
+    <h4>Regex engines</h4>
+    <p class="small">Java's <code>java.util.regex</code> is a backtracking matcher: alternation tries one branch,
+    and on failure un-chooses and tries the next. It's also why a pathological pattern like <code>(a+)+$</code> on a long
+    string of a's explodes — "catastrophic backtracking" is the exponential recursion tree from this page hitting production.</p>
+  </div>
+  <div class="card">
+    <h4>SQL query planners</h4>
+    <p class="small">Optimizers explore the tree of join orders and access paths — choose a join, cost the partial plan,
+    prune branches already worse than the best complete plan (branch-and-bound). PostgreSQL switches from exhaustive
+    search to heuristics past ~12 joins precisely because the tree is factorial.</p>
+  </div>
+  <div class="card">
+    <h4>Solvers &amp; filesystem walks</h4>
+    <p class="small">Sudoku/config solvers (choose a value, check constraints, backtrack) are the N-Queens pattern with
+    different constraint sets. And <code>Files.walkFileTree</code> is plain recursion over directories — visit, recurse
+    into children, return — the everyday face of DFS.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/subsets/">Subsets</a></span>
+    <span class="hint">One include/exclude decision per element; leaves of the decision tree are the answer. The canonical first backtracking problem.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/permutations/">Permutations</a></span>
+    <span class="hint">Order matters, so every unused element is a candidate for the next slot — track them with a <code>used[]</code> array.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/letter-combinations-of-a-phone-number/">Letter Combinations of a Phone Number</a></span>
+    <span class="hint">One decision per digit, candidates = that digit's letters. Pure choose/explore/un-choose with a StringBuilder.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/combination-sum/">Combination Sum</a></span>
+    <span class="hint">Start-index pattern kills duplicate orderings; pass <code>i</code> (not <code>i+1</code>) to allow reuse; sort + break to prune.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/word-search/">Word Search</a></span>
+    <span class="hint">Grid DFS from each cell; mark the cell visited (mutate the board), recurse into 4 neighbors, restore on the way out.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/palindrome-partitioning/">Palindrome Partitioning</a></span>
+    <span class="hint">Decision = where the next cut ends; only recurse if the prefix piece is a palindrome (that check IS the pruning).</span></div>
+  <div class="prob"><span class="badge hard">hard</span> <span class="t"><a href="https://leetcode.com/problems/n-queens/">N-Queens</a></span>
+    <span class="hint">One queen per row; O(1) conflict checks via three sets — columns, r+c diagonals, r−c diagonals. See the walkthrough below.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Subsets (LeetCode 78)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given distinct integers, return every possible subset (the power set).</p>
+    <p><strong>Idea:</strong> walk the elements left to right; for each one make two recursive calls — one that excludes
+    it and one that includes it. When you've decided all n elements, the current path is exactly one subset. This is the
+    decision tree from the animation above; the code is a depth-first walk of it.</p>
+<p class="code-title">code/10-recursion-backtracking/Subsets.java</p>
+<pre class="code"><code>// LeetCode 78. Return ALL subsets (the power set) of a set of distinct ints.
+public static List&lt;List&lt;Integer&gt;&gt; subsets(int[] nums) {
+    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
+    // path = the choices made so far on the way down one branch
+    backtrack(nums, 0, new ArrayList&lt;&gt;(), result);
+    return result;
+}
+
+private static void backtrack(int[] nums, int i, List&lt;Integer&gt; path,
+                              List&lt;List&lt;Integer&gt;&gt; result) {
+    // Base case: we have made a decision for EVERY element -&gt; path is one
+    // complete subset. Copy it (path itself keeps mutating afterwards!).
+    if (i == nums.length) {
+        result.add(new ArrayList&lt;&gt;(path));
+        return;
+    }
+    // Branch 1: EXCLUDE nums[i]. No state change, just move on.
+    backtrack(nums, i + 1, path, result);
+
+    // Branch 2: INCLUDE nums[i].
+    path.add(nums[i]);                  // choose
+    backtrack(nums, i + 1, path, result); // explore
+    path.remove(path.size() - 1);       // un-choose: restore state for caller
+}</code></pre>
+    <p><strong>Complexity:</strong> 2ⁿ leaves, each copied in O(n) → <strong>time O(n·2ⁿ)</strong>;
+    <strong>space O(n)</strong> for the recursion depth and path (output not counted).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Permutations (LeetCode 46)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given distinct integers, return every possible ordering of them.</p>
+    <p><strong>Idea:</strong> build the answer slot by slot. Because order matters, the candidates for the next slot are
+    <em>all elements not yet placed</em> — not just "later" ones. A <code>boolean[] used</code> marks what the current
+    branch has consumed; un-choosing clears the mark so sibling branches can use that element.</p>
+<p class="code-title">code/10-recursion-backtracking/Permutations.java</p>
+<pre class="code"><code>// LeetCode 46. Return ALL orderings of an array of distinct ints.
+public static List&lt;List&lt;Integer&gt;&gt; permute(int[] nums) {
+    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
+    // used[j] = "nums[j] is already placed somewhere in the current path"
+    backtrack(nums, new boolean[nums.length], new ArrayList&lt;&gt;(), result);
+    return result;
+}
+
+private static void backtrack(int[] nums, boolean[] used, List&lt;Integer&gt; path,
+                              List&lt;List&lt;Integer&gt;&gt; result) {
+    // Base case: every slot is filled -&gt; path is one complete permutation.
+    if (path.size() == nums.length) {
+        result.add(new ArrayList&lt;&gt;(path)); // copy — path keeps mutating
+        return;
+    }
+    // Unlike subsets, EVERY still-unused element is a candidate for the
+    // next slot (order matters, so we don't restrict to "later" indices).
+    for (int j = 0; j &lt; nums.length; j++) {
+        if (used[j]) continue;      // prune: already placed in this branch
+        used[j] = true;             // choose nums[j] for the current slot
+        path.add(nums[j]);
+        backtrack(nums, used, path, result);   // explore deeper
+        path.remove(path.size() - 1);          // un-choose (mirror order!)
+        used[j] = false;
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> n! leaves, O(n) copy each → <strong>time O(n·n!)</strong>;
+    <strong>space O(n)</strong> for recursion depth, path and <code>used</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Combination Sum (LeetCode 39)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> distinct candidates, unlimited reuse of each — return all unique
+    combinations that sum to a target.</p>
+    <p><strong>Idea:</strong> the danger is producing [2,3] and [3,2] as "different" answers. The fix is the
+    <em>start-index</em> pattern: at each level only consider candidates from index <code>start</code> onward, so
+    combinations are always generated in non-decreasing candidate order. Reuse is allowed by recursing with <code>i</code>
+    rather than <code>i+1</code>. Sorting first lets us <code>break</code> the instant a candidate exceeds what's left —
+    real pruning.</p>
+<p class="code-title">code/10-recursion-backtracking/CombinationSum.java</p>
+<pre class="code"><code>// LeetCode 39. Distinct candidates, each usable UNLIMITED times.
+// Return all unique combinations summing to target.
+public static List&lt;List&lt;Integer&gt;&gt; combinationSum(int[] candidates, int target) {
+    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
+    Arrays.sort(candidates);   // lets us break early once a candidate exceeds what's left
+    backtrack(candidates, 0, target, new ArrayList&lt;&gt;(), result);
+    return result;
+}
+
+private static void backtrack(int[] cand, int start, int remaining,
+                              List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; result) {
+    // Base case: we spent the target exactly -&gt; path is a valid combination.
+    if (remaining == 0) {
+        result.add(new ArrayList&lt;&gt;(path));
+        return;
+    }
+    // Only consider candidates from `start` onward. This is THE trick that
+    // avoids duplicates: [2,3] and [3,2] can never both appear, because once
+    // we move past 2 we never pick it again.
+    for (int i = start; i &lt; cand.length; i++) {
+        if (cand[i] &gt; remaining) break; // prune: sorted, so the rest are bigger too
+        path.add(cand[i]);              // choose
+        // pass `i`, NOT `i + 1`: same element may be reused (unlimited supply)
+        backtrack(cand, i, remaining - cand[i], path, result);
+        path.remove(path.size() - 1);   // un-choose
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> exponential in the worst case — roughly O(nᵀ/ᵐ) branches where m is the smallest
+    candidate; <strong>space O(target/m)</strong> recursion depth. Honest answer in interviews: "exponential, bounded by
+    the pruning".</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Hint-level walkthrough: N-Queens (LeetCode 51)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> place n queens on an n×n board so none attack another; return all boards.</p>
+    <p><strong>The insight chain:</strong> (1) exactly one queen per row → recursion depth = row number, one decision
+    (the column) per level. (2) A placement conflicts iff its column, its ↘ diagonal (constant r−c), or its ↙ diagonal
+    (constant r+c) is already taken — so keep three <code>HashSet&lt;Integer&gt;</code>s (or boolean arrays) and conflict
+    checks are O(1). (3) Choose = add col, r−c, r+c to the sets and place the queen; un-choose = remove all three.
+    Pruning is savage here: most branches die within a few rows, which is why n=9 (352,696-node full tree in theory)
+    solves instantly. This is the template you'd reuse for Sudoku solvers.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong><code>result.add(path)</code> without copying</strong> — the #1 bug. Every stored reference points at the same list, which unwinds to empty. Always <code>new ArrayList&lt;&gt;(path)</code> at the base case.</li>
+  <li><strong>Un-choose must mirror choose exactly.</strong> Two mutations in (add to path, set <code>used</code>) means two mutations out, in reverse order. Write both lines before writing the recursive call.</li>
+  <li><strong>State the complexity from the tree shape:</strong> "2ⁿ leaves × O(n) copy = O(n·2ⁿ)". Interviewers accept exponential answers for enumeration problems — they just want them <em>derived</em>, not guessed.</li>
+  <li><strong>Watch the stack.</strong> Recursion depth is space: O(n) here, but a 10⁵-deep list/graph recursion overflows the JVM's default stack. Mention the explicit-stack rewrite as the fix.</li>
+  <li><strong>Prune before recursing, not after.</strong> <code>if (cand[i] &gt; remaining) break;</code> saves the whole subtree; checking validity only at the leaves is brute force wearing a costume.</li>
+  <li><strong>Say the rhythm out loud</strong> — "choose, explore, un-choose" — as you code it. It structures your solution and tells the interviewer you have the pattern, even before the code compiles.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="09-stacks-queues.html"><span class="dir">⟵ Prev</span><span class="name">09 · Stacks &amp; Queues</span></a>
+  <a class="next" href="11-trees.html"><span class="dir">Next ⟶</span><span class="name">11 · Trees &amp; BSTs</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('subsetTree', {
+  totalSteps: 7,
+  intervalMs: 2200,
+  captions: [
+    'Each level of this tree decides the fate of ONE element. The root is the empty path — no decisions made yet.',
+    'Element 1: branch left to EXCLUDE it, branch right to INCLUDE it. Two partial paths now exist.',
+    'Element 2 gets the same two choices under every existing branch — now 4 partial paths.',
+    'Element 3 doubles it again: 8 leaves, and every leaf is exactly one subset. 2 × 2 × 2 = 2³ — the tree IS the power set.',
+    'The code walks this tree depth-first. Follow one branch: include 1, exclude 2, include 3 — the leaf [1,3] is reached and copied into the result.',
+    'Then the recursion RETURNS: path.remove() un-does the last choice so the parent can explore its other branch with clean state. That undo is the "backtracking".',
+    'DFS visits all 8 leaves, paying O(n) copy work at each: O(n · 2ⁿ) total — complexity read straight off the tree shape.'
+  ],
+  apply: function (svg, step) {
+    // reveal levels cumulatively (idempotent: recompute visibility every call)
+    svg.querySelector('#lvl1').style.opacity = step >= 1 ? 1 : 0;
+    svg.querySelector('#lvl1e').style.opacity = step >= 1 ? 1 : 0;
+    svg.querySelector('#lvl2').style.opacity = step >= 2 ? 1 : 0;
+    svg.querySelector('#lvl2e').style.opacity = step >= 2 ? 1 : 0;
+    svg.querySelector('#lvl3').style.opacity = step >= 3 ? 1 : 0;
+    svg.querySelector('#lvl3e').style.opacity = step >= 3 ? 1 : 0;
+    // the highlighted DFS branch root -> [1,3]
+    var branchNodes = ['#n0', '#nB', '#nBA', '#nL6'];
+    var branchEdges = ['#eB', '#eBA', '#eL6'];
+    var i;
+    for (i = 0; i < branchNodes.length; i++)
+      Stepper.setClass(svg, branchNodes[i], 'active', step === 4 || step === 5);
+    for (i = 0; i < branchEdges.length; i++)
+      Stepper.setClass(svg, branchEdges[i], 'active', step === 4 || step === 5);
+    // at step 5 the leaf is recorded (done) while the path unwinds
+    Stepper.setClass(svg, '#nL6', 'active', step === 4);
+    Stepper.setClass(svg, '#nL6', 'done', step === 5);
+    // step 6: every leaf recorded
+    var leaves = ['#nL1', '#nL2', '#nL3', '#nL4', '#nL5', '#nL7', '#nL8'];
+    for (i = 0; i < leaves.length; i++)
+      Stepper.setClass(svg, leaves[i], 'done', step === 6);
+    Stepper.setClass(svg, '#nL6', 'done', step === 5 || step === 6);
+    // white labels when their box is colored
+    Stepper.setClass(svg, '#t0', 'onfill', step === 4 || step === 5);
+    Stepper.setClass(svg, '#tB', 'onfill', step === 4 || step === 5);
+    Stepper.setClass(svg, '#tBA', 'onfill', step === 4 || step === 5);
+    Stepper.setClass(svg, '#tL6', 'onfill', step >= 4);
+    var leafLbls = ['#tL1', '#tL2', '#tL3', '#tL4', '#tL5', '#tL7', '#tL8'];
+    for (i = 0; i < leafLbls.length; i++)
+      Stepper.setClass(svg, leafLbls[i], 'onfill', step === 6);
+  }
+});
+</script>
+
+</body>
+</html>

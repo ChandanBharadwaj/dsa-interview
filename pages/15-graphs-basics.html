@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>15 · Graph Basics — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Graph Basics: BFS &amp; DFS</h1>
+<p class="subtitle">Model anything as nodes and edges, then master the only two traversals you'll ever need — and learn why grids are secretly graphs.</p>
+<p>
+  <span class="badge phase">Phase 6 · Weeks 9–10</span>
+  <span class="badge freq">Nearly every senior interview loop includes one graph question</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Graphs are the most general data model in the book: social networks, road maps, dependency trees, microservices,
+  grids in games — all nodes and edges. Interviewers love them because a graph question tests modeling ("can you SEE
+  the graph hiding in this story?") plus algorithms (BFS/DFS) plus bookkeeping (the visited set) in one problem.
+  The good news: two traversals — BFS and DFS — solve the vast majority of graph interview questions.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a> — DFS <em>is</em> recursion on a graph</li>
+  <li><a href="11-trees.html">11 · Trees &amp; BSTs</a> — level-order traversal <em>is</em> BFS; a tree is just a graph with no cycles</li>
+  <li><a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a> — BFS runs on a queue, iterative DFS on a stack</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li>Can you <strong>build the graph</strong> from the problem's raw input (edge list, grid, word list) before traversing it?</li>
+  <li>Do you place the <strong>visited check at the right moment</strong> (the #1 graph bug — details below)?</li>
+  <li>Do you know <strong>BFS gives shortest paths</strong> in unweighted graphs, and why DFS doesn't?</li>
+  <li>Can you state <strong>O(V + E)</strong> and explain it (each node and each edge touched once)?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Trees gave you traversal instincts in a world without cycles. Graphs add exactly one complication — you can reach
+  the same node twice — and exactly one tool fixes it: the <strong>visited set</strong>. Tree BFS/DFS + visited set
+  = graph BFS/DFS. That's genuinely the whole leap.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Representing a graph (step 1 of every solution)</h3>
+<p>
+  Problems hand you edge lists, grids, or prerequisite pairs — almost never a ready-made graph. Your first lines of
+  code build an <strong>adjacency list</strong>: for each node, the list of its neighbors.
+</p>
+
+<p class="code-title">Building an adjacency list from an edge list — memorize this idiom</p>
+<pre class="code"><code>// n nodes (0..n-1), undirected edges like [[0,1],[1,2],[0,3]]
+List&lt;List&lt;Integer&gt;&gt; adj = new ArrayList&lt;&gt;();
+for (int i = 0; i &lt; n; i++) adj.add(new ArrayList&lt;&gt;());
+for (int[] e : edges) {
+    adj.get(e[0]).add(e[1]);   // edge u -&gt; v
+    adj.get(e[1]).add(e[0]);   // undirected: also v -&gt; u (drop this line if directed)
+}</code></pre>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Representation</th><th>Space</th><th>"Is u–v an edge?"</th><th>Iterate neighbors</th><th>Use when</th></tr>
+  <tr><td>Adjacency list</td><td>O(V + E)</td><td>O(degree)</td><td>O(degree) ✅</td><td><strong>default</strong> — real graphs are sparse</td></tr>
+  <tr><td>Adjacency matrix</td><td>O(V²)</td><td>O(1) ✅</td><td>O(V)</td><td>dense graphs, tiny V, edge-existence heavy</td></tr>
+  <tr><td>Implicit (grid)</td><td>none</td><td colspan="2">neighbors computed on the fly (r±1, c±1)</td><td>grid/matrix problems — most common in interviews!</td></tr>
+</table>
+</div>
+
+<h3>2. BFS — explore in expanding waves</h3>
+<p>
+  Breadth-first search uses a <strong>queue</strong>: visit the start, then everything 1 edge away, then 2 edges away…
+  Because it exhausts distance-k nodes before touching distance-k+1, <strong>the first time BFS reaches a node is via
+  a shortest path</strong> (fewest edges). That single property answers every "minimum number of steps" question.
+</p>
+
+<div class="anim" id="bfsAnim">
+  <svg viewBox="0 0 640 260">
+    <line id="be-ab" class="edge" x1="320" y1="52" x2="190" y2="110"></line>
+    <line id="be-ac" class="edge" x1="320" y1="52" x2="450" y2="110"></line>
+    <line id="be-bd" class="edge" x1="190" y1="110" x2="190" y2="185"></line>
+    <line id="be-ce" class="edge" x1="450" y1="110" x2="450" y2="185"></line>
+    <line id="be-df" class="edge" x1="190" y1="185" x2="320" y2="230"></line>
+    <line id="be-ef" class="edge" x1="450" y1="185" x2="320" y2="230"></line>
+    <circle id="bn-a" class="box" cx="320" cy="42" r="22"></circle>
+    <circle id="bn-b" class="box" cx="190" cy="110" r="22"></circle>
+    <circle id="bn-c" class="box" cx="450" cy="110" r="22"></circle>
+    <circle id="bn-d" class="box" cx="190" cy="185" r="22"></circle>
+    <circle id="bn-e" class="box" cx="450" cy="185" r="22"></circle>
+    <circle id="bn-f" class="box" cx="320" cy="230" r="22"></circle>
+    <text class="lbl" x="320" y="47" text-anchor="middle">A</text>
+    <text class="lbl" x="190" y="115" text-anchor="middle">B</text>
+    <text class="lbl" x="450" y="115" text-anchor="middle">C</text>
+    <text class="lbl" x="190" y="190" text-anchor="middle">D</text>
+    <text class="lbl" x="450" y="190" text-anchor="middle">E</text>
+    <text class="lbl" x="320" y="235" text-anchor="middle">F</text>
+    <text class="small" x="20" y="30">gold = in queue (frontier) · blue = being processed · green = done</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. DFS — explore one path to the end, then backtrack</h3>
+<p>
+  Depth-first search dives along one path as far as possible, then backtracks — naturally recursive (the call stack
+  <em>is</em> the "stack"). It doesn't find shortest paths, but it's the cleanest tool for
+  <strong>"does a path exist"</strong>, <strong>connected components</strong>, and <strong>flood fill</strong>,
+  and the backbone of cycle detection and topological sort (<a href="16-graphs-advanced.html">next page</a>).
+</p>
+
+<div class="anim" id="dfsAnim">
+  <svg viewBox="0 0 640 260">
+    <line id="de-ab" class="edge" x1="320" y1="52" x2="190" y2="110"></line>
+    <line id="de-ac" class="edge" x1="320" y1="52" x2="450" y2="110"></line>
+    <line id="de-bd" class="edge" x1="190" y1="110" x2="190" y2="185"></line>
+    <line id="de-ce" class="edge" x1="450" y1="110" x2="450" y2="185"></line>
+    <line id="de-df" class="edge" x1="190" y1="185" x2="320" y2="230"></line>
+    <line id="de-ef" class="edge" x1="450" y1="185" x2="320" y2="230"></line>
+    <circle id="dn-a" class="box" cx="320" cy="42" r="22"></circle>
+    <circle id="dn-b" class="box" cx="190" cy="110" r="22"></circle>
+    <circle id="dn-c" class="box" cx="450" cy="110" r="22"></circle>
+    <circle id="dn-d" class="box" cx="190" cy="185" r="22"></circle>
+    <circle id="dn-e" class="box" cx="450" cy="185" r="22"></circle>
+    <circle id="dn-f" class="box" cx="320" cy="230" r="22"></circle>
+    <text class="lbl" x="320" y="47" text-anchor="middle">A</text>
+    <text class="lbl" x="190" y="115" text-anchor="middle">B</text>
+    <text class="lbl" x="450" y="115" text-anchor="middle">C</text>
+    <text class="lbl" x="190" y="190" text-anchor="middle">D</text>
+    <text class="lbl" x="450" y="190" text-anchor="middle">E</text>
+    <text class="lbl" x="320" y="235" text-anchor="middle">F</text>
+    <text class="small" x="20" y="30">same graph as above — watch how differently DFS moves</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>4. Grids are graphs</h3>
+<p>
+  A 2D grid is an <em>implicit</em> graph: each cell is a node; its up/down/left/right neighbors are its edges.
+  No adjacency list needed — compute neighbors with a direction array. "Number of Islands" is literally
+  "count connected components"; "Rotting Oranges" is literally "multi-source BFS". Interviewers dress graphs
+  up as grids constantly — undressing them is the skill.
+</p>
+
+<h3>5. Multi-source BFS</h3>
+<p>
+  When spreading starts from <em>many</em> places at once (all rotten oranges, all ocean-border cells), seed the queue
+  with <strong>every source before starting</strong>. BFS then computes distance-to-<em>nearest</em>-source for every
+  node in one pass — no need to run BFS per source.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">BFS — queue + visited-before-enqueue (memorize)</p>
+<pre class="code"><code>public void bfs(List&lt;List&lt;Integer&gt;&gt; adj, int start) {
+    boolean[] visited = new boolean[adj.size()];
+    Queue&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+    visited[start] = true;              // mark WHEN ENQUEUING, not when polling
+    queue.offer(start);
+    while (!queue.isEmpty()) {
+        int layer = queue.size();       // freeze the layer ONLY if you need distances
+        for (int k = 0; k &lt; layer; k++) {
+            int cur = queue.poll();
+            for (int nb : adj.get(cur)) {
+                if (visited[nb]) continue;   // already discovered — skip
+                visited[nb] = true;          // claim it now…
+                queue.offer(nb);             // …so no one enqueues it twice
+            }
+        }
+        // one layer processed == one unit of distance from start
+    }
+}</code></pre>
+
+<p class="code-title">DFS — recursive (visited set instead of a tree's implicit no-cycles)</p>
+<pre class="code"><code>public void dfs(List&lt;List&lt;Integer&gt;&gt; adj, int cur, boolean[] visited) {
+    visited[cur] = true;                 // mark on ARRIVAL
+    for (int nb : adj.get(cur))
+        if (!visited[nb])
+            dfs(adj, nb, visited);       // dive deeper; backtracking is the return
+}</code></pre>
+
+<div class="warn">
+  <strong>The #1 graph bug: visited timing in BFS.</strong> If you mark nodes visited when you <em>poll</em> them
+  (instead of when you <em>offer</em> them), the same node can sit in the queue multiple times — on dense graphs
+  that's exponential blowup and wrong distance counts. Rule: <em>the moment a node enters the queue, it is claimed.</em>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Question smells like…</th><th>Use</th><th>Why</th></tr>
+  <tr><td>"minimum steps / shortest path" (unweighted)</td><td><strong>BFS</strong></td><td>first arrival = fewest edges, guaranteed</td></tr>
+  <tr><td>"does a path exist / is it connected"</td><td>DFS (or BFS)</td><td>either works; DFS is less code</td></tr>
+  <tr><td>"count regions / islands / provinces"</td><td>DFS flood fill</td><td>one dive erases one whole component</td></tr>
+  <tr><td>"spreading / infection / nearest of many sources"</td><td>Multi-source BFS</td><td>seed all sources; layers = time</td></tr>
+  <tr><td>"level by level / within k moves"</td><td>BFS with layer loop</td><td>the frozen-layer trick counts distance</td></tr>
+  <tr><td>deep exploration state (paths, cycles, ordering)</td><td>DFS</td><td>recursion carries path state naturally</td></tr>
+  <tr><td>graph is HUGE and deep</td><td>BFS or iterative DFS</td><td>recursion can blow the Java stack (~10⁴ frames)</td></tr>
+  <tr><td>edges have <em>weights</em></td><td>Dijkstra &amp; friends</td><td>BFS layers no longer equal cost — <a href="17-shortest-paths.html">page 17</a></td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Social networks</h4>
+    <p class="small">"People you may know" is BFS 2–3 hops out from you, ranked by mutual-friend counts. Degrees of
+    separation, friend clusters, influence spread — all BFS/DFS on the friendship graph
+    (<a href="25-real-world-systems.html">capstone</a> maps the full pipeline).</p>
+  </div>
+  <div class="card">
+    <h4>Web crawlers</h4>
+    <p class="small">Googlebot is a giant BFS: seed URLs in a queue, fetch, extract links, enqueue unseen ones — the
+    visited set (already-crawled URLs) is exactly your interview visited set, at the scale of the entire web.</p>
+  </div>
+  <div class="card">
+    <h4>Microservices &amp; infrastructure</h4>
+    <p class="small">Blast-radius analysis ("if this service dies, what breaks?") is reachability — DFS over the
+    dependency graph. Network topology discovery, Kubernetes resource graphs, Terraform plans: all traversals.</p>
+  </div>
+  <div class="card">
+    <h4>Games &amp; robotics</h4>
+    <p class="small">Enemy pathfinding on uniform-cost maps is grid BFS; fog-of-war reveal and paint-bucket tools are
+    flood fill. Weighted terrain upgrades it to Dijkstra/A* — the exact ladder this runbook climbs next.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/flood-fill/">Flood Fill</a>
+    <span class="hint">The paint bucket: DFS from the start pixel, repaint everything connected with the same color.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/number-of-islands/">Number of Islands</a>
+    <span class="hint">Worked below — count components; sink each island as you find it.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/max-area-of-island/">Max Area of Island</a>
+    <span class="hint">Same flood fill, but the DFS returns 1 + sum of neighbor areas.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/rotting-oranges/">Rotting Oranges</a>
+    <span class="hint">Worked below — multi-source BFS; layers are minutes.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/clone-graph/">Clone Graph</a>
+    <span class="hint">Worked below — the original→clone HashMap doubles as the visited set.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/01-matrix/">01 Matrix</a>
+    <span class="hint">Distance-to-nearest-0 for every cell: seed ALL zeros (multi-source BFS), never BFS per cell.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/pacific-atlantic-water-flow/">Pacific Atlantic Water Flow</a>
+    <span class="hint">Reverse the flow: DFS inland from each ocean's border cells; answer = cells reached by both.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/shortest-path-in-binary-matrix/">Shortest Path in Binary Matrix</a>
+    <span class="hint">8-directional BFS — worked on <a href="17-shortest-paths.html">page 17</a> as the BFS-vs-DP showcase.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Number of Islands (DFS flood fill) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Grid of '1' (land) and '0' (water) — count islands (4-directionally connected land).</p>
+    <p><strong>Idea.</strong> The grid IS a graph; islands are connected components. Scan every cell; each time you
+    find un-visited land, that's a new island — flood-fill (DFS) sinks the whole component so it's never recounted.</p>
+<pre class="code"><code>public static int numIslands(char[][] grid) {
+    int rows = grid.length, cols = grid[0].length;
+    int islands = 0;
+    for (int r = 0; r &lt; rows; r++) {
+        for (int c = 0; c &lt; cols; c++) {
+            if (grid[r][c] == '1') { // fresh land -&gt; a brand-new component
+                islands++;
+                sink(grid, r, c);    // erase the whole island
+            }
+        }
+    }
+    return islands;
+}
+
+// DFS flood fill: mark this cell as water, then recurse in 4 directions.
+// Mutating the grid doubles as our "visited" set (no extra structure).
+private static void sink(char[][] grid, int r, int c) {
+    if (r &lt; 0 || r &gt;= grid.length || c &lt; 0 || c &gt;= grid[0].length
+            || grid[r][c] != '1') // off the map, water, or already sunk
+        return;
+    grid[r][c] = '0';             // mark visited BEFORE recursing
+    sink(grid, r + 1, c);         // down
+    sink(grid, r - 1, c);         // up
+    sink(grid, r, c + 1);         // right
+    sink(grid, r, c - 1);         // left
+}</code></pre>
+    <p><strong>Complexity.</strong> Time O(rows·cols) — each cell visited a constant number of times. Space
+    O(rows·cols) worst case for the recursion (one giant snake-shaped island). Mention that mutating the input is a
+    choice — offer a separate <code>boolean[][] visited</code> if the interviewer objects.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Rotting Oranges (multi-source BFS) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Fresh (1) and rotten (2) oranges; each minute rot spreads to adjacent fresh oranges.
+    Minutes until nothing fresh remains, or −1 if impossible.</p>
+    <p><strong>Idea.</strong> Seed the queue with ALL initially-rotten oranges (they all rot outward simultaneously),
+    then expand one BFS layer per minute — BFS layers ARE elapsed time.</p>
+<pre class="code"><code>public static int orangesRotting(int[][] grid) {
+    int rows = grid.length, cols = grid[0].length;
+    Queue&lt;int[]&gt; queue = new ArrayDeque&lt;&gt;();
+    int fresh = 0;
+
+    // Seed: every rotten orange enters the queue simultaneously.
+    for (int r = 0; r &lt; rows; r++)
+        for (int c = 0; c &lt; cols; c++) {
+            if (grid[r][c] == 2) queue.offer(new int[]{r, c});
+            else if (grid[r][c] == 1) fresh++;
+        }
+    if (fresh == 0) return 0; // nothing left to rot -&gt; 0 minutes
+
+    int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
+    int minutes = 0;
+    // One full LAYER of the queue = one minute of spreading.
+    while (!queue.isEmpty() &amp;&amp; fresh &gt; 0) {
+        int layerSize = queue.size(); // freeze this minute's frontier
+        for (int k = 0; k &lt; layerSize; k++) {
+            int[] cell = queue.poll();
+            for (int[] d : dirs) {
+                int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                if (nr &lt; 0 || nr &gt;= rows || nc &lt; 0 || nc &gt;= cols
+                        || grid[nr][nc] != 1) continue; // only fresh oranges rot
+                grid[nr][nc] = 2;               // mark rotten NOW ("visited")
+                fresh--;                        // one fewer fresh orange
+                queue.offer(new int[]{nr, nc}); // it spreads next minute
+            }
+        }
+        minutes++; // a whole wavefront finished = one minute passed
+    }
+    return fresh == 0 ? minutes : -1; // stranded fresh orange -&gt; impossible
+}</code></pre>
+    <p><strong>Complexity.</strong> Time O(rows·cols), space O(rows·cols) for the queue. The
+    <code>fresh &gt; 0</code> loop guard avoids counting a final minute where nothing spreads.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Clone Graph (BFS + HashMap) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Deep-copy an undirected graph given one node reference.</p>
+    <p><strong>Idea.</strong> The trap is cycles — blind recursion clones forever. Keep a HashMap
+    original → clone that doubles as the visited set: clone a node the first time you see it, and always wire edges
+    between <em>clones</em>.</p>
+<pre class="code"><code>static class Node {
+    int val;
+    List&lt;Node&gt; neighbors = new ArrayList&lt;&gt;();
+    Node(int val) { this.val = val; }
+}
+
+public static Node cloneGraph(Node node) {
+    if (node == null) return null;
+    // Maps each original node -&gt; its clone. Also our "visited" set.
+    Map&lt;Node, Node&gt; clones = new HashMap&lt;&gt;();
+    clones.put(node, new Node(node.val)); // clone the start node up front
+    Queue&lt;Node&gt; queue = new ArrayDeque&lt;&gt;();
+    queue.offer(node);
+
+    while (!queue.isEmpty()) {
+        Node cur = queue.poll();
+        for (Node nb : cur.neighbors) {
+            if (!clones.containsKey(nb)) {        // first time seeing nb
+                clones.put(nb, new Node(nb.val)); // clone BEFORE enqueue
+                queue.offer(nb);                  // explore it later
+            }
+            // Wire the CLONE edge: clone(cur) -&gt; clone(nb).
+            clones.get(cur).neighbors.add(clones.get(nb));
+        }
+    }
+    return clones.get(node);
+}</code></pre>
+    <p><strong>Complexity.</strong> Time O(V + E), space O(V) for the map + queue. The same map-as-visited trick
+    powers "Copy List with Random Pointer" (<a href="08-linked-lists.html">page 08</a>) — say so for pattern credit.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Visited on enqueue, not on poll</strong> (BFS). Repeat it like a mantra — it's the most common graph bug in interviews.</li>
+  <li><strong>Build the graph first.</strong> Don't traverse edge lists directly; spend the O(E) to build an adjacency list and the rest of the code writes itself.</li>
+  <li><strong>Deep recursion can crash.</strong> A 300×300 grid can recurse ~90,000 deep — beyond Java's default stack. Mention the iterative (explicit stack) rewrite; writing it is rarely required, knowing it is.</li>
+  <li><strong>Directions array beats eight ifs.</strong> <code>int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}}</code> — less code, fewer typos, easy 8-direction upgrade.</li>
+  <li><strong>Weighted edges ⇒ BFS is wrong.</strong> The moment steps have different costs, switch to Dijkstra — that's the opening insight of <a href="17-shortest-paths.html">page 17</a>.</li>
+  <li><strong>Say the complexity as a formula:</strong> "O(V + E) — every node dequeued once, every edge relaxed once (twice if undirected)."</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="14-strings-advanced.html"><span class="dir">⟵ Previous</span><span class="name">14 · String Algorithms</span></a>
+  <a class="next" href="16-graphs-advanced.html"><span class="dir">Next ⟶</span><span class="name">16 · Graphs Advanced</span></a>
+</nav>
+
+</div>
+
+<script>
+(function () {
+  var N = ['a','b','c','d','e','f'];
+
+  /* BFS: layers A | B,C | D,E | F */
+  var bfsSteps = [
+    { done:[], active:[], frontier:['a'], edges:[] },
+    { done:[], active:['a'], frontier:['b','c'], edges:['ab','ac'] },
+    { done:['a'], active:['b'], frontier:['c','d'], edges:['ab','ac','bd'] },
+    { done:['a','b'], active:['c'], frontier:['d','e'], edges:['ab','ac','bd','ce'] },
+    { done:['a','b','c'], active:['d'], frontier:['e','f'], edges:['ab','ac','bd','ce','df'] },
+    { done:['a','b','c','d'], active:['e'], frontier:['f'], edges:['ab','ac','bd','ce','df'] },
+    { done:['a','b','c','d','e'], active:['f'], frontier:[], edges:['ab','ac','bd','ce','df'] },
+    { done:['a','b','c','d','e','f'], active:[], frontier:[], edges:['ab','ac','bd','ce','df'] }
+  ];
+  new Stepper('bfsAnim', {
+    totalSteps: 8,
+    captions: [
+      'Start: A enters the queue (gold = queued). The queue drives everything.',
+      'Poll A (blue = processing). Its neighbors B and C are unvisited — mark visited and enqueue BOTH. Layer 0 done.',
+      'Poll B. New neighbor D goes into the queue. Note C is still waiting — BFS finishes a layer before going deeper.',
+      'Poll C. New neighbor E enqueued. Layer 1 (distance 1 from A) is complete: B and C.',
+      'Poll D. New neighbor F enqueued. We are now processing layer 2 — every node here is exactly 2 edges from A.',
+      'Poll E. Its neighbor F is ALREADY claimed (visited on enqueue!) — nothing to add. No duplicates ever enter the queue.',
+      'Poll F — distance 3. First arrival at every node was via a shortest path; that is the whole magic of BFS.',
+      'All visited in wave order: A | B C | D E | F. "Minimum steps" questions = read the layer number.'
+    ],
+    apply: function (svg, step) {
+      var s = bfsSteps[step];
+      N.forEach(function (n) {
+        Stepper.setClass(svg, '#bn-' + n, 'done', s.done.indexOf(n) >= 0);
+        Stepper.setClass(svg, '#bn-' + n, 'active', s.active.indexOf(n) >= 0);
+        Stepper.setClass(svg, '#bn-' + n, 'frontier', s.frontier.indexOf(n) >= 0);
+      });
+      ['ab','ac','bd','ce','df','ef'].forEach(function (e) {
+        Stepper.setClass(svg, '#be-' + e, 'done', s.edges.indexOf(e) >= 0);
+      });
+    }
+  });
+
+  /* DFS: A -> B -> D -> F -> E -> C */
+  var dfsSteps = [
+    { done:[], active:[], edges:[] },
+    { done:[], active:['a'], edges:[] },
+    { done:['a'], active:['b'], edges:['ab'] },
+    { done:['a','b'], active:['d'], edges:['ab','bd'] },
+    { done:['a','b','d'], active:['f'], edges:['ab','bd','df'] },
+    { done:['a','b','d','f'], active:['e'], edges:['ab','bd','df','ef'] },
+    { done:['a','b','d','f','e'], active:['c'], edges:['ab','bd','df','ef','ce'] },
+    { done:['a','b','d','f','e','c'], active:[], edges:['ab','bd','df','ef','ce'] }
+  ];
+  new Stepper('dfsAnim', {
+    totalSteps: 8,
+    captions: [
+      'Same graph, same start — but DFS commits to ONE path and rides it to the end.',
+      'Visit A. Its first unvisited neighbor is B — dive there immediately (no queue, just recursion).',
+      'Visit B. Dive again: B\'s unvisited neighbor is D.',
+      'Visit D. Deeper still: D leads to F. We are 3 edges deep while C (1 edge from A!) is still untouched.',
+      'Visit F. F\'s unvisited neighbor is E — keep diving.',
+      'Visit E. E\'s unvisited neighbor is C — note we reach C the LONG way around (4 edges, not 1). DFS ≠ shortest path.',
+      'Visit C. Every neighbor everywhere is visited — the recursion unwinds (backtracks) all the way home.',
+      'Order: A,B,D,F,E,C — one deep dive. Perfect for "does a path exist / flood fill", wrong for "minimum steps".'
+    ],
+    apply: function (svg, step) {
+      var s = dfsSteps[step];
+      N.forEach(function (n) {
+        Stepper.setClass(svg, '#dn-' + n, 'done', s.done.indexOf(n) >= 0);
+        Stepper.setClass(svg, '#dn-' + n, 'active', s.active.indexOf(n) >= 0);
+      });
+      ['ab','ac','bd','ce','df','ef'].forEach(function (e) {
+        Stepper.setClass(svg, '#de-' + e, 'done', s.edges.indexOf(e) >= 0);
+      });
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 · Sorting — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Sorting</h1>
+<p class="subtitle">Merge sort, quicksort, and the non-comparison sorts — plus what <code>Arrays.sort</code> actually runs, and why "is it stable?" is a senior-level question.</p>
+<p>
+  <span class="badge phase">Phase 2 · Week 4</span>
+  <span class="badge freq">Concept questions + the building block under half of all patterns</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  You will rarely be asked to hand-write a full sort in an interview — but you will constantly be asked
+  <em>about</em> sorting: "can you do better than O(n²)?", "is your sort stable?", "why did you sort at all?".
+  And dozens of patterns (two pointers, intervals, greedy, binary search) begin with the sentence
+  "first, sort the input". Understanding how the classic sorts work — and their exact costs — is the
+  price of admission for everything after this page.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — Big-O, and why O(n log n) beats O(n²)</li>
+  <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — array manipulation fluency</li>
+  <li><a href="02-two-pointers.html">02 · Two Pointers</a> — the merge step below IS a two-pointer walk</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li>Do you know the O(n log n) standard sorts and their <strong>tradeoffs</strong> (space, stability, worst case) — not just their names?</li>
+  <li>Do you spot when a <strong>non-comparison sort</strong> (counting/bucket) gives O(n) because the key range is small?</li>
+  <li>Can you write a <strong>custom comparator</strong> correctly in Java, and reason about stability?</li>
+  <li>Do you know <strong>quickselect</strong> — getting the K-th element in average O(n) <em>without</em> fully sorting?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Phase 1 gave you patterns that mostly assume unsorted input. Sorting is the great <em>pre-processor</em>: spend
+  O(n log n) once and suddenly two pointers, binary search (next page), and interval reasoning all become available.
+  The recurring interview decision is exactly: "HashMap in O(n), or sort first and get a simpler O(n log n) solution?"
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Merge sort — divide, conquer, merge</h3>
+<p>
+  Split the array in half, sort each half (recursively), then <strong>merge</strong> the two sorted halves with a
+  two-pointer walk. The recursion is log n levels deep and every level touches all n elements once ⇒
+  <strong>O(n log n) always</strong> — best case, worst case, adversarial case. The price: O(n) extra space for the
+  merge buffer. Merge sort is also <strong>stable</strong>: equal elements keep their original relative order.
+</p>
+
+<div class="anim" id="mergeAnim">
+  <svg viewBox="0 0 640 220">
+    <text class="small" x="90" y="24">sorted left half</text>
+    <text class="small" x="420" y="24">sorted right half</text>
+    <!-- left half -->
+    <rect id="m-l0" class="box" x="60"  y="34" width="52" height="40" rx="7"></rect>
+    <rect id="m-l1" class="box" x="118" y="34" width="52" height="40" rx="7"></rect>
+    <rect id="m-l2" class="box" x="176" y="34" width="52" height="40" rx="7"></rect>
+    <text class="lbl" x="86"  y="59" text-anchor="middle">2</text>
+    <text class="lbl" x="144" y="59" text-anchor="middle">5</text>
+    <text class="lbl" x="202" y="59" text-anchor="middle">8</text>
+    <!-- right half -->
+    <rect id="m-r0" class="box" x="390" y="34" width="52" height="40" rx="7"></rect>
+    <rect id="m-r1" class="box" x="448" y="34" width="52" height="40" rx="7"></rect>
+    <rect id="m-r2" class="box" x="506" y="34" width="52" height="40" rx="7"></rect>
+    <text class="lbl" x="416" y="59" text-anchor="middle">1</text>
+    <text class="lbl" x="474" y="59" text-anchor="middle">6</text>
+    <text class="lbl" x="532" y="59" text-anchor="middle">9</text>
+    <!-- output -->
+    <text class="small" x="60" y="128">merged output (always take the smaller front element)</text>
+    <rect id="m-o0" class="box" x="140" y="140" width="52" height="40" rx="7"></rect>
+    <rect id="m-o1" class="box" x="198" y="140" width="52" height="40" rx="7"></rect>
+    <rect id="m-o2" class="box" x="256" y="140" width="52" height="40" rx="7"></rect>
+    <rect id="m-o3" class="box" x="314" y="140" width="52" height="40" rx="7"></rect>
+    <rect id="m-o4" class="box" x="372" y="140" width="52" height="40" rx="7"></rect>
+    <rect id="m-o5" class="box" x="430" y="140" width="52" height="40" rx="7"></rect>
+    <text id="m-t0" class="lbl onfill" x="166" y="165" text-anchor="middle"></text>
+    <text id="m-t1" class="lbl onfill" x="224" y="165" text-anchor="middle"></text>
+    <text id="m-t2" class="lbl onfill" x="282" y="165" text-anchor="middle"></text>
+    <text id="m-t3" class="lbl onfill" x="340" y="165" text-anchor="middle"></text>
+    <text id="m-t4" class="lbl onfill" x="398" y="165" text-anchor="middle"></text>
+    <text id="m-t5" class="lbl onfill" x="456" y="165" text-anchor="middle"></text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>2. Quicksort — partition around a pivot</h3>
+<p>
+  Pick a <strong>pivot</strong>, then <em>partition</em>: rearrange so everything smaller sits left of the pivot,
+  everything bigger sits right. The pivot lands in its <strong>final sorted position</strong>; recurse on the two
+  sides. Average O(n log n), <strong>in place</strong> (O(log n) stack only) — but a consistently bad pivot
+  (already-sorted input with naive "pick last") degrades to <strong>O(n²)</strong>. Real implementations
+  randomize or median-of-three the pivot. Quicksort is <strong>not stable</strong>.
+</p>
+
+<div class="anim" id="partAnim">
+  <svg viewBox="0 0 640 170">
+    <rect id="p-0" class="box" x="60"  y="40" width="66" height="46" rx="7"></rect>
+    <rect id="p-1" class="box" x="132" y="40" width="66" height="46" rx="7"></rect>
+    <rect id="p-2" class="box" x="204" y="40" width="66" height="46" rx="7"></rect>
+    <rect id="p-3" class="box" x="276" y="40" width="66" height="46" rx="7"></rect>
+    <rect id="p-4" class="box" x="348" y="40" width="66" height="46" rx="7"></rect>
+    <rect id="p-5" class="box" x="420" y="40" width="66" height="46" rx="7"></rect>
+    <text id="p-v0" class="lbl" x="93"  y="68" text-anchor="middle">3</text>
+    <text id="p-v1" class="lbl" x="165" y="68" text-anchor="middle">7</text>
+    <text id="p-v2" class="lbl" x="237" y="68" text-anchor="middle">1</text>
+    <text id="p-v3" class="lbl" x="309" y="68" text-anchor="middle">8</text>
+    <text id="p-v4" class="lbl" x="381" y="68" text-anchor="middle">2</text>
+    <text id="p-v5" class="lbl" x="453" y="68" text-anchor="middle">5</text>
+    <text class="small" x="497" y="68">← pivot</text>
+    <text id="p-jlbl" class="ptrlbl" x="93" y="112" text-anchor="middle">j</text>
+    <text id="p-ilbl" class="ptrlbl" x="93" y="132" text-anchor="middle">i (smaller-zone edge)</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. Heapsort, and the O(n log n) floor</h3>
+<p>
+  Heapsort builds a max-heap (O(n)) then extracts the max n times (O(log n) each): O(n log n), in place, not stable,
+  but with poor cache behavior — so it's rarely the default. It matters as a <em>concept</em> (see
+  <a href="12-heaps.html">12 · Heaps</a>) and as quicksort's safety net (see Introsort below).
+  And a fact worth quoting: <strong>no comparison sort can beat O(n log n)</strong> — sorting n items must
+  distinguish n! orderings, and each comparison splits the possibilities in half, so you need at least
+  log₂(n!) ≈ n log n comparisons. To go faster you must stop comparing…
+</p>
+
+<h3>4. Counting, bucket &amp; radix — sorting without comparisons</h3>
+<p class="code-title">Counting sort — keys in a small range ⇒ O(n + k)</p>
+<pre class="code"><code>// Sort an array whose values are all in 0..k (here k = 100), stably and in O(n + k).
+int[] count = new int[101];
+for (int x : arr) count[x]++;          // tally each value — O(n)
+int idx = 0;
+for (int v = 0; v &lt;= 100; v++)         // walk values in order — O(k)
+    while (count[v]-- &gt; 0) arr[idx++] = v;   // write out v, count[v] times</code></pre>
+<p>
+  <strong>Bucket sort</strong> spreads uniformly-distributed values into buckets and sorts each small bucket.
+  <strong>Radix sort</strong> counting-sorts numbers digit by digit (least significant first — stability of each pass
+  makes it work): O(d·(n+b)) for d digits. The interview signal: <em>whenever the problem bounds the values
+  ("ages 0–120", "letters a–z"), say "counting sort gives O(n) here."</em>
+</p>
+
+<h3>5. What Java actually runs — and stability</h3>
+<ul>
+  <li><code>Arrays.sort(int[])</code> → <strong>dual-pivot quicksort</strong>: fastest in practice for primitives, not stable — but for primitives equal values are indistinguishable, so stability is irrelevant.</li>
+  <li><code>Arrays.sort(T[])</code> and <code>Collections.sort</code> → <strong>TimSort</strong>: a merge sort that detects already-sorted "runs" in real data; stable, O(n) best case on nearly-sorted input, O(n log n) worst.</li>
+  <li>C++'s <code>std::sort</code> uses <strong>introsort</strong>: quicksort that switches to heapsort if recursion gets too deep — killing the O(n²) worst case. Good trivia when asked "how do libraries avoid bad pivots?"</li>
+</ul>
+
+<div class="note">
+  <strong>Why stability matters in real code.</strong> Sort employees by salary, then by department: if the second
+  sort is stable, each department's employees stay salary-ordered — you've built "sort by department, then salary"
+  out of two passes. Unstable sorts destroy that. This is exactly why Java forces stable TimSort for objects.
+</div>
+
+<h3>6. Quickselect — the K-th element without sorting</h3>
+<p>
+  Quicksort's partition places the pivot at its final index. If you only need the K-th smallest element, recurse into
+  <em>just the side containing K</em>: n + n/2 + n/4 + … ⇒ <strong>average O(n)</strong>, versus O(n log n) for a
+  full sort. This powers "K-th largest element" (worked below) and is the one-shot alternative to heaps
+  (<a href="12-heaps.html">page 12</a> compares them).
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Merge sort — the template (also the shape of "count inversions" problems)</p>
+<pre class="code"><code>public static void mergeSort(int[] a, int lo, int hi) {   // sorts a[lo..hi]
+    if (lo &gt;= hi) return;                 // base case: 0 or 1 element is sorted
+    int mid = lo + (hi - lo) / 2;         // overflow-safe midpoint
+    mergeSort(a, lo, mid);                // sort left half
+    mergeSort(a, mid + 1, hi);            // sort right half
+    merge(a, lo, mid, hi);                // two-pointer merge of the sorted halves
+}
+
+private static void merge(int[] a, int lo, int mid, int hi) {
+    int[] tmp = new int[hi - lo + 1];     // the O(n) extra space
+    int i = lo, j = mid + 1, t = 0;
+    while (i &lt;= mid &amp;&amp; j &lt;= hi)
+        // &lt;= keeps equal elements' left-first order ⇒ stability
+        tmp[t++] = a[i] &lt;= a[j] ? a[i++] : a[j++];
+    while (i &lt;= mid) tmp[t++] = a[i++];   // drain leftovers (only one loop runs)
+    while (j &lt;= hi)  tmp[t++] = a[j++];
+    System.arraycopy(tmp, 0, a, lo, tmp.length);
+}</code></pre>
+
+<p class="code-title">Comparators — the Java you'll write in every sorting-adjacent problem</p>
+<pre class="code"><code>int[][] intervals = ...;
+// sort 2D arrays by first column (start time) — intervals, meetings, events
+Arrays.sort(intervals, (x, y) -&gt; Integer.compare(x[0], y[0]));
+
+// multi-key: by length ascending, then alphabetically — Comparator composition
+List&lt;String&gt; words = ...;
+words.sort(Comparator.comparingInt(String::length)
+                     .thenComparing(Comparator.naturalOrder()));
+
+// descending: reverseOrder needs boxed types (Integer[], not int[])
+Arrays.sort(boxed, Collections.reverseOrder());</code></pre>
+
+<div class="warn">
+  <strong>Comparator bug to avoid.</strong> Never write <code>(x, y) -&gt; x[0] - y[0]</code> — the subtraction
+  overflows for values like <code>Integer.MIN_VALUE</code> and silently mis-sorts. Always
+  <code>Integer.compare(x[0], y[0])</code>. Interviewers notice.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Sort</th><th>Time (best / avg / worst)</th><th>Space</th><th>Stable</th><th>Reach for it when…</th></tr>
+  <tr><td>Merge sort</td><td>n log n / n log n / n log n</td><td>O(n)</td><td>✅</td><td>guaranteed worst case, linked lists, external/huge data, count-inversions</td></tr>
+  <tr><td>Quicksort</td><td>n log n / n log n / n²</td><td>O(log n)</td><td>❌</td><td>in-place speed; partition idea powers quickselect &amp; Dutch flag</td></tr>
+  <tr><td>Heapsort</td><td>n log n / n log n / n log n</td><td>O(1)</td><td>❌</td><td>tight memory + guaranteed bound; mostly conceptual</td></tr>
+  <tr><td>TimSort (Java objects)</td><td>n / n log n / n log n</td><td>O(n)</td><td>✅</td><td>real-world data with sorted runs — it's the default; nearly-sorted input</td></tr>
+  <tr><td>Counting sort</td><td colspan="2">O(n + k), space O(k)</td><td>✅</td><td>small integer key range (ages, chars, 0/1/2 colors)</td></tr>
+  <tr><td>Bucket sort</td><td colspan="2">O(n) expected, space O(n)</td><td>✅*</td><td>uniformly distributed floats/values</td></tr>
+  <tr><td>Radix sort</td><td colspan="2">O(d·(n+b)), space O(n+b)</td><td>✅</td><td>fixed-width ints/strings (IDs, IPs, phone numbers)</td></tr>
+</table>
+</div>
+
+<h3>Decision cues</h3>
+<ul>
+  <li>Problem bounds the values to a small range → <strong>counting sort O(n)</strong>, mention it even if you then use a library sort.</li>
+  <li>"K-th largest / smallest", one-shot → <strong>quickselect O(n)</strong>; streaming/repeated → <strong>heap</strong> (<a href="12-heaps.html">12</a>).</li>
+  <li>Only 3 distinct values (0/1/2) → <strong>Dutch national flag</strong> one-pass partition (worked below).</li>
+  <li>Custom order ("largest concatenation", "closest to origin") → library sort + <strong>comparator</strong>; your job is only the comparator.</li>
+  <li>"Nearly sorted" input → say <strong>TimSort is O(n) here</strong>; or an insertion-sort/heap argument for k-out-of-place variants.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>TimSort runs the world's sorting</h4>
+    <p class="small">Invented for Python, adopted by Java (<code>Collections.sort</code>), Android, and V8's
+    <code>Array.prototype.sort</code>. Its bet — real data arrives in partially sorted runs — pays off so often that
+    a 2002 heuristic became the planetary default.</p>
+  </div>
+  <div class="card">
+    <h4>External sort &amp; LSM-tree compaction</h4>
+    <p class="small">When data exceeds RAM (database spills, MapReduce shuffle), systems sort chunks in memory, write
+    sorted "runs" to disk, then K-way merge them — merge sort at terabyte scale. RocksDB/Cassandra compaction is this
+    merge running forever in the background (see <a href="25-real-world-systems.html">capstone</a>).</p>
+  </div>
+  <div class="card">
+    <h4>Radix sort in graphics &amp; networking</h4>
+    <p class="small">GPUs radix-sort millions of primitives per frame for rendering order; routers and flow analyzers
+    radix-bucket packets by IP prefix — comparison-free sorting where keys are fixed-width bits.</p>
+  </div>
+  <div class="card">
+    <h4>Top-K everywhere</h4>
+    <p class="small">"Trending now" and leaderboard features don't fully sort a billion items; they quickselect or
+    heap-select the top 100 — the exact interview distinction between O(n log n), O(n log k) and O(n).</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/merge-sorted-array/">Merge Sorted Array</a>
+    <span class="hint">The merge step alone — walk from the BACK to reuse nums1's free space without overwriting.</span></div>
+  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/how-many-numbers-are-smaller-than-the-current-number/">How Many Numbers Are Smaller Than the Current Number</a>
+    <span class="hint">Values ≤ 100 → counting sort + prefix counts. Say "O(n + k)" out loud.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/sort-colors/">Sort Colors</a>
+    <span class="hint">Worked below — Dutch national flag: one pass, three zones, two boundaries.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/kth-largest-element-in-an-array/">Kth Largest Element in an Array</a>
+    <span class="hint">Worked below — quickselect; compare with the heap version from page 12.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/largest-number/">Largest Number</a>
+    <span class="hint">Worked below — the whole problem is one clever comparator: order a,b by (b+a) vs (a+b).</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/sort-list/">Sort List</a>
+    <span class="hint">Merge sort is THE sort for linked lists (no random access; merging lists is natural). Fast/slow split from page 08.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/merge-intervals/">Merge Intervals</a>
+    <span class="hint">Sort by start, then sweep — fully worked on <a href="21-greedy-intervals.html">page 21</a>.</span></div>
+  <div class="prob"><span class="badge hard">Hard</span> <a class="t" href="https://leetcode.com/problems/count-of-smaller-numbers-after-self/">Count of Smaller Numbers After Self</a>
+    <span class="hint">Count inversions during merge sort's merge — the classic "merge sort as a counting tool" upgrade.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Sort Colors (Dutch National Flag) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Array of 0s, 1s, 2s — sort in place, one pass, no counting allowed.</p>
+    <p><strong>Idea.</strong> Maintain three zones via two boundaries: everything left of <code>lo</code> is 0,
+    everything right of <code>hi</code> is 2, between <code>lo</code> and <code>i</code> is 1, and <code>i..hi</code>
+    is unexplored. Swap each element into its zone. This is quicksort's partition generalized to three parts.</p>
+<pre class="code"><code>public void sortColors(int[] nums) {
+    int lo = 0;                    // next slot for a 0 (zone boundary)
+    int hi = nums.length - 1;      // next slot for a 2 (zone boundary)
+    int i = 0;                     // current element under inspection
+    while (i &lt;= hi) {              // hi side is UNSORTED territory — stop when we meet it
+        if (nums[i] == 0) {
+            swap(nums, i, lo);     // send 0 to the left zone
+            lo++; i++;             // the swapped-in value came from the 1-zone — safe to advance
+        } else if (nums[i] == 2) {
+            swap(nums, i, hi);     // send 2 to the right zone
+            hi--;                  // do NOT advance i: the swapped-in value is UNSEEN — recheck it
+        } else {
+            i++;                   // 1 is already in the middle zone
+        }
+    }
+}
+private void swap(int[] a, int i, int j) { int t = a[i]; a[i] = a[j]; a[j] = t; }</code></pre>
+    <p><strong>Complexity.</strong> Time O(n) — each step either advances <code>i</code> or shrinks <code>hi</code>.
+    Space O(1). The "don't advance i after the hi-swap" line is the classic bug — say why out loud.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Kth Largest Element (quickselect) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Return the K-th largest element (not distinct) of an unsorted array.</p>
+    <p><strong>Idea.</strong> K-th largest = element at index <code>n - k</code> in sorted order. Partition places the
+    pivot at its final index; recurse only into the side containing <code>n - k</code>. Randomized pivot makes the
+    adversarial O(n²) practically impossible.</p>
+<pre class="code"><code>private static final Random RAND = new Random();
+
+public int findKthLargest(int[] nums, int k) {
+    int target = nums.length - k;              // index the answer occupies in sorted order
+    int lo = 0, hi = nums.length - 1;
+    while (true) {
+        int p = partition(nums, lo, hi);       // pivot lands at its FINAL sorted index p
+        if (p == target) return nums[p];       // pivot is exactly the K-th largest — done
+        if (p &lt; target) lo = p + 1;            // answer lies right of p — discard left side
+        else hi = p - 1;                       // answer lies left of p — discard right side
+    }
+}
+
+// Lomuto partition with a random pivot: returns the pivot's final index
+private int partition(int[] a, int lo, int hi) {
+    int r = lo + RAND.nextInt(hi - lo + 1);    // random pivot defeats sorted-input worst case
+    swap(a, r, hi);                            // park pivot at the end
+    int pivot = a[hi];
+    int i = lo;                                // a[lo..i-1] = the "&lt; pivot" zone
+    for (int j = lo; j &lt; hi; j++)
+        if (a[j] &lt; pivot) swap(a, i++, j);     // grow the smaller-zone by one
+    swap(a, i, hi);                            // drop pivot just after the smaller-zone
+    return i;                                  // pivot's final resting index
+}
+private void swap(int[] a, int i, int j) { int t = a[i]; a[i] = a[j]; a[j] = t; }</code></pre>
+    <p><strong>Complexity.</strong> Average O(n) time (n + n/2 + n/4 + … = 2n), O(1) space (iterative).
+    Compare: full sort O(n log n); size-k min-heap O(n log k) — better for streams (<a href="12-heaps.html">page 12</a>).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Largest Number (custom comparator) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Arrange non-negative ints so their concatenation is the largest number: [10, 2] → "210".</p>
+    <p><strong>Idea.</strong> For any two strings a, b: put a first exactly when <code>a+b &gt; b+a</code> as strings
+    ("9"+"34"="934" beats "34"+"9"="349"). This comparator is a valid total order, so sorting with it maximizes the
+    whole concatenation — a taste of the greedy exchange argument from <a href="21-greedy-intervals.html">page 21</a>.</p>
+<pre class="code"><code>public String largestNumber(int[] nums) {
+    // work with strings — concatenation order is what we're optimizing
+    String[] s = new String[nums.length];
+    for (int i = 0; i &lt; nums.length; i++) s[i] = String.valueOf(nums[i]);
+
+    // order pair (a, b) by which concatenation is bigger: "b+a vs a+b" descending
+    Arrays.sort(s, (a, b) -&gt; (b + a).compareTo(a + b));
+
+    if (s[0].equals("0")) return "0";     // all zeros collapse to a single "0"
+
+    StringBuilder sb = new StringBuilder(); // O(n) build — never += in a loop (page 00!)
+    for (String part : s) sb.append(part);
+    return sb.toString();
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n log n · L) time where L is average digit length (each comparison costs O(L));
+    O(n·L) space for the string copies.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>"Just sort it" isn't free.</strong> Before sorting, say what it costs (O(n log n)) and check a hash-based O(n) alternative isn't cleaner. Sorting <em>mutates</em> — copy first if indexes matter later.</li>
+  <li><strong>Subtraction comparators overflow.</strong> <code>a - b</code> breaks on extreme values; use <code>Integer.compare</code> / <code>Long.compare</code>. Also never return inconsistent comparators — TimSort throws <code>IllegalArgumentException: Comparison method violates its general contract</code>.</li>
+  <li><strong>Primitives can't take comparators.</strong> To sort <code>int[]</code> descending, either sort ascending and read backwards, or box to <code>Integer[]</code> (O(n) extra). Know both before the interview.</li>
+  <li><strong>Quicksort's worst case is a fair question.</strong> Answer: O(n²) on adversarial pivots; fixed by random pivot / median-of-three / introsort's heapsort fallback.</li>
+  <li><strong>Stability only matters for objects.</strong> If asked "is your sort stable?" for an <code>int[]</code>, point out equal ints are interchangeable — that's why the JDK dares use unstable dual-pivot quicksort there.</li>
+  <li><strong>Merge from the back</strong> when merging into an array that has free space at the end (Merge Sorted Array) — forward merging overwrites unread elements.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="05-matrix.html"><span class="dir">⟵ Previous</span><span class="name">05 · Matrix &amp; 2D Simulation</span></a>
+  <a class="next" href="07-binary-search.html"><span class="dir">Next ⟶</span><span class="name">07 · Binary Search</span></a>
+</nav>
+
+</div>
+
+<script>
+/* Merge-step animation: merging [2,5,8] and [1,6,9] */
+(function () {
+  // per step: output values filled so far, and which source boxes are highlighted
+  var fills = [[], ['1'], ['1','2'], ['1','2','5'], ['1','2','5','6'], ['1','2','5','6','8'], ['1','2','5','6','8','9']];
+  var cmp = [ ['m-l0','m-r0'], ['m-l0','m-r1'], ['m-l1','m-r1'], ['m-l2','m-r1'], ['m-l2','m-r2'], ['m-r2'], [] ];
+  var src = [ null, 'm-r0', 'm-l0', 'm-l1', 'm-r1', 'm-l2', 'm-r2' ];
+  new Stepper('mergeAnim', {
+    totalSteps: 7,
+    captions: [
+      'Both halves are already sorted (the recursion handled that). Compare the two FRONT elements: 2 vs 1.',
+      '1 is smaller — copy it to the output and advance the right pointer. Next comparison: 2 vs 6.',
+      '2 wins — copy it, advance the left pointer. Notice: every step is one comparison, one copy.',
+      '5 vs 6 — 5 wins. The output is growing in sorted order for free.',
+      '8 vs 6 — 6 wins. Each pointer only ever moves forward: n total steps.',
+      '8 vs 9 — 8 wins. The left half is now exhausted…',
+      '…so drain the rest of the right half (just 9). Merged: [1,2,5,6,8,9] in exactly O(n) work.'
+    ],
+    apply: function (svg, step) {
+      for (var i = 0; i < 6; i++) {
+        var has = i < fills[step].length;
+        Stepper.setClass(svg, '#m-o' + i, 'done', has);
+        Stepper.setText(svg, '#m-t' + i, has ? fills[step][i] : '');
+      }
+      ['m-l0','m-l1','m-l2','m-r0','m-r1','m-r2'].forEach(function (id) {
+        Stepper.setClass(svg, '#' + id, 'active', cmp[step].indexOf(id) >= 0);
+        Stepper.setClass(svg, '#' + id, 'dim', false);
+      });
+      // dim consumed sources
+      for (var s = 1; s <= step; s++) if (src[s]) Stepper.setClass(svg, '#' + src[s], 'dim', true);
+    }
+  });
+
+  /* Quicksort partition (Lomuto) on [3,7,1,8,2,5], pivot 5 */
+  var states = [
+    ['3','7','1','8','2','5'],
+    ['3','7','1','8','2','5'],
+    ['3','7','1','8','2','5'],
+    ['3','1','7','8','2','5'],
+    ['3','1','7','8','2','5'],
+    ['3','1','2','8','7','5'],
+    ['3','1','2','5','7','8'],
+    ['3','1','2','5','7','8']
+  ];
+  var jPos =   [0, 0, 1, 2, 3, 4, 5, 5];
+  var iEdge =  [0, 1, 1, 2, 2, 3, 3, 3];   // count of elements in the "< pivot" zone
+  var CELL = 72, X0 = 93;
+  new Stepper('partAnim', {
+    totalSteps: 8,
+    captions: [
+      'Partition around pivot 5 (last element). j scans; i marks the end of the "smaller than pivot" zone.',
+      'j=0: 3 < 5, so 3 joins the smaller-zone (swap with itself) and i advances.',
+      'j=1: 7 ≥ 5 — leave it. Only i freezes; j keeps scanning.',
+      'j=2: 1 < 5 — swap it back into the smaller-zone (1 ↔ 7). Zone is now [3,1].',
+      'j=3: 8 ≥ 5 — leave it.',
+      'j=4: 2 < 5 — swap into the zone (2 ↔ 7). Zone is [3,1,2].',
+      'Scan done: swap the pivot to just after the zone (5 ↔ 8). Pivot 5 is at its FINAL sorted index 3.',
+      'Everything left of 5 is smaller, everything right is bigger. Recurse on [3,1,2] and [7,8] — that is quicksort.'
+    ],
+    apply: function (svg, step) {
+      for (var i = 0; i < 6; i++) {
+        Stepper.setText(svg, '#p-v' + i, states[step][i]);
+        Stepper.setClass(svg, '#p-' + i, 'done', i < iEdge[step]);          // smaller-zone
+        Stepper.setClass(svg, '#p-' + i, 'frontier', step >= 6 && i === 3); // settled pivot
+        Stepper.setClass(svg, '#p-' + i, 'active', step < 6 && i === jPos[step]);
+      }
+      Stepper.movePtr(svg, '#p-jlbl', CELL * jPos[step], 0);
+      Stepper.movePtr(svg, '#p-ilbl', CELL * iEdge[step], 0);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>21 · Greedy &amp; Intervals — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Greedy &amp; Intervals</h1>
+<p class="subtitle">When a locally best choice is provably globally safe — and the interval toolkit (merge, schedule, count rooms) that appears in almost every interview pool.</p>
+<p>
+  <span class="badge phase">Phase 7 · Weeks 11–12</span>
+  <span class="badge freq">Intervals show up in every phone-screen pool</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  You just spent three pages on dynamic programming, which carefully considers <em>every</em> choice. Greedy is the
+  opposite bet: make the obviously-best local choice, never look back, and finish in one pass. Sometimes that's wrong
+  (DP exists for a reason) — but for a well-defined family of problems it is provably right, and interviews love
+  asking you to tell the two apart. Interval problems are the most common playground for that judgment call, and
+  they're also the questions your calendar app solves every day.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="06-sorting.html">06 · Sorting</a> — every interval problem starts with a sort and a comparator.</li>
+  <li><a href="12-heaps.html">12 · Heaps</a> — Meeting Rooms II uses a min-heap of end times.</li>
+  <li><a href="18-dp-1d.html">18 · DP 1D</a> — you'll contrast greedy with DP (remember coin change with coins [1,3,4]).</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you justify a greedy choice</strong>, not just state it? "Sort by end time because…" is the whole answer.</li>
+  <li><strong>Do you know the sort-by-start vs sort-by-end split?</strong> Picking the wrong one is the classic interval mistake.</li>
+  <li><strong>Do you test greedy against small counterexamples</strong> before committing, instead of assuming it works?</li>
+  <li><strong>Comparator fluency in Java</strong> — writing <code>(a, b) -&gt; Integer.compare(a[0], b[0])</code> without overflow bugs.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 20 ended with DP variants that enumerate whole families of choices. Greedy is what you try <em>first</em>:
+  if a local rule can be proven safe, you replace an O(n·states) DP with a single O(n log n) sort-and-sweep. The
+  decision test "can I prove the greedy choice, or do I need DP?" is exactly the skill this page adds on top of
+  the DP instinct you already have.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Greedy = local choice + a safety proof</h3>
+<p class="lead">
+  A greedy algorithm makes the best-looking choice <em>right now</em> and never reconsiders. That's only an
+  algorithm — not a correct one — until you can argue the choice is safe.
+</p>
+<p>
+  The standard argument is the <strong>exchange argument</strong>, and told simply it goes:
+  <em>"take any optimal solution; I can rewrite it to start with my greedy choice without making it worse."</em>
+  If that rewrite is always possible, greedy's first pick is safe; apply the same logic to the rest and the whole
+  greedy answer is optimal. You rarely write this proof formally in an interview — but saying one honest sentence
+  of it ("earliest end time leaves the most room, so swapping it into any optimal schedule can't hurt") is what
+  separates "I memorized this" from "I understand this".
+</p>
+
+<div class="warn">
+  <strong>When greedy fails.</strong> Coin change with coins [1,3,4] and target 6: greedy grabs 4, then 1, then 1 —
+  three coins. Optimal is 3+3 — two coins. The local choice (biggest coin) is <em>not</em> safe, so this problem needs
+  DP (<a href="18-dp-1d.html">page 18</a>). The practical interview test: <strong>try 2–3 small counterexamples
+  first</strong>. If you can't break the greedy rule quickly, start sketching why it's safe; if you can, it's DP.
+</div>
+
+<h3>2. The canonical greedy moves (non-interval)</h3>
+<ul>
+  <li><strong>Furthest reach (Jump Game):</strong> walk the array keeping one number — the furthest index reachable so
+    far. Every jump either extends it or doesn't; you never need to know <em>which</em> jumps got you there.</li>
+  <li><strong>Reset point (Gas Station):</strong> if you run out of gas somewhere between station i and j, no station in
+    (i..j] can be the answer either — so restart from j+1. One pass, O(n).</li>
+  <li><strong>Last occurrence (Partition Labels):</strong> a cut is legal only when no letter inside the current chunk
+    appears again later — so precompute each letter's last index and extend the chunk to cover them.</li>
+  <li><strong>Pair extremes (task assignment):</strong> sorting and matching smallest-with-largest (or
+    biggest-job-to-freest-worker) is a greedy that shows up in load-balancing style questions.</li>
+</ul>
+
+<h3>3. Intervals: the "sort by start or sort by end?" question</h3>
+<p>
+  Almost every interval problem is: sort, then one sweep. The entire game is choosing the sort key —
+  and the two choices answer two different questions:
+</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Sort by</th><th>Question it answers</th><th>Why it works</th><th>Problems</th></tr>
+  <tr><td><strong>START</strong></td><td>"What does the merged timeline look like?"</td><td>Once sorted by start, an interval can only overlap the block you're currently building — after the first gap, nothing later can reach back.</td><td>Merge Intervals, Insert Interval, Meeting Rooms I</td></tr>
+  <tr><td><strong>END</strong></td><td>"How many non-overlapping intervals can I keep?"</td><td>The interval that <em>ends earliest</em> leaves maximum room for the rest — the exchange argument: any optimal schedule can swap its first pick for the earliest-ending one without losing a slot.</td><td>Non-overlapping Intervals, activity selection, Min Arrows</td></tr>
+</table>
+</div>
+
+<p>Watch the sort-by-start sweep merge a set of intervals:</p>
+
+<div class="anim" id="mergeAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Merge intervals sweep on a timeline">
+    <!-- time axis -->
+    <line x1="40" y1="205" x2="620" y2="205" class="edge"></line>
+    <text x="36" y="222" class="small">0</text>
+    <text x="112" y="222" class="small">2</text>
+    <text x="188" y="222" class="small">4</text>
+    <text x="264" y="222" class="small">6</text>
+    <text x="340" y="222" class="small">8</text>
+    <text x="414" y="222" class="small">10</text>
+    <text x="490" y="222" class="small">12</text>
+    <text x="566" y="222" class="small">14</text>
+    <text x="46" y="40" class="small">input (sorted by start)</text>
+    <!-- input interval bars -->
+    <rect id="i1" class="box" x="78"  y="52"  width="114" height="18" rx="4"></rect>
+    <text x="198" y="66"  class="small">[1,4]</text>
+    <rect id="i2" class="box" x="116" y="82"  width="152" height="18" rx="4"></rect>
+    <text x="274" y="96"  class="small">[2,6]</text>
+    <rect id="i3" class="box" x="344" y="112" width="76"  height="18" rx="4"></rect>
+    <text x="426" y="126" class="small">[8,10]</text>
+    <rect id="i4" class="box" x="382" y="142" width="76"  height="18" rx="4"></rect>
+    <text x="464" y="156" class="small">[9,11]</text>
+    <rect id="i5" class="box" x="534" y="172" width="38"  height="18" rx="4"></rect>
+    <text x="578" y="186" class="small">[13,14]</text>
+    <!-- merged result row -->
+    <text x="46" y="252" class="small">merged result</text>
+    <rect id="m1" class="box" x="78"  y="260" width="0" height="20" rx="4" style="opacity:0"></rect>
+    <rect id="m2" class="box" x="344" y="260" width="0" height="20" rx="4" style="opacity:0"></rect>
+    <rect id="m3" class="box" x="534" y="260" width="0" height="20" rx="4" style="opacity:0"></rect>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>4. Counting rooms: heap vs sweep line</h3>
+<p>
+  Meeting Rooms II ("minimum rooms so no two meetings share one") has two classic solutions, and strong candidates
+  can sketch both:
+</p>
+<ul>
+  <li><strong>Min-heap of end times</strong> (<a href="12-heaps.html">page 12</a>): process meetings in start order;
+    the heap holds one end-time per occupied room. If the earliest-freeing room (heap top) is free before your
+    meeting starts, reuse it (poll), otherwise you need a new room. Final heap size = answer.</li>
+  <li><strong>Sweep line (+1/−1):</strong> forget which meeting is which — a room count only changes at events.
+    Sort all starts and all ends separately; walk time forward adding 1 per start, subtracting 1 per passed end;
+    the peak of that counter is the answer. This "event counting" trick generalizes to any
+    "max concurrent X" question (connections, calls, car pooling — see the difference array on
+    <a href="04-prefix-sum.html">page 04</a>).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — merge / sweep intervals (sort by START)</p>
+<pre class="code"><code>// Works for: Merge Intervals, Insert Interval, Meeting Rooms I, "any overlap?" checks
+Arrays.sort(intervals, (a, b) -&gt; Integer.compare(a[0], b[0])); // NEVER a[0]-b[0]: overflow risk
+List&lt;int[]&gt; out = new ArrayList&lt;&gt;();
+int[] cur = intervals[0];                 // block currently being grown
+for (int i = 1; i &lt; intervals.length; i++) {
+    if (intervals[i][0] &lt;= cur[1]) {      // overlap (touching counts) -&gt; absorb
+        cur[1] = Math.max(cur[1], intervals[i][1]);   // max() handles nested intervals
+    } else {                              // gap: starts only increase -&gt; cur is final
+        out.add(cur);
+        cur = intervals[i];
+    }
+}
+out.add(cur);                             // the last block is still open — commit it</code></pre>
+
+<p class="code-title">Template 2 — activity selection (sort by END, keep the compatible ones)</p>
+<pre class="code"><code>// Works for: Non-overlapping Intervals, max meetings in one room, Min Arrows
+Arrays.sort(intervals, (a, b) -&gt; Integer.compare(a[1], b[1])); // earliest END first
+int kept = 0;
+int end = Integer.MIN_VALUE;              // end of the last interval we kept
+for (int[] iv : intervals) {
+    if (iv[0] &gt;= end) {                   // starts after the last kept one ends -&gt; compatible
+        kept++;                           // greedy: earliest end leaves maximum room
+        end = iv[1];
+    }
+    // else: skip it — it clashes with a provably better pick
+}
+// kept = max compatible set;  intervals.length - kept = min removals</code></pre>
+
+<div class="tip">
+  <strong>One decision to make out loud.</strong> Does your problem treat touching intervals ([1,4] and [4,5]) as
+  overlapping? Merge Intervals says yes (<code>&lt;=</code>); Non-overlapping Intervals says no
+  (<code>&gt;=</code> is fine). Confirm with the interviewer — it's a one-character bug either way.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Signal in the problem</th><th>Reach for</th><th>Why / cost</th></tr>
+  <tr><td>"merge / insert / total covered time"</td><td>sort by <strong>start</strong> + sweep</td><td>O(n log n); overlaps only touch the current block</td></tr>
+  <tr><td>"maximum number of non-overlapping…" / "minimum removals"</td><td>sort by <strong>end</strong> + greedy keep</td><td>O(n log n); exchange argument makes earliest-end safe</td></tr>
+  <tr><td>"minimum rooms / platforms / max concurrent"</td><td>min-heap of ends <em>or</em> +1/−1 sweep</td><td>both O(n log n); sweep is simpler, heap tells you <em>which</em> room</td></tr>
+  <tr><td>"fewest jumps / can I reach / furthest…"</td><td>greedy reach variable</td><td>O(n); track one running best</td></tr>
+  <tr><td>local choice fails a small counterexample</td><td>DP (<a href="18-dp-1d.html">18</a>–<a href="20-dp-advanced.html">20</a>)</td><td>overlapping subproblems need memory, not faith</td></tr>
+  <tr><td>need <em>all</em> valid arrangements, not the best one</td><td>backtracking (<a href="10-recursion-backtracking.html">10</a>)</td><td>greedy/DP only give one optimum</td></tr>
+</table>
+</div>
+
+<p>
+  <strong>The greedy-vs-DP test, verbatim for interviews:</strong> "Let me check if a greedy choice is safe — I'll try
+  a couple of adversarial small inputs. If the local rule survives and I can say why (exchange argument), greedy in
+  O(n log n). If not, I'll define a DP state." Saying this out loud is worth more than silently picking right.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Calendar &amp; meeting systems</h4>
+    <p class="small">Google Calendar / Outlook conflict detection is Meeting Rooms I; "find a free room" across a
+    building is Meeting Rooms II with real room identities (the heap version, since you must know <em>which</em>
+    room frees up). Free/busy views are literally Merge Intervals over attendees' schedules.</p>
+  </div>
+  <div class="card">
+    <h4>CPU &amp; task schedulers</h4>
+    <p class="small">EDF (Earliest Deadline First) — the classic real-time scheduling policy in RTOSes and
+    Linux's <code>SCHED_DEADLINE</code> — is activity selection's cousin: always run the task with the earliest
+    deadline, provably optimal for schedulable single-core task sets.</p>
+  </div>
+  <div class="card">
+    <h4>Register allocation in compilers</h4>
+    <p class="small">A variable is "live" over an interval of instructions. Linear-scan register allocation (used in
+    JIT compilers like HotSpot's C1) sorts live intervals by start and greedily assigns registers, spilling when the
+    active set exceeds the register count — Meeting Rooms II where rooms are CPU registers.</p>
+  </div>
+  <div class="card">
+    <h4>Booking, ads &amp; Huffman</h4>
+    <p class="small">Hotel/seat booking engines count overlap per resource (sweep line); ad servers pack
+    non-overlapping slots into breaks (activity selection). And Huffman coding — the compression step inside
+    zip/JPEG — is a famous greedy: repeatedly merge the two rarest symbols (a heap, <a href="12-heaps.html">page 12</a>).</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/jump-game/">Jump Game</a>
+    <span class="hint">One variable: the furthest index reachable so far. If i ever exceeds it, you're stuck.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/gas-station/">Gas Station</a>
+    <span class="hint">If total gas ≥ total cost an answer exists; whenever the tank goes negative, restart from the next station.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/partition-labels/">Partition Labels</a>
+    <span class="hint">Precompute each letter's last occurrence; a chunk can close only when i reaches the max last-occurrence seen.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/merge-intervals/">Merge Intervals</a>
+    <span class="hint">Sort by start; extend the current block while next.start ≤ current.end, else commit and restart.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/insert-interval/">Insert Interval</a>
+    <span class="hint">Already sorted: copy intervals ending before the new one, absorb all that overlap it, copy the rest.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/non-overlapping-intervals/">Non-overlapping Intervals</a>
+    <span class="hint">Sort by END; count how many you can keep; removals = n − kept.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/meeting-rooms-ii/">Meeting Rooms II</a>
+    <span class="hint">Min-heap of end times, or +1/−1 sweep over sorted starts and ends — know both.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/">Minimum Number of Arrows to Burst Balloons</a>
+    <span class="hint">Activity selection in disguise: sort by end, shoot at each kept interval's end; strict inequality (touching balloons share an arrow).</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution — Jump Game (greedy reach)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> from index 0, each cell tells you your max jump length — can you reach the last index?</p>
+    <p><strong>Idea:</strong> you never need to know the actual path. Keep one number — the furthest index reachable using
+    everything seen so far. Each cell you can stand on may extend it. The exchange argument is trivial here: any
+    successful path only ever stands on reachable cells, and "furthest" dominates every other measure of progress.</p>
+    <p class="code-title">code/21-greedy-intervals/JumpGame.java</p>
+<pre class="code"><code>public static boolean canJump(int[] nums) {
+    int furthest = 0;                                 // furthest index we can reach with jumps seen so far
+    for (int i = 0; i &lt; nums.length; i++) {
+        if (i &gt; furthest) return false;               // we can't even stand on i -&gt; stuck before the end
+        furthest = Math.max(furthest, i + nums[i]);   // jumping from i could extend our reach to i + nums[i]
+        if (furthest &gt;= nums.length - 1) return true; // last index is already within reach -&gt; done early
+    }
+    return true;                                      // loop finished =&gt; every index (incl. last) was reachable
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — one pass; space O(1).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Partition Labels (last occurrence)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> split a string into as many chunks as possible so each letter appears in at most one chunk; return chunk sizes.</p>
+    <p><strong>Idea:</strong> a cut after position i is legal only if no letter in s[start..i] occurs again after i.
+    So first record every letter's <em>last</em> occurrence. Sweeping left to right, the chunk's required end is the max
+    last-occurrence of the letters seen so far; the moment i catches up to that end, nothing inside points past it —
+    cut greedily (cutting as early as possible clearly maximizes the number of chunks).</p>
+    <p class="code-title">code/21-greedy-intervals/PartitionLabels.java</p>
+<pre class="code"><code>public static List&lt;Integer&gt; partitionLabels(String s) {
+    int[] last = new int[26];                       // last[c] = final index where letter c appears
+    for (int i = 0; i &lt; s.length(); i++) {
+        last[s.charAt(i) - 'a'] = i;                // later occurrences overwrite earlier ones
+    }
+    List&lt;Integer&gt; sizes = new ArrayList&lt;&gt;();
+    int start = 0, end = 0;                         // current partition is s[start..end]
+    for (int i = 0; i &lt; s.length(); i++) {
+        // every letter we meet drags the partition's end out to its last occurrence
+        end = Math.max(end, last[s.charAt(i) - 'a']);
+        if (i == end) {                             // nothing inside points past i -&gt; safe to cut here
+            sizes.add(end - start + 1);             // record this partition's length
+            start = i + 1;                          // next partition begins after the cut
+        }
+    }
+    return sizes;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — two passes; space O(1) (the 26-slot array is constant).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Merge Intervals (sort by start)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given intervals in any order, return the merged, non-overlapping set.</p>
+    <p><strong>Idea:</strong> exactly the animation above. Sort by start; grow a current block; a new interval either
+    overlaps it (starts at or before its end — extend with <code>max</code>, because a nested interval must not shrink
+    the end) or opens a gap (commit the block; since starts only increase, nothing later can reach back into it).</p>
+    <p class="code-title">code/21-greedy-intervals/MergeIntervals.java</p>
+<pre class="code"><code>public static int[][] merge(int[][] intervals) {
+    // Sort by start. Integer.compare avoids the subtraction-overflow bug of (a[0] - b[0]).
+    Arrays.sort(intervals, (a, b) -&gt; Integer.compare(a[0], b[0]));
+    List&lt;int[]&gt; out = new ArrayList&lt;&gt;();
+    int[] cur = intervals[0];                       // the interval we are currently growing
+    for (int i = 1; i &lt; intervals.length; i++) {
+        int[] next = intervals[i];
+        if (next[0] &lt;= cur[1]) {                    // starts before cur ends -&gt; overlap (touching counts)
+            cur[1] = Math.max(cur[1], next[1]);     // extend; max() because next may be nested inside cur
+        } else {                                    // gap -&gt; cur can never grow again (starts only increase)
+            out.add(cur);                           // commit the finished merged interval
+            cur = next;                             // start growing a fresh one
+        }
+    }
+    out.add(cur);                                   // don't forget the last open interval
+    return out.toArray(new int[0][]);
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n log n) for the sort, O(n) sweep; space O(n) for the output (O(log n) sort stack).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Non-overlapping Intervals (sort by end)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> remove the minimum number of intervals so the rest don't overlap.</p>
+    <p><strong>Idea:</strong> flip it: <em>keep</em> the maximum non-overlapping set (activity selection), then removals
+    = n − kept. Sorting by end time makes greedy safe: the earliest-ending interval leaves the most room for
+    everything after it, and any optimal solution can be rewritten to start with it (exchange argument) — so keep it,
+    then repeat among intervals that start after it ends.</p>
+    <p class="code-title">code/21-greedy-intervals/NonOverlappingIntervals.java</p>
+<pre class="code"><code>public static int eraseOverlapIntervals(int[][] intervals) {
+    // Sort by END time: the interval finishing earliest leaves the most room
+    // for everything after it (exchange argument: any optimal schedule can
+    // swap its first pick for the earliest-ending one without losing a slot).
+    Arrays.sort(intervals, (a, b) -&gt; Integer.compare(a[1], b[1]));
+    int kept = 0;                                   // size of the max non-overlapping set
+    int end = Integer.MIN_VALUE;                    // end of the last interval we kept
+    for (int[] iv : intervals) {
+        if (iv[0] &gt;= end) {                         // starts at/after last end -&gt; no overlap, keep it
+            kept++;
+            end = iv[1];                            // future picks must start at/after this
+        }                                           // else: overlaps the kept set -&gt; it's a removal
+    }
+    return intervals.length - kept;                 // minimum removals = everything we couldn't keep
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n log n); space O(1) beyond the sort.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Meeting Rooms II (heap AND sweep line)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given meeting [start,end) intervals, find the minimum number of rooms needed.</p>
+    <p><strong>Idea A (heap):</strong> take meetings in start order; the min-heap holds the end time of every occupied
+    room, earliest on top. If the earliest-freeing room is free before your meeting starts, reuse it; otherwise open a
+    new room. <strong>Idea B (sweep):</strong> the room count only changes at events — +1 at every start, −1 at every
+    end. Sort starts and ends separately and walk them in time order; the peak count is the answer. Note the sweep
+    never pairs an end with "its" start — it doesn't need to, because counts are anonymous.</p>
+    <p class="code-title">code/21-greedy-intervals/MeetingRoomsII.java</p>
+<pre class="code"><code>// Solution A — min-heap of end times: the heap IS the set of occupied rooms.
+public static int minMeetingRoomsHeap(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -&gt; Integer.compare(a[0], b[0])); // process meetings in start order
+    PriorityQueue&lt;Integer&gt; endTimes = new PriorityQueue&lt;&gt;();       // min-heap: earliest-freeing room on top
+    for (int[] m : intervals) {
+        // If the room that frees earliest is free before we start, reuse it
+        if (!endTimes.isEmpty() &amp;&amp; endTimes.peek() &lt;= m[0]) {
+            endTimes.poll();                       // that meeting ended -&gt; room released
+        }
+        endTimes.offer(m[1]);                      // our meeting now occupies a room until m[1]
+    }
+    return endTimes.size();                        // rooms still tracked = peak simultaneous meetings
+}
+
+// Solution B — sweep line: +1 at each start, -1 at each end, track the peak.
+public static int minMeetingRoomsSweep(int[][] intervals) {
+    int n = intervals.length;
+    int[] starts = new int[n], ends = new int[n];
+    for (int i = 0; i &lt; n; i++) {
+        starts[i] = intervals[i][0];
+        ends[i] = intervals[i][1];
+    }
+    Arrays.sort(starts);                           // walk both timelines in time order
+    Arrays.sort(ends);
+    int rooms = 0, best = 0, e = 0;                // e = index of next meeting to finish
+    for (int s = 0; s &lt; n; s++) {
+        // release every meeting that finished before (or exactly when) this one starts
+        while (e &lt; n &amp;&amp; ends[e] &lt;= starts[s]) {
+            rooms--;
+            e++;
+        }
+        rooms++;                                   // this meeting starts -&gt; needs a room
+        best = Math.max(best, rooms);              // record the peak concurrency
+    }
+    return best;                                   // peak = minimum rooms required
+}</code></pre>
+    <p><strong>Complexity:</strong> both O(n log n) time. Heap: O(n) space, and it can tell you <em>which</em> room frees
+    up (useful in the real-system version). Sweep: O(n) space for the two sorted arrays, simpler logic.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Comparator overflow:</strong> <code>(a, b) -&gt; a[0] - b[0]</code> breaks when values straddle ±2·10⁹
+    (subtraction wraps). Always <code>Integer.compare(a[0], b[0])</code> or <code>Comparator.comparingInt(a -&gt; a[0])</code>.</li>
+  <li><strong>Forgetting to sort</strong> (or sorting by the wrong key) is the #1 interval bug. Say the sort key and why
+    before writing any loop code.</li>
+  <li><strong>Touching intervals:</strong> decide up front whether [1,4] and [4,5] overlap. Merge Intervals: yes.
+    Non-overlapping / Min Arrows: check the problem statement — Arrows counts touching as shared (<code>&lt;=</code> keeps them together).</li>
+  <li><strong>Commit the last block.</strong> Sweep loops end with an open current interval — the trailing
+    <code>out.add(cur)</code> after the loop is forgotten constantly.</li>
+  <li><strong>Greedy without a sentence of proof is a red flag.</strong> One line — "earliest end leaves the most room" /
+    "furthest reach dominates any path" — plus one tested counterexample attempt is exactly the bar.</li>
+  <li><strong>Meeting Rooms heap direction:</strong> it's a <em>min</em>-heap of end times and you poll <em>at most one</em>
+    room per meeting (you only need to free one to reuse it). Java's <code>PriorityQueue</code> is already a min-heap — no comparator needed.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="20-dp-advanced.html"><span class="dir">⟵ Prev</span><span class="name">20 · DP Advanced</span></a>
+  <a class="next" href="22-bit-manipulation.html"><span class="dir">Next ⟶</span><span class="name">22 · Bit Manipulation</span></a>
+</nav>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Per-step state tables (apply() is idempotent: full state set every step).
+  var inputs = ['#i1', '#i2', '#i3', '#i4', '#i5'];
+  var activeIn  = [-1, 0, 1, 2, 3, 4, -1];   // which input bar is being examined
+  var doneUpTo  = [0, 0, 1, 2, 3, 4, 5];     // inputs before this index are consumed
+  var merged = {
+    '#m1': { w: [0, 114, 190, 190, 190, 190, 190], st: ['h','a','a','d','d','d','d'] },
+    '#m2': { w: [0, 0, 0, 76, 114, 114, 114],      st: ['h','h','h','a','a','d','d'] },
+    '#m3': { w: [0, 0, 0, 0, 0, 38, 38],           st: ['h','h','h','h','h','a','d'] }
+  };
+  new Stepper('mergeAnim', {
+    totalSteps: 7,
+    intervalMs: 2400,
+    captions: [
+      'Input intervals already sorted by start: [1,4] [2,6] [8,10] [9,11] [13,14]. Sorting by start guarantees every interval that can overlap the current block arrives before the first gap.',
+      'Take [1,4] as the current merged block (blue on the result row). Nothing is committed yet — the block may still grow.',
+      '[2,6] starts at 2 ≤ current end 4 — overlap. Extend the end to max(4,6)=6; the block is now [1,6]. (max() matters: a nested interval must not shrink the end.)',
+      '[8,10] starts at 8 > 6 — a gap. Starts only increase, so nothing later can reach back into [1,6]: commit it (green) and open a new block [8,10].',
+      '[9,11] starts at 9 ≤ 10 — overlap again. Extend the block to [8,11].',
+      '[13,14] starts at 13 > 11 — gap. Commit [8,11], open the final block [13,14].',
+      'Input exhausted: commit the open block. Result: [1,6] [8,11] [13,14]. Cost: O(n log n) sort + O(n) sweep.'
+    ],
+    apply: function (svg, step) {
+      inputs.forEach(function (sel, idx) {
+        Stepper.setClass(svg, sel, 'active', idx === activeIn[step]);
+        Stepper.setClass(svg, sel, 'done', idx < doneUpTo[step]);
+        Stepper.setClass(svg, sel, 'dim', step === 6);
+      });
+      Object.keys(merged).forEach(function (sel) {
+        var m = merged[sel];
+        var el = svg.querySelector(sel);
+        el.setAttribute('width', m.w[step]);
+        el.style.opacity = m.st[step] === 'h' ? 0 : 1;
+        el.classList.toggle('active', m.st[step] === 'a');
+        el.classList.toggle('done', m.st[step] === 'd');
+      });
+    }
+  });
+});
+</script>
+
+</body>
+</html>

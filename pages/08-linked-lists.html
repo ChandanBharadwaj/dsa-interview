@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>08 · Linked Lists — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Linked Lists: Pointer Fluency Under Pressure</h1>
+<p class="subtitle">Dummy heads, the three-pointer reversal, and fast/slow tricks — the screener classics that test whether you can rewire references without dropping the list.</p>
+<p>
+  <span class="badge phase">Phase 3 · Week 5</span>
+  <span class="badge freq">Screener classic — a pointer-fluency test more than a data-structure test</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Nobody is going to ask you to build a production system on <code>LinkedList</code> — cache locality killed that
+  idea (details below). Interviewers use linked lists for a different reason: they are the cheapest way to test
+  whether you can <em>manipulate references precisely</em>. One wrong assignment order and the rest of the list is
+  garbage-collected out from under you. The same reference discipline is exactly what trees (page 11) and the LRU
+  cache (page 24) demand — this page is where you build it.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — the ArrayList vs LinkedList cost table.</li>
+  <li><a href="02-two-pointers.html">02 · Two Pointers</a> — fast/slow was introduced there; here it gets its full treatment.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Reference precision:</strong> can you reorder <code>a.next = b</code> assignments so nothing is lost? (Save before you overwrite.)</li>
+  <li><strong>Edge-case instinct:</strong> empty list, single node, operating on the head — do you handle them by design (dummy node) or by patching?</li>
+  <li><strong>The standard tricks on recall:</strong> reversal, fast/slow middle, cycle detection, dummy-head merging. These are assumed knowledge in later rounds.</li>
+  <li><strong>Can you draw it?</strong> Strong candidates sketch boxes and arrows before coding. Pointer bugs are visible on paper before they're visible in code.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Binary search (page 07) exploited O(1) random access — jump to any index instantly. Linked lists are the opposite
+  trade: no random access at all (getting element i costs O(i), which is why you can't binary-search a linked list),
+  but O(1) <em>splicing</em> anywhere you already hold a reference. Every technique on this page is about navigating
+  cleverly under that constraint — and it's your first step into linked <em>structures</em>, where trees and graphs
+  are "linked lists with more pointers".
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. The node model: Java references are pointers with seatbelts</h3>
+<p class="lead">
+  A linked list is just objects pointing at each other. In Java there's no pointer arithmetic, but a
+  <code>ListNode next</code> field is exactly a pointer: a value that names another object (or <code>null</code>).
+</p>
+<pre class="code"><code>// The whole data structure is two fields:
+static class ListNode {
+    int val;
+    ListNode next;      // reference to the following node, or null at the tail
+    ListNode(int val) { this.val = val; }
+}
+// head ──▶ [1|•] ──▶ [2|•] ──▶ [3|∅]
+// Losing `head` (or any node's only incoming reference) loses everything after it — the GC takes it.</code></pre>
+<div class="note">
+  <strong>The one rule of pointer surgery.</strong> Before overwriting a reference you still need, save it.
+  Nearly every linked-list bug is an assignment executed one line too early. When stuck, narrate each line:
+  "who points where <em>now</em>?" — and draw it.
+</div>
+
+<h3>2. The dummy head: delete your special cases</h3>
+<p>
+  Operations at the head ("what if the node I remove <em>is</em> the head?") normally need special-case code.
+  The fix is one line: allocate a fake node in front, work exclusively with <code>.next</code> pointers of
+  <em>predecessors</em>, and return <code>dummy.next</code> at the end. The head is now just another node with a
+  predecessor. You'll see it carry both worked solutions below.
+</p>
+<pre class="code"><code>ListNode dummy = new ListNode(0);   // value never read — it exists only to be a predecessor
+dummy.next = head;
+// ... operate via predecessor.next, never via `head` directly ...
+return dummy.next;                  // the true head, even if the original was removed</code></pre>
+
+<h3>3. Reversal: the three-pointer dance</h3>
+<p>
+  Reverse a list in place by walking it once, flipping each <code>next</code> arrow backwards. You need three
+  references — the reversed prefix (<code>prev</code>), the node being flipped (<code>curr</code>), and a saved
+  handle on the unvisited remainder (<code>next</code>) so the flip doesn't orphan it. Watch the invariant: at every
+  step, <code>prev</code> heads a fully reversed sublist and <code>curr</code> heads the untouched rest.
+</p>
+
+<div class="anim" id="revAnim">
+  <svg viewBox="0 0 640 240" role="img" aria-label="In-place reversal of a linked list, pointer by pointer">
+    <defs>
+      <marker id="arrowF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--svg-stroke)"></path>
+      </marker>
+      <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--svg-node-done)"></path>
+      </marker>
+    </defs>
+    <!-- null symbol on the left -->
+    <text x="52" y="122" class="lbl" id="nullSym">∅</text>
+    <!-- nodes: value box at x = 110 + i*130, y=95, w=70 h=48 -->
+    <rect id="nd1" class="box" x="110" y="95" width="70" height="48" rx="9"></rect>
+    <rect id="nd2" class="box" x="240" y="95" width="70" height="48" rx="9"></rect>
+    <rect id="nd3" class="box" x="370" y="95" width="70" height="48" rx="9"></rect>
+    <rect id="nd4" class="box" x="500" y="95" width="70" height="48" rx="9"></rect>
+    <text x="138" y="124" class="lbl">1</text>
+    <text x="268" y="124" class="lbl">2</text>
+    <text x="398" y="124" class="lbl">3</text>
+    <text x="528" y="124" class="lbl">4</text>
+    <!-- forward arrows (original direction), straight lines between boxes -->
+    <line id="f1" class="edge" x1="180" y1="112" x2="236" y2="112" marker-end="url(#arrowF)"></line>
+    <line id="f2" class="edge" x1="310" y1="112" x2="366" y2="112" marker-end="url(#arrowF)"></line>
+    <line id="f3" class="edge" x1="440" y1="112" x2="496" y2="112" marker-end="url(#arrowF)"></line>
+    <!-- flipped arrows (reversed direction), curved below the boxes -->
+    <path id="b0" class="edge done" d="M110,130 C90,140 76,136 64,128" marker-end="url(#arrowG)" style="opacity:0"></path>
+    <path id="b1" class="edge done" d="M240,132 C218,152 202,152 184,136" marker-end="url(#arrowG)" style="opacity:0"></path>
+    <path id="b2" class="edge done" d="M370,132 C348,152 332,152 314,136" marker-end="url(#arrowG)" style="opacity:0"></path>
+    <path id="b3" class="edge done" d="M500,132 C478,152 462,152 444,136" marker-end="url(#arrowG)" style="opacity:0"></path>
+    <!-- pointer labels above the boxes; moved with translate from ORIGINAL x -->
+    <text id="prevPtr" class="ptrlbl" x="36"  y="70">prev</text>
+    <text id="currPtr" class="ptrlbl" x="128" y="70">curr</text>
+    <text id="nextPtr" class="ptrlbl" x="258" y="70" style="opacity:0">next</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>4. Fast &amp; slow: two speeds, three superpowers</h3>
+<p>
+  Run two pointers down the list, one advancing 1 node per step, the other 2. This single trick yields:
+</p>
+<ul>
+  <li><strong>Middle of the list:</strong> when <code>fast</code> hits the end, <code>slow</code> has covered half the distance — it's standing on the middle. One pass, no length count.</li>
+  <li><strong>Cycle detection (Floyd):</strong> if there's a cycle, <code>fast</code> can never "finish" — both pointers eventually orbit the cycle, and they <em>must</em> meet.</li>
+  <li><strong>Nth from the end:</strong> a variant — give one pointer an n-node head start and move both at the same speed (worked solution below).</li>
+</ul>
+<div class="tip">
+  <strong>Why Floyd's meeting is guaranteed — the actual math.</strong> Once both pointers are inside the cycle
+  (length C), look at the gap from fast to slow: each step, fast closes it by exactly 1 (moves 2, slow moves 1).
+  A gap that shrinks by 1 each step must reach 0 — they collide; fast can never "jump over" slow.
+  Bonus fact for the follow-up (LC 142): if the meeting happens after slow walks distance <code>a + b</code>
+  (a = head→cycle-start, b = into the cycle), fast walked <code>2(a+b)</code>, and the difference <code>a+b</code>
+  is a whole number of laps — which rearranges to: <em>head-to-cycle-start equals meeting-point-to-cycle-start</em>
+  (mod C). So restart one pointer at the head, advance both at speed 1, and they meet exactly at the cycle's entrance.
+</div>
+
+<pre class="code"><code>// Floyd's cycle detection — O(1) space (vs. the obvious HashSet's O(n))
+public static boolean hasCycle(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null &amp;&amp; fast.next != null) {  // fast does the null-checking for both
+        slow = slow.next;                        // +1
+        fast = fast.next.next;                   // +2 — closes the gap by 1 per step inside a cycle
+        if (slow == fast) return true;           // reference equality: same NODE, not equal values
+    }
+    return false;                                // fast found a null — no cycle possible
+}</code></pre>
+
+<h3>5. The rest of the standard kit</h3>
+<ul>
+  <li><strong>Merge two sorted lists</strong> — dummy head + always-take-the-smaller. Worked below; it's also the heart of Merge k Sorted Lists (page 12) and merge sort on lists.</li>
+  <li><strong>Reorder List</strong> (L0→Ln→L1→Ln-1…) — a three-trick combo: fast/slow finds the middle, reverse the second half, then interleave the two halves. If you know this decomposition, the "hard-looking" problem is three easies.</li>
+  <li><strong>Deep copy with random pointers</strong> (LC 138) — either a <code>HashMap&lt;Node,Node&gt;</code> from originals to clones (O(n) space, obvious), or the elegant O(1)-space interleave: weave each clone in right after its original (<code>A→A'→B→B'</code>), set <code>clone.random = orig.random.next</code>, then unweave.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template A — dummy head + predecessor walking (insert/delete/merge)</p>
+<pre class="code"><code>ListNode dummy = new ListNode(0);
+dummy.next = head;
+ListNode pred = dummy;                     // pred = last node of the already-processed prefix
+while (pred.next != null) {
+    if (shouldRemove(pred.next)) {
+        pred.next = pred.next.next;        // bypass — do NOT advance pred (next node is unvetted)
+    } else {
+        pred = pred.next;                  // keep — advance
+    }
+}
+return dummy.next;                         // correct even if the original head was removed</code></pre>
+
+<p class="code-title">Template B — in-place reversal (the three-pointer loop)</p>
+<pre class="code"><code>ListNode prev = null, curr = head;
+while (curr != null) {
+    ListNode next = curr.next;             // 1. SAVE the remainder first
+    curr.next = prev;                      // 2. flip the arrow
+    prev = curr;                           // 3. reversed prefix grows
+    curr = next;                           // 4. advance into the saved remainder
+}
+// prev is the new head — memorize this 4-line body until it's automatic</code></pre>
+
+<p class="code-title">Template C — fast/slow (middle, cycle, nth-from-end)</p>
+<pre class="code"><code>ListNode slow = head, fast = head;
+while (fast != null &amp;&amp; fast.next != null) {   // guard BOTH hops fast will take
+    slow = slow.next;
+    fast = fast.next.next;
+}
+// even length: slow = second middle; start fast at head.next for the first middle</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Operation</th><th><code>ArrayList</code> (dynamic array)</th><th><code>LinkedList</code> (doubly linked)</th></tr>
+  <tr><td>get(i)</td><td>O(1)</td><td>O(n) — must walk</td></tr>
+  <tr><td>add at end</td><td>amortized O(1)</td><td>O(1)</td></tr>
+  <tr><td>insert/remove at front</td><td>O(n) shift</td><td>O(1)</td></tr>
+  <tr><td>insert/remove mid-list via iterator</td><td>O(n)</td><td>O(1) splice (but O(n) to <em>get there</em>)</td></tr>
+  <tr><td>memory per element</td><td>just the slot</td><td>slot + 2 pointers + object header (~3-5× more)</td></tr>
+  <tr><td>cache behavior</td><td>contiguous — prefetcher's dream</td><td>pointer-chasing — a potential cache miss per node</td></tr>
+</table>
+</div>
+
+<div class="warn">
+  <strong>The dirty secret: <code>LinkedList</code> almost never wins in practice.</strong> Its O(1) splicing only
+  pays if you're <em>already standing at</em> the splice point; getting there is O(n) of pointer-chasing, where every
+  hop is a potential CPU cache miss because nodes are scattered across the heap. <code>ArrayList</code>'s O(n)
+  "shift" is a contiguous <code>System.arraycopy</code> the hardware races through. Even Joshua Bloch (who wrote
+  <code>LinkedList</code>) jokes that nobody should use it. For queue/deque needs, use <code>ArrayDeque</code>
+  (page 09). So why is this page here at all? Because interviews use lists to test <em>pointer manipulation</em> —
+  and because intrusive linked lists genuinely power real systems where you already hold the node: see below.
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>Problem hands you a <code>ListNode</code> → it's a pointer-manipulation exercise; think dummy head, reversal, fast/slow.</li>
+  <li>"Detect a cycle" / "find where the cycle begins" → Floyd's fast/slow.</li>
+  <li>"Middle", "nth from end", "palindrome list" → fast/slow (+ reversal for palindrome).</li>
+  <li>"In O(1) space" on a list problem → in-place reversal or interleaving is intended; a <code>HashMap</code> is the O(n)-space fallback worth mentioning first.</li>
+  <li>Real Java code needing a sequence → <code>ArrayList</code>; needing both-ends ops → <code>ArrayDeque</code>; needing O(1) removal of a node you hold a handle to → hand-rolled DLL (LRU, page 24).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>LRU caches: HashMap + doubly linked list</h4>
+    <p class="small">The #1 design interview question (page 24) and the eviction backbone of real caches: a DLL keeps
+    entries in recency order — move-to-front and evict-from-tail are O(1) because the map hands you the exact node,
+    no walking. This is <em>the</em> case where a linked list beats an array: removal from the middle when you
+    already hold the node. Linux's page LRU lists work the same way.</p>
+  </div>
+  <div class="card">
+    <h4>Allocator free lists</h4>
+    <p class="small">Memory allocators (glibc malloc's bins, kernel slab allocators, JVM free-region tracking) chain
+    free blocks into linked lists — the pointer is stored <em>inside the free block itself</em>, so bookkeeping is
+    free and coalescing/splitting blocks is O(1) splicing. Intrusive lists like these are everywhere in systems code.</p>
+  </div>
+  <div class="card">
+    <h4>HashMap collision chaining</h4>
+    <p class="small">Java's own <code>HashMap</code> resolves collisions by chaining entries into a singly linked
+    list per bucket (treeifying long chains, page 01). Every <code>get</code> on a collided key walks a linked list.
+    <code>LinkedHashMap</code> additionally threads a DLL through <em>all</em> entries for iteration order — which is
+    exactly why it trivializes LRU.</p>
+  </div>
+  <div class="card">
+    <h4>Undo chains &amp; MRU playlists</h4>
+    <p class="small">Editor undo/redo systems keep operations in a doubly linked chain — O(1) append, O(1) walk back
+    and forward, cheap truncation when you undo-then-edit. Media players' "recently played" and browser-tab MRU
+    ordering are small LRU/MRU lists: move-to-front on every access.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/reverse-linked-list/">Reverse Linked List</a>
+    <span class="hint">The three-pointer loop until it's muscle memory; then do it recursively for the follow-up.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/merge-two-sorted-lists/">Merge Two Sorted Lists</a>
+    <span class="hint">Dummy head + take-the-smaller; attach the leftover list whole at the end.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/linked-list-cycle/">Linked List Cycle</a>
+    <span class="hint">Floyd's fast/slow — compare nodes with ==, and let fast do all the null checks.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/middle-of-the-linked-list/">Middle of the Linked List</a>
+    <span class="hint">Fast moves 2, slow moves 1; when fast stops, slow is the middle — mind the even-length case.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/remove-nth-node-from-end-of-list/">Remove Nth Node From End of List</a>
+    <span class="hint">Two pointers with a fixed n+1 gap from a dummy — one pass, no length count.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/add-two-numbers/">Add Two Numbers</a>
+    <span class="hint">Grade-school addition with a carry; dummy head, loop while either list OR carry remains.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/reorder-list/">Reorder List</a>
+    <span class="hint">Three tricks chained: fast/slow middle → reverse second half → interleave. Practice the decomposition.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/copy-list-with-random-pointer/">Copy List with Random Pointer</a>
+    <span class="hint">HashMap old→new is the clear O(n)-space answer; the interleave A→A'→B→B' gets O(1) space.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/linked-list-cycle-ii/">Linked List Cycle II</a>
+    <span class="hint">After the fast/slow meeting, restart one pointer at head; both at speed 1 meet at the cycle start (the math is in the tip above).</span>
+  </div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <a class="t" href="https://leetcode.com/problems/reverse-nodes-in-k-group/">Reverse Nodes in k-Group</a>
+    <span class="hint">Template B applied per block + dummy head + careful stitching of block boundaries. The final pointer-fluency exam.</span>
+  </div>
+</div>
+
+<details class="sol">
+  <summary>★ Worked: Reverse Linked List (LC 206)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> reverse a singly linked list in place; return the new head.</p>
+    <p><strong>Idea:</strong> walk once with three references. <code>prev</code> always heads the already-reversed
+    prefix, <code>curr</code> the untouched suffix. Each iteration: save <code>curr.next</code> (or the flip strands
+    the rest of the list), point <code>curr</code> backwards, then shift both references one node right. The
+    recursive version is the same surgery driven by the call stack — worth knowing because it previews the
+    "trust the recursion" leap of faith trees demand (page 11).</p>
+<pre class="code"><code>// Iterative: walk the list once, flipping each .next backwards.
+public static ListNode reverseList(ListNode head) {
+    ListNode prev = null;                  // everything BEFORE curr, already reversed (starts empty)
+    ListNode curr = head;                  // the node whose arrow we're about to flip
+    while (curr != null) {
+        ListNode next = curr.next;         // 1. save the rest of the list BEFORE we cut the link
+        curr.next = prev;                  // 2. flip: curr now points backwards
+        prev = curr;                       // 3. the reversed prefix grows by one node
+        curr = next;                       // 4. step into the saved remainder
+    }
+    return prev;                           // curr fell off the end; prev is the new head
+}
+
+// Recursive: trust reverseList(rest) to hand back the reversed tail,
+// then hook the old head onto the end of it.
+public static ListNode reverseRecursive(ListNode head) {
+    if (head == null || head.next == null) return head;   // base: empty or single node is already reversed
+    ListNode newHead = reverseRecursive(head.next);        // leap of faith: rest is now reversed; newHead = old tail
+    head.next.next = head;                 // my old successor is now the reversed tail's last node — point it back at me
+    head.next = null;                      // I'm the new tail; sever my stale forward link
+    return newHead;                        // the new head never changes on the way back up
+}</code></pre>
+    <p><strong>Complexity:</strong> iterative — time O(n), space O(1). Recursive — time O(n), space O(n) for the
+    call stack (say this unprompted!). Runnable version: <code>code/08-linked-lists/ReverseLinkedList.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Merge Two Sorted Lists (LC 21)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> splice two sorted lists into one sorted list, reusing the existing nodes.</p>
+    <p><strong>Idea:</strong> exactly the merge step of merge sort (page 06). Keep a <code>tail</code> on the result;
+    repeatedly attach the smaller of the two front nodes and advance that list. The dummy head removes the "which
+    list provides the first node?" special case, and when one list runs dry the other is attached whole — it's
+    already sorted, no loop required.</p>
+<pre class="code"><code>public static ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+    ListNode dummy = new ListNode(0);      // fake node BEFORE the real head — kills all "is this the first node?" special cases
+    ListNode tail = dummy;                 // tail always points at the last node of the merged result
+    while (l1 != null &amp;&amp; l2 != null) {     // while both lists still have candidates
+        if (l1.val &lt;= l2.val) {            // &lt;= keeps the merge STABLE (ties keep l1's order)
+            tail.next = l1;                // splice the smaller node onto the result
+            l1 = l1.next;                  // advance only the list we consumed from
+        } else {
+            tail.next = l2;
+            l2 = l2.next;
+        }
+        tail = tail.next;                  // result grew by one — move tail forward
+    }
+    tail.next = (l1 != null) ? l1 : l2;    // one list is empty; the other is sorted — attach it whole (no loop needed)
+    return dummy.next;                     // the real head lives just after the dummy
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n + m), space O(1) — nodes are relinked, not copied.
+    Runnable version: <code>code/08-linked-lists/MergeTwoLists.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Remove Nth Node From End of List (LC 19)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> delete the nth node counting from the <em>end</em>, in one pass.</p>
+    <p><strong>Idea:</strong> you can't count from the end of a singly linked list — but you can maintain a fixed
+    <em>gap</em>. Send <code>fast</code> ahead by n+1 nodes, then advance both pointers together; when
+    <code>fast</code> falls off the end, <code>slow</code> is exactly n+1 from the end — i.e. the <em>predecessor</em>
+    of the victim, which is who you need for the bypass. Starting both at a dummy makes "delete the head"
+    (n = length) work with zero extra code.</p>
+<pre class="code"><code>public static ListNode removeNthFromEnd(ListNode head, int n) {
+    ListNode dummy = new ListNode(0);      // dummy head: removing the FIRST node becomes a normal case
+    dummy.next = head;
+    ListNode fast = dummy, slow = dummy;   // both start at the dummy, gap = 0
+    for (int i = 0; i &lt; n + 1; i++) {      // advance fast n+1 steps → gap of n+1 nodes
+        fast = fast.next;                  // (n+1, not n, so slow lands BEFORE the node to delete)
+    }
+    while (fast != null) {                 // walk both until fast runs off the end
+        fast = fast.next;
+        slow = slow.next;                  // gap stays n+1 the whole way
+    }
+    slow.next = slow.next.next;            // slow is the predecessor — bypass the victim (GC reclaims it)
+    return dummy.next;                     // head may have changed (n == list length) — dummy.next is always right
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — one pass; space O(1).
+    Runnable version: <code>code/08-linked-lists/RemoveNthFromEnd.java</code>.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Save before you sever.</strong> The canonical bug is <code>curr.next = prev</code> before saving <code>curr.next</code> — the rest of the list is instantly unreachable. Write the save line first, always.</li>
+  <li><strong>Reach for the dummy head by default</strong> whenever the head might change (delete, merge, partition). It converts three edge cases into zero and takes one line. Interviewers notice candidates who deploy it unprompted.</li>
+  <li><strong>Guard fast/slow correctly:</strong> <code>while (fast != null &amp;&amp; fast.next != null)</code> — in that order, or you NPE on even-length lists. And know that where slow stops differs by one between odd and even lengths; trace a 2-node list before claiming done.</li>
+  <li><strong>Compare nodes with <code>==</code>, not <code>equals</code>.</strong> Cycle detection asks "is this the same object?" — value equality would false-positive on duplicate values.</li>
+  <li><strong>Recursion depth is real:</strong> a recursive solution on a 10⁵-node list can blow the JVM stack (~10⁴ frames by default). Offer the iterative version and mention this as the reason — easy senior credit.</li>
+  <li><strong>After surgery, check for accidental cycles:</strong> in reorder/reverse-in-parts problems, forgetting to null-terminate the new tail makes printing loop forever. State "and finally the tail's next becomes null" out loud.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="07-binary-search.html"><span class="dir">⟵ Prev</span><span class="name">07 · Binary Search</span></a>
+  <a class="next" href="09-stacks-queues.html"><span class="dir">Next ⟶</span><span class="name">09 · Stacks &amp; Queues</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('revAnim', {
+  totalSteps: 8,
+  captions: [
+    'Start: 1→2→3→4. prev = null (∅) — the reversed prefix is empty; curr = node 1, the first arrow to flip.',
+    'Iteration 1: save next = node 2 (or flipping would strand 2→3→4), then flip: 1 now points at ∅. Node 1 is a fully reversed 1-node list.',
+    'Advance: prev = node 1 (head of the reversed prefix), curr = the saved node 2. The invariant holds: left of curr, all arrows point backwards.',
+    'Iteration 2: save next = node 3, flip: 2 → 1. The reversed prefix is now 2→1.',
+    'Advance: prev = node 2, curr = node 3. Two arrows flipped, one to go — same four lines every time.',
+    'Iteration 3: save next = node 4, flip: 3 → 2. Reversed prefix: 3→2→1.',
+    'Advance and final flip: prev = 3, curr = 4, and 4 → 3. curr moves to the saved next, which is null.',
+    'curr == null — the loop exits. prev = node 4 is the new head: 4→3→2→1. One pass, three references, O(1) extra space.'
+  ],
+  apply: function (svg, step) {
+    // forward arrows disappear as they're flipped: f1 at step>=1, f2 at step>=3, f3 at step>=6
+    svg.querySelector('#f1').style.opacity = step >= 1 ? 0 : 1;
+    svg.querySelector('#f2').style.opacity = step >= 3 ? 0 : 1;
+    svg.querySelector('#f3').style.opacity = step >= 6 ? 0 : 1;
+    // backward arrows appear at the same moments
+    svg.querySelector('#b0').style.opacity = step >= 1 ? 1 : 0;  // 1 → ∅
+    svg.querySelector('#b1').style.opacity = step >= 3 ? 1 : 0;  // 2 → 1
+    svg.querySelector('#b2').style.opacity = step >= 5 ? 1 : 0;  // 3 → 2
+    svg.querySelector('#b3').style.opacity = step >= 6 ? 1 : 0;  // 4 → 3
+    // nodes turn done once their arrow is flipped
+    Stepper.setClass(svg, '#nd1', 'done', step >= 1);
+    Stepper.setClass(svg, '#nd2', 'done', step >= 3);
+    Stepper.setClass(svg, '#nd3', 'done', step >= 5);
+    Stepper.setClass(svg, '#nd4', 'done', step >= 7);
+    // curr highlight (active) on the node being processed
+    Stepper.setClass(svg, '#nd1', 'active', step === 0 || step === 1);
+    Stepper.setClass(svg, '#nd2', 'active', step === 2 || step === 3);
+    Stepper.setClass(svg, '#nd3', 'active', step === 4 || step === 5);
+    Stepper.setClass(svg, '#nd4', 'active', step === 6);
+    // prev label: original x=36 (over ∅); node i center-ish at 36 + (74 + i*130)
+    var prevDx = [0, 0, 104, 104, 234, 234, 364, 494][step];
+    Stepper.movePtr(svg, '#prevPtr', prevDx, 0);
+    // curr label: original over node 1 (x=128); moves node by node, ends past node 4
+    var currDx = [0, 0, 130, 130, 260, 260, 390, 470][step];
+    Stepper.movePtr(svg, '#currPtr', currDx, 0);
+    // next label: original over node 2 (x=258); visible during flip steps
+    var nextOn = step === 1 || step === 3 || step === 5 || step === 6;
+    svg.querySelector('#nextPtr').style.opacity = nextOn ? 1 : 0;
+    var nextDx = [0, 0, 0, 130, 130, 260, 312, 312][step];
+    Stepper.movePtr(svg, '#nextPtr', nextDx, 0);
+  }
+});
+</script>
+
+</body>
+</html>

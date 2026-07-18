@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>14 · String Algorithms — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>String Algorithms: Palindromes, Hashing &amp; KMP</h1>
+<p class="subtitle">The three ideas that turn quadratic string problems linear: expand from centers, hash windows in O(1), and never re-read a character you've already matched.</p>
+<p>
+  <span class="badge phase">Phase 5 · Week 8</span>
+  <span class="badge freq">Palindromes appear constantly — KMP is a senior-level signal</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Strings are just <code>char</code> arrays, so every earlier array pattern applies — yet string questions have their own
+  recurring shapes: "longest palindrome", "find this pattern inside that text", "is it a repetition of itself?". Naive
+  answers are O(n²) or O(n·m); this page gives you the three standard escapes. Palindrome expansion you'll use monthly;
+  Rabin-Karp and KMP you may never type in production — but explaining <em>why</em> they're linear is exactly the kind of
+  question that separates senior candidates.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="02-two-pointers.html">02 · Two Pointers</a> — palindrome checks are converging pointers.</li>
+  <li><a href="03-sliding-window.html">03 · Sliding Window</a> — a rolling hash is a sliding window whose state is a number.</li>
+  <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — count arrays and hashing intuition.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you reach for expand-around-center</strong> on palindrome questions instead of brute-forcing all O(n²) substrings with an O(n) check each?</li>
+  <li><strong>Do you know Java string costs?</strong> <code>substring</code>, <code>+=</code> in loops, <code>charAt</code> — cheap-looking calls with real prices.</li>
+  <li><strong>Can you explain a linear-time matcher?</strong> Nobody expects KMP typed flawlessly from memory; they expect you to explain the LPS idea and why the text pointer never backs up.</li>
+  <li><strong>Are you honest about hashing?</strong> Rabin-Karp answers "probably equal" — verifying on hash hits shows you understand collisions.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Tries (page 13) organized <em>many</em> words for prefix lookup; this page searches for patterns <em>inside</em> one
+  long text. The two meet later: Aho-Corasick — a trie whose nodes carry KMP-style failure links — scans a text for
+  thousands of patterns simultaneously. Master single-pattern KMP here and that whole family opens up.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Recap: immutability and StringBuilder</h3>
+<p>
+  Java <code>String</code>s are immutable: every "modification" allocates a new object. <code>s += c</code> in a loop
+  copies the whole string built so far — O(n²) total, the classic trap from <a href="00-foundations.html">page 00</a>.
+  Inside algorithms use <code>StringBuilder</code> (amortized O(1) append, plus <code>reverse()</code> and
+  <code>deleteCharAt</code>), or work on <code>char[]</code> / indexes and materialize a String once at the end.
+  Also remember <code>substring(i, j)</code> copies O(j−i) characters — prefer passing indexes around.
+</p>
+
+<h3>2. Palindromes: expand around the center</h3>
+<p class="lead">
+  Checking one palindrome is two pointers converging (<a href="02-two-pointers.html">page 02</a>). <em>Finding</em> the
+  longest palindromic substring flips the direction: instead of testing substrings from outside in, grow them from the
+  <strong>center out</strong> — because every palindrome is symmetric around some center.
+</p>
+<p>
+  Key counting insight: a string of length n has exactly <strong>2n−1</strong> centers — n single characters (odd-length
+  palindromes like <code>aba</code>) and n−1 gaps between characters (even-length ones like <code>abba</code>). Expand
+  from each center while the ends match: O(n) centers × O(n) max expansion = O(n²) time, O(1) space — and unlike the
+  brute force, each expansion step does O(1) work because it extends a <em>known</em> palindrome by one ring.
+  (An O(n) algorithm exists — Manacher's — worth name-dropping, never expected in interviews.)
+</p>
+
+<h3>3. Rolling hashes: compare windows as numbers</h3>
+<p>
+  Treat a string as a number in base B: <code>hash("cab") = c·B² + a·B + b</code> (mod a large prime M). The power move
+  is <strong>rolling</strong>: sliding the window one character right is O(1) —
+</p>
+<pre class="code"><code>// slide window [i .. i+m-1] -&gt; [i+1 .. i+m]
+hash = (hash - text[i] * B^(m-1)) * B + text[i+m]     // all mod M</code></pre>
+<p>
+  So after O(m) setup you can compare the pattern's hash against <em>every</em> text window in O(1) each — that's
+  <strong>Rabin-Karp</strong>, expected O(n+m). The honesty clause: equal hashes do <em>not</em> prove equal strings
+  (pigeonhole: 10⁹ hash values, far more possible strings), so verify char-by-char on a hash hit. Where hashing truly
+  shines: <em>many</em> patterns of the same length (hash all into a HashSet, one scan finds them all) and 2D pattern
+  matching — per-comparison, KMP can't do either.
+</p>
+
+<h3>4. KMP: never re-read the text</h3>
+<p>
+  Naive matching restarts after every mismatch: align pattern at i, compare, on failure try i+1 — worst case O(n·m)
+  (think <code>"aaaa…"</code> vs <code>"aaab"</code>). KMP's observation: when a mismatch happens after matching k
+  characters, you already <em>know</em> those k text characters — so the table can tell you, in advance, the next
+  alignment worth trying. That table is the <strong>LPS array</strong>: for each pattern prefix, the length of the
+  <em>longest proper prefix that is also a suffix</em> of it.
+</p>
+<p>Hand-build it for our animation's pattern <code>ABABC</code> — do this once slowly and LPS stops being scary:</p>
+<div class="tablewrap">
+<table>
+  <tr><th>i</th><th>prefix so far</th><th>longest proper prefix = suffix</th><th>lps[i]</th></tr>
+  <tr><td>0</td><td><code>A</code></td><td>— (must be <em>proper</em>, i.e. shorter than the whole)</td><td>0</td></tr>
+  <tr><td>1</td><td><code>AB</code></td><td>none (<code>A</code> ≠ <code>B</code>)</td><td>0</td></tr>
+  <tr><td>2</td><td><code>ABA</code></td><td><code>A</code></td><td>1</td></tr>
+  <tr><td>3</td><td><code>ABAB</code></td><td><code>AB</code></td><td>2</td></tr>
+  <tr><td>4</td><td><code>ABABC</code></td><td>none</td><td>0</td></tr>
+</table>
+</div>
+<p>
+  During the scan, a mismatch with j characters matched doesn't reset j to 0 — it falls back to <code>lps[j-1]</code>,
+  the longest chunk of the match that's still usable, and <strong>the text pointer i never moves backwards</strong>.
+  Each character of text is consumed once; j can only fall as much as it previously rose ⇒ O(n+m) total. Watch it dodge
+  a restart:
+</p>
+
+<div class="anim" id="kmpAnim">
+  <svg viewBox="0 0 640 290" role="img" aria-label="KMP matching ABABC inside ABABABC">
+    <text x="8" y="98" class="small">text</text>
+    <text x="8" y="178" class="small">pattern</text>
+    <!-- text row: A B A B A B C -->
+    <text x="88"  y="60" class="small">0</text><text x="160" y="60" class="small">1</text>
+    <text x="232" y="60" class="small">2</text><text x="304" y="60" class="small">3</text>
+    <text x="376" y="60" class="small">4</text><text x="448" y="60" class="small">5</text>
+    <text x="520" y="60" class="small">6</text>
+    <rect id="t0" x="60"  y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl0" x="88"  y="98" text-anchor="middle" class="lbl">A</text>
+    <rect id="t1" x="132" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl1" x="160" y="98" text-anchor="middle" class="lbl">B</text>
+    <rect id="t2" x="204" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl2" x="232" y="98" text-anchor="middle" class="lbl">A</text>
+    <rect id="t3" x="276" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl3" x="304" y="98" text-anchor="middle" class="lbl">B</text>
+    <rect id="t4" x="348" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl4" x="376" y="98" text-anchor="middle" class="lbl">A</text>
+    <rect id="t5" x="420" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl5" x="448" y="98" text-anchor="middle" class="lbl">B</text>
+    <rect id="t6" x="492" y="70" width="56" height="44" rx="8" class="box"></rect><text id="tl6" x="520" y="98" text-anchor="middle" class="lbl">C</text>
+    <!-- pattern row: A B A B C (whole group slides right on the LPS jump) -->
+    <g id="patg" style="transition: transform 0.4s ease;">
+      <rect id="p0" x="60"  y="150" width="56" height="44" rx="8" class="box"></rect><text id="pl0" x="88"  y="178" text-anchor="middle" class="lbl">A</text>
+      <rect id="p1" x="132" y="150" width="56" height="44" rx="8" class="box"></rect><text id="pl1" x="160" y="178" text-anchor="middle" class="lbl">B</text>
+      <rect id="p2" x="204" y="150" width="56" height="44" rx="8" class="box"></rect><text id="pl2" x="232" y="178" text-anchor="middle" class="lbl">A</text>
+      <rect id="p3" x="276" y="150" width="56" height="44" rx="8" class="box"></rect><text id="pl3" x="304" y="178" text-anchor="middle" class="lbl">B</text>
+      <rect id="p4" x="348" y="150" width="56" height="44" rx="8" class="box"></rect><text id="pl4" x="376" y="178" text-anchor="middle" class="lbl">C</text>
+    </g>
+    <!-- static LPS table -->
+    <rect id="lpsHi" x="270" y="228" width="68" height="52" rx="8" class="box frontier" opacity="0"></rect>
+    <text x="8" y="252" class="small">LPS</text>
+    <text x="88"  y="252" text-anchor="middle" class="lbl" font-size="12">A</text><text x="88"  y="272" text-anchor="middle" class="lbl" font-size="12">0</text>
+    <text x="160" y="252" text-anchor="middle" class="lbl" font-size="12">B</text><text x="160" y="272" text-anchor="middle" class="lbl" font-size="12">0</text>
+    <text x="232" y="252" text-anchor="middle" class="lbl" font-size="12">A</text><text x="232" y="272" text-anchor="middle" class="lbl" font-size="12">1</text>
+    <text x="304" y="252" text-anchor="middle" class="lbl" font-size="12">B</text><text x="304" y="272" text-anchor="middle" class="lbl" font-size="12">2</text>
+    <text x="376" y="252" text-anchor="middle" class="lbl" font-size="12">C</text><text x="376" y="272" text-anchor="middle" class="lbl" font-size="12">0</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>5. Recap &amp; preview</h3>
+<p>
+  <strong>Anagram matching recap:</strong> "does a permutation of s appear in t?" is not a matching problem at all —
+  it's a fixed-size sliding window comparing <code>int[26]</code> letter counts
+  (<a href="03-sliding-window.html">page 03</a>, Permutation in String). Reach for counts whenever <em>order doesn't
+  matter</em>; reach for KMP/hashing when it does.
+</p>
+<p>
+  <strong>Edit distance preview:</strong> the remaining big string family is "two strings + minimum operations to turn
+  one into the other" (insert/delete/replace). Those need a 2D DP table indexed by prefixes of both strings — the
+  intuition is "the answer for (<code>i</code>,<code>j</code>) comes from three smaller prefix pairs". That's the
+  centerpiece of <a href="19-dp-2d.html">page 19</a>; recognize the shape now, solve it there.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Expand-around-center — the palindrome workhorse</p>
+<pre class="code"><code>// For EACH of the 2n-1 centers, grow while the ends match.
+// Odd-length centers: (i, i). Even-length centers: (i, i+1).
+int expand(String s, int l, int r) {
+    while (l &gt;= 0 &amp;&amp; r &lt; s.length() &amp;&amp; s.charAt(l) == s.charAt(r)) {
+        l--;                       // extend one ring outward
+        r++;
+    }
+    return r - l - 1;              // length of the palindrome found
+}
+// Caller pattern:
+// for (int i = 0; i &lt; n; i++) { use expand(s,i,i) and expand(s,i,i+1); }</code></pre>
+
+<p class="code-title">LPS build + KMP scan — the shape to remember</p>
+<pre class="code"><code>// lps[i] = length of longest proper prefix of p[0..i] that is also its suffix
+int[] lps = new int[m];
+for (int i = 1, len = 0; i &lt; m; i++) {
+    while (len &gt; 0 &amp;&amp; p.charAt(i) != p.charAt(len))
+        len = lps[len - 1];        // fall back to the next-best prefix
+    if (p.charAt(i) == p.charAt(len)) len++;
+    lps[i] = len;
+}
+// Scan: i walks the text ONCE; j tracks matched pattern chars
+for (int i = 0, j = 0; i &lt; n; i++) {
+    while (j &gt; 0 &amp;&amp; text.charAt(i) != p.charAt(j))
+        j = lps[j - 1];            // reuse the longest still-valid prefix
+    if (text.charAt(i) == p.charAt(j)) j++;
+    if (j == m) { /* match at i-m+1 */ j = lps[j - 1]; /* keep scanning */ }
+}</code></pre>
+
+<div class="tip">
+  <strong>Notice the twin loops.</strong> The LPS builder is KMP matching the pattern against itself — same fall-back
+  <code>while</code>, same extend-on-match. Learn one loop, get the other free. And in a real interview it's perfectly
+  acceptable to start with "naively this is O(n·m); if we need linear I'd use KMP — here's the idea…"
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Approach</th><th>Time</th><th>Space</th><th>Character</th><th>Reach for it when…</th></tr>
+  <tr><td>Naive scan / <code>indexOf</code> / <code>contains</code></td><td>O(n·m) worst, fast in practice</td><td>O(1)</td><td>exact, simple</td><td>everyday code — the JDK's <code>indexOf</code> is a tuned naive scan; adversarial inputs are rare</td></tr>
+  <tr><td>Rabin-Karp (rolling hash)</td><td>expected O(n+m)</td><td>O(1)</td><td>probabilistic — must verify hits</td><td>many equal-length patterns at once, 2D grids, chunk fingerprinting</td></tr>
+  <tr><td>KMP</td><td>O(n+m) <em>guaranteed</em></td><td>O(m) for LPS</td><td>deterministic, never backs up in text</td><td>worst-case guarantees, streaming input you can't rewind, LPS structure itself (periodicity tricks)</td></tr>
+  <tr><td>Trie / Aho-Corasick (<a href="13-tries.html">13</a>)</td><td>O(n + Σm)</td><td>O(Σm)</td><td>multi-pattern, deterministic</td><td>dictionary of patterns scanned in one pass</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>"Longest/count palindromic …" → <strong>expand around center</strong> first; DP only if the interviewer pushes toward subsequences (<a href="19-dp-2d.html">19</a>).</li>
+  <li>"Find pattern in text" and n·m fits the budget → say <code>indexOf</code>, then offer KMP/Rabin-Karp as the linear upgrades.</li>
+  <li>"Compare many substrings for equality" → <strong>rolling hash</strong> turns each comparison into O(1).</li>
+  <li>"Order doesn't matter" (anagram/permutation wording) → count arrays + window, not matching (<a href="03-sliding-window.html">03</a>).</li>
+  <li>"Repeats / periods / shifts" → LPS: a string of length n with <code>lps[n-1] = k</code> repeats with period n−k. (That's Repeated Substring Pattern in one line.)</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>grep, ripgrep &amp; editors</h4>
+    <p class="small">Literal-string search in grep-family tools builds on linear-time matchers (Boyer-Moore variants —
+    KMP's cousin that skips forward even faster) plus SIMD scanning; regex engines compile down to automata whose
+    "failure transitions" are exactly the LPS idea generalized. Your IDE's find-in-files lives on this.</p>
+  </div>
+  <div class="card">
+    <h4>rsync &amp; dedup pipelines</h4>
+    <p class="small">rsync finds unchanged blocks between two file versions by sliding a <em>rolling checksum</em> over
+    the file — Rabin-Karp's exact trick — then confirming candidates with a strong hash. Content-defined chunking in
+    backup/dedup systems (and plagiarism detectors like MOSS) fingerprint documents the same way.</p>
+  </div>
+  <div class="card">
+    <h4>Bioinformatics</h4>
+    <p class="small">DNA is a 4-letter alphabet text of billions of characters; finding gene subsequences uses
+    Rabin-Karp-style k-mer hashing (BLAST seeds) and suffix structures. LeetCode's "Repeated DNA Sequences" is a toy
+    version: hash every 10-mer, report duplicates.</p>
+  </div>
+  <div class="card">
+    <h4>WAFs &amp; intrusion detection</h4>
+    <p class="small">Web application firewalls and IDS engines (Snort, Suricata) must match every packet against
+    thousands of attack signatures at line rate — Aho-Corasick automata (trie + KMP failure links,
+    <a href="13-tries.html">page 13</a>) make it one pass per packet regardless of rule count.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <span class="t"><a href="https://leetcode.com/problems/valid-palindrome/">Valid Palindrome</a></span>
+    <span class="hint">Two pointers converging, skipping non-alphanumerics (<a href="02-two-pointers.html">page 02</a>) — the warm-up for every palindrome question.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <span class="t"><a href="https://leetcode.com/problems/repeated-substring-pattern/">Repeated Substring Pattern</a></span>
+    <span class="hint">Elegant LPS one-liner: with k = lps[n-1], the answer is k &gt; 0 and n % (n−k) == 0. (Or the trick: s appears inside (s+s) minus its ends.)</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/string-compression/">String Compression</a></span>
+    <span class="hint">Read/write two pointers over a char[], in place — careful with multi-digit counts. Pure implementation discipline.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/longest-palindromic-substring/">Longest Palindromic Substring</a></span>
+    <span class="hint">2n−1 centers, expand each; track the best (start, length). Worked below.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/palindromic-substrings/">Palindromic Substrings</a></span>
+    <span class="hint">Same expansion — but ADD ONE per successful ring instead of tracking the max. If you solved the previous one, this is a 3-line diff.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <span class="t"><a href="https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/">Find the Index of the First Occurrence in a String</a></span>
+    <span class="hint">"Implement strStr". Rated easy because naive passes — the interview value is doing it in O(n+m). BOTH linear solutions worked below.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked: Longest Palindromic Substring (LeetCode 5)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> return the longest contiguous palindrome inside s (n ≤ 1000).</p>
+    <p><strong>Idea.</strong> Try every center — each of the n characters (odd palindromes) and each of the n−1 gaps
+    (even palindromes) — and expand outward while the ends agree. Track the best length seen and recover the start index
+    from center and length. The expansion helper returns just the length, keeping the arithmetic in one place.</p>
+    <p class="code-title">code/14-strings-advanced/LongestPalindromicSubstring.java</p>
+    <pre class="code"><code>// LeetCode 5 — Longest Palindromic Substring
+// Expand-around-center: every palindrome has a center — either one char
+// (odd length) or the gap between two chars (even length). There are
+// only 2n-1 centers, and expanding each costs at most O(n) -&gt; O(n^2)
+// total with O(1) extra space. This is THE interview-expected solution.
+public class LongestPalindromicSubstring {
+
+    public static String longestPalindrome(String s) {
+        if (s == null || s.isEmpty()) return "";
+        int bestStart = 0, bestLen = 1; // any single char is a palindrome
+        for (int center = 0; center &lt; s.length(); center++) {
+            // Odd-length palindromes: center is the single char at `center`.
+            int odd = expand(s, center, center);
+            // Even-length: center is the GAP between center and center+1.
+            int even = expand(s, center, center + 1);
+            int len = Math.max(odd, even);
+            if (len &gt; bestLen) {
+                bestLen = len;
+                // Recover the start index from the center and the length.
+                bestStart = center - (len - 1) / 2;
+            }
+        }
+        return s.substring(bestStart, bestStart + bestLen);
+    }
+
+    // Grow outward while the two ends match; return the palindrome length.
+    private static int expand(String s, int l, int r) {
+        while (l &gt;= 0 &amp;&amp; r &lt; s.length() &amp;&amp; s.charAt(l) == s.charAt(r)) {
+            l--; // step the left end outward
+            r++; // step the right end outward
+        }
+        // The loop overshot by one on each side: length = (r-1)-(l+1)+1.
+        return r - l - 1;
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> O(n²) time (2n−1 centers × O(n) expansion), O(1) extra space (the final substring copy aside). Fine for n ≤ 1000; mention Manacher's O(n) exists.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked: Implement strStr with KMP (LeetCode 28)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> return the index of the first occurrence of needle in haystack, or −1.</p>
+    <p><strong>Idea.</strong> Precompute the needle's LPS array, then walk the haystack once with a matched-count j.
+    On mismatch, drop j to <code>lps[j-1]</code> — the longest prefix of the needle that's still consistent with what we
+    just read — and try again <em>without moving i back</em>. When j reaches the needle's length, the match started at
+    <code>i - m + 1</code>. The LPS builder is the same loop matching the needle against itself.</p>
+    <p class="code-title">code/14-strings-advanced/StrStrKMP.java</p>
+    <pre class="code"><code>// LeetCode 28 — Find the Index of the First Occurrence in a String
+// KMP version: O(n + m) worst case. The LPS table ("longest proper
+// prefix that is also a suffix") tells us, on a mismatch, how much of
+// what we already matched is REUSABLE — so the text pointer i never
+// moves backwards.
+public class StrStrKMP {
+
+    public static int strStr(String haystack, String needle) {
+        int n = haystack.length(), m = needle.length();
+        if (m == 0) return 0;
+        int[] lps = buildLps(needle);
+        int j = 0; // how many pattern chars are currently matched
+        for (int i = 0; i &lt; n; i++) {           // i NEVER decreases
+            // On mismatch, fall back through the LPS chain: keep the
+            // longest matched prefix that is still consistent.
+            while (j &gt; 0 &amp;&amp; haystack.charAt(i) != needle.charAt(j))
+                j = lps[j - 1];
+            if (haystack.charAt(i) == needle.charAt(j)) j++; // extend match
+            if (j == m) return i - m + 1;       // full match; return its start
+        }
+        return -1; // pattern never fully matched
+    }
+
+    // lps[i] = length of the longest proper prefix of needle[0..i] that
+    // is ALSO a suffix of it. Built with the same fall-back trick.
+    static int[] buildLps(String p) {
+        int[] lps = new int[p.length()];
+        int len = 0;                       // current matched prefix length
+        for (int i = 1; i &lt; p.length(); i++) {
+            while (len &gt; 0 &amp;&amp; p.charAt(i) != p.charAt(len))
+                len = lps[len - 1];        // shrink to the next-best prefix
+            if (p.charAt(i) == p.charAt(len)) len++; // prefix grows by one
+            lps[i] = len;
+        }
+        return lps;
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> O(n + m) time guaranteed — i only moves forward, and j's fall-backs are bounded by its rises. O(m) space for LPS.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked: Implement strStr with Rabin-Karp (LeetCode 28, alternative)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> same problem — now with a rolling hash instead of a prefix table.</p>
+    <p><strong>Idea.</strong> Hash the needle and the first m-character window of the haystack. Slide the window one
+    character at a time, updating the hash in O(1): subtract the departing character's contribution (it carries weight
+    B<sup>m−1</sup>), multiply by B, add the arriving character — all mod a large prime. When window hash equals target
+    hash, verify with a real character comparison (<code>regionMatches</code>) because collisions are possible.</p>
+    <p class="code-title">code/14-strings-advanced/StrStrRabinKarp.java</p>
+    <pre class="code"><code>// LeetCode 28 again — Rabin-Karp version.
+// Polynomial rolling hash: after hashing the first window, every next
+// m-length window of the text is hashed in O(1) (remove left char, add
+// right char). Compare hashes; verify char-by-char on a hash hit,
+// because hashes CAN collide. Expected O(n + m).
+public class StrStrRabinKarp {
+
+    public static int strStr(String haystack, String needle) {
+        int n = haystack.length(), m = needle.length();
+        if (m == 0) return 0;
+        if (m &gt; n) return -1;
+
+        final long MOD = 1_000_000_007L; // large prime keeps collisions rare
+        final long BASE = 31;            // treat chars as digits in base 31
+
+        // Highest power of BASE inside a window: BASE^(m-1) mod MOD.
+        long pow = 1;
+        for (int i = 0; i &lt; m - 1; i++) pow = pow * BASE % MOD;
+
+        // Hash of the needle and of the first text window.
+        long target = 0, window = 0;
+        for (int i = 0; i &lt; m; i++) {
+            target = (target * BASE + needle.charAt(i)) % MOD;
+            window = (window * BASE + haystack.charAt(i)) % MOD;
+        }
+
+        for (int start = 0; ; start++) {
+            // Hashes equal? Verify for real — collisions are possible.
+            if (window == target
+                    &amp;&amp; haystack.regionMatches(start, needle, 0, m))
+                return start;
+            if (start + m &gt;= n) return -1; // no window left to slide into
+            // Roll: remove the leftmost char, shift, append the next char.
+            long out = haystack.charAt(start) * pow % MOD;
+            window = (window - out + MOD) % MOD;  // +MOD avoids going negative
+            window = (window * BASE + haystack.charAt(start + m)) % MOD;
+        }
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> expected O(n + m) time — each verification is O(m) but triggers only on hash hits, which are rare with a good modulus; degenerate worst case O(n·m). O(1) space. Note the <code>+ MOD</code> before <code>% MOD</code>: Java's remainder can be negative after subtraction.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Missing even-length centers</strong> — expanding only from (i, i) finds <code>aba</code> but never <code>abba</code>. Always run both (i, i) and (i, i+1).</li>
+  <li><strong>"Proper" prefix means strictly shorter.</strong> lps of <code>"aaaa"</code> is [0,1,2,3], never 4 — the whole string doesn't count as its own prefix. Get this wrong and KMP loops forever.</li>
+  <li><strong>Negative mods:</strong> in Java <code>(a - b) % MOD</code> can be negative — write <code>((a - b) % MOD + MOD) % MOD</code>. This bug is invisible until a hash silently mismatches.</li>
+  <li><strong>Hash arithmetic overflows int fast:</strong> B·hash exceeds 2³¹ after a couple of characters. Use <code>long</code> throughout and reduce mod M at every step, not once at the end.</li>
+  <li><strong>Palindromic <em>substring</em> ≠ <em>subsequence</em>.</strong> Substring is contiguous (this page); subsequence allows gaps and is a DP problem (<a href="19-dp-2d.html">page 19</a>). Confirm which one before solving.</li>
+  <li><strong>Don't oversell hashing:</strong> say "expected O(n+m), and I verify on hash equality since collisions exist." Claiming certainty from a hash match is exactly the mistake the follow-up question is fishing for.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="13-tries.html"><span class="dir">⟵ Prev</span><span class="name">13 · Tries</span></a>
+  <a class="next" href="15-graphs-basics.html"><span class="dir">Next ⟶</span><span class="name">15 · Graph Basics</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('kmpAnim', {
+  totalSteps: 7,
+  intervalMs: 2600,
+  captions: [
+    'Search for pattern ABABC inside text ABABABC. KMP first builds the LPS row shown below: for each pattern prefix, the length of the longest proper prefix that is also its suffix.',
+    'Scan left to right: text[0]=A and text[1]=B match pattern[0..1]. So far this looks exactly like naive matching. Matched count j = 2.',
+    'The match keeps extending: text[2..3] = AB also matches. Four pattern characters matched (j = 4); only C remains.',
+    'Mismatch! text[4] = A but pattern[4] = C. Naive search would slide the pattern to index 1 and re-compare from text[1] — re-reading characters we have already seen.',
+    'KMP consults the table instead: lps[3] = 2 says the "AB" we matched last is ALSO the pattern\'s first two characters. Slide the pattern so that prefix lines up (green) — j falls to 2, and i does NOT move backwards.',
+    'Resume at the same text position: text[4] = A = pattern[2], then text[5] = B = pattern[3]. The reused green prefix was never re-checked — that is the whole trick.',
+    'text[6] = C = pattern[4]: full match starting at index 2. Every text character was read O(1) times ⇒ O(n + m) guaranteed, versus O(n·m) for restarts.'
+  ],
+  apply: function (svg, step) {
+    // per-step color state for text boxes t0..t6 and pattern boxes p0..p4
+    var tS = [
+      {},
+      { 0:'done', 1:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done', 4:'frontier' },
+      { 0:'dim', 1:'dim', 2:'done', 3:'done' },
+      { 0:'dim', 1:'dim', 2:'done', 3:'done', 4:'done', 5:'done' },
+      { 0:'dim', 1:'dim', 2:'done', 3:'done', 4:'done', 5:'done', 6:'done' }
+    ];
+    var pS = [
+      {},
+      { 0:'done', 1:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done', 4:'frontier' },
+      { 0:'done', 1:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done' },
+      { 0:'done', 1:'done', 2:'done', 3:'done', 4:'done' }
+    ];
+    var shifts = [0, 0, 0, 0, 2, 2, 2]; // pattern alignment (text index) per step
+    function paint(prefix, lblPrefix, count, table) {
+      for (var i = 0; i < count; i++) {
+        var cls = table[step][i] || null;
+        ['done', 'frontier', 'active', 'dim'].forEach(function (c) {
+          Stepper.setClass(svg, '#' + prefix + i, c, cls === c);
+        });
+        Stepper.setClass(svg, '#' + lblPrefix + i, 'onfill', !!cls && cls !== 'dim');
+      }
+    }
+    paint('t', 'tl', 7, tS);
+    paint('p', 'pl', 5, pS);
+    Stepper.movePtr(svg, '#patg', shifts[step] * 72, 0);
+    svg.querySelector('#lpsHi').style.opacity = (step === 4) ? 0.6 : 0;
+  }
+});
+</script>
+
+</body>
+</html>

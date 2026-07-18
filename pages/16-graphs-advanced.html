@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>16 · Graphs Advanced — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Graphs Advanced: Topological Sort &amp; Union-Find</h1>
+<p class="subtitle">Ordering dependency graphs (Kahn's and DFS post-order), merging groups incrementally with union-find, and 2-coloring for bipartite checks.</p>
+<p>
+  <span class="badge phase">Phase 6 · Weeks 9–10</span>
+  <span class="badge freq">Course Schedule &amp; Accounts Merge are interview staples</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  BFS and DFS (page 15) answer "can I reach X?" and "how far is X?". Real graph questions are often subtler:
+  <em>in what order</em> can I process nodes when some depend on others (build systems, course prerequisites)?
+  And <em>which nodes belong to the same group</em> when connections arrive one at a time (merging user accounts,
+  detecting the edge that creates a cycle)? Topological sort answers the first; union-find answers the second —
+  and union-find does it without ever traversing the graph, which is why it feels like a magic trick the first time.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="15-graphs-basics.html">15 · Graph Basics</a> — adjacency lists, BFS with a queue, DFS, connected components.</li>
+  <li><a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a> — <code>ArrayDeque</code> as the queue behind Kahn's algorithm.</li>
+  <li><a href="10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a> — the DFS variant of topo sort is a post-order recursion.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you recognize "dependency order" as topological sort?</strong> The words "prerequisites", "build before", "must come first" should trigger it instantly.</li>
+  <li><strong>Can you detect a cycle</strong> — and do you know that directed and undirected graphs need <em>different</em> techniques?</li>
+  <li><strong>Can you write union-find from memory</strong> (parent array, path compression, union by size) in under 5 minutes? It's short but easy to fumble under pressure.</li>
+  <li><strong>Do you pick UF vs DFS deliberately?</strong> "Edges arrive incrementally, so union-find" is a senior-level sentence.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 15 gave you the two traversal engines and the habit of building an adjacency list as step one. This page adds
+  structure on top: Kahn's algorithm is literally BFS where the queue admission rule is "indegree hit zero" instead of
+  "not yet visited", and union-find replaces whole traversals with two tiny array operations. Everything here feeds
+  page 17 — Kruskal's minimum spanning tree is just sorted edges + the union-find you learn now.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Topological sort: lining up a dependency graph</h3>
+<p class="lead">
+  A <strong>topological order</strong> of a directed graph lists the nodes so that every edge u→v has u appearing
+  before v. It's "a valid order to take the courses" or "a valid build order for modules".
+</p>
+<p>
+  One condition makes or breaks it: the graph must be a <strong>DAG</strong> (directed acyclic graph). If A depends on
+  B and B depends on A, no order can satisfy both — <em>a topological order exists if and only if there is no directed
+  cycle</em>. This is why every topo-sort algorithm doubles as a cycle detector, and why interviewers love Course
+  Schedule: one problem tests both skills.
+</p>
+
+<h4>Kahn's algorithm (BFS flavor) — the one to write in interviews</h4>
+<p>
+  Think of how you'd actually plan courses: first take everything with <em>no</em> prerequisites, cross them off,
+  see what that unblocks, repeat. Kahn's algorithm is exactly that, with an <code>indegree</code> array (how many
+  unmet prerequisites each node has) and a queue of currently-takeable nodes. When it finishes, either every node was
+  processed (valid order) or some nodes never reached indegree 0 — those sit on a cycle.
+</p>
+
+<h4>DFS post-order (the other flavor)</h4>
+<p>
+  Alternative: run DFS and record each node <em>after</em> all its descendants are done (post-order); the reverse of
+  that record is a topological order — a node is only stamped once everything it points to is already stamped.
+  Cycle detection needs the three-color trick: seeing a <em>gray</em> node (still on the recursion stack) again means
+  you followed a back edge into your own ancestry — a directed cycle. Both variants are O(V+E); Kahn's is usually
+  easier to get right under pressure and hands you the order for free.
+</p>
+
+<h3>2. Union-find (disjoint set union): groups without traversal</h3>
+<p>
+  Union-find maintains a collection of disjoint sets under two operations: <code>find(x)</code> — which set is x in? —
+  and <code>union(a,b)</code> — merge two sets. The whole structure is one <code>int[] parent</code> array: each node
+  points at a parent, roots point at themselves, and a set is identified by its root. <code>find</code> walks up the
+  chain; <code>union</code> links one root under the other.
+</p>
+<p>Two small optimizations make it fast enough to feel like O(1):</p>
+<ul>
+  <li><strong>Path compression:</strong> while walking up in <code>find</code>, re-point every visited node closer to the root, flattening the tree for all future calls.</li>
+  <li><strong>Union by size (or rank):</strong> always hang the <em>smaller</em> tree under the bigger root, so trees stay shallow.</li>
+</ul>
+<p>
+  Together they make each operation amortized <strong>O(α(n))</strong> — the inverse Ackermann function, which is ≤ 4
+  for any input that fits in this universe. Say "effectively constant, formally inverse Ackermann" and move on.
+</p>
+
+<div class="anim" id="ufAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Union-find: unions merging trees, then path compression flattening a chain">
+    <defs>
+      <marker id="ufArw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#64748b"></path>
+      </marker>
+    </defs>
+    <!-- parent-pointer arrows (child -> parent), revealed per step -->
+    <line id="ea" x1="90"  y1="163" x2="90"  y2="99"  class="edge" marker-end="url(#ufArw)" style="opacity:0"></line>
+    <line id="eb" x1="250" y1="163" x2="250" y2="99"  class="edge" marker-end="url(#ufArw)" style="opacity:0"></line>
+    <path id="ec" d="M 228,58 Q 170,20 114,58" class="edge" marker-end="url(#ufArw)" style="opacity:0"></path>
+    <line id="ed" x1="470" y1="163" x2="470" y2="99"  class="edge" marker-end="url(#ufArw)" style="opacity:0"></line>
+    <path id="ee" d="M 229,181 Q 130,160 99,95" class="edge" marker-end="url(#ufArw)" style="opacity:0"></path>
+    <!-- nodes -->
+    <circle id="ufn0" cx="90"  cy="70"  r="22" class="box"></circle>
+    <circle id="ufn1" cx="90"  cy="190" r="22" class="box"></circle>
+    <circle id="ufn2" cx="250" cy="70"  r="22" class="box"></circle>
+    <circle id="ufn3" cx="250" cy="190" r="22" class="box"></circle>
+    <circle id="ufn4" cx="470" cy="70"  r="22" class="box"></circle>
+    <circle id="ufn5" cx="470" cy="190" r="22" class="box"></circle>
+    <text id="ufl0" x="90"  y="75"  text-anchor="middle" class="lbl">0</text>
+    <text id="ufl1" x="90"  y="195" text-anchor="middle" class="lbl">1</text>
+    <text id="ufl2" x="250" y="75"  text-anchor="middle" class="lbl">2</text>
+    <text id="ufl3" x="250" y="195" text-anchor="middle" class="lbl">3</text>
+    <text id="ufl4" x="470" y="75"  text-anchor="middle" class="lbl">4</text>
+    <text id="ufl5" x="470" y="195" text-anchor="middle" class="lbl">5</text>
+    <text id="ufcount" x="560" y="270" text-anchor="middle" class="lbl">roots: 6</text>
+    <text x="560" y="288" text-anchor="middle" class="small">(parent[i] == i)</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. What union-find unlocks</h3>
+<ul>
+  <li><strong>Cycle detection in undirected graphs:</strong> process edges one by one; if <code>union(a,b)</code> reports the endpoints were <em>already</em> in the same set, this edge closes a cycle. (That is the entire solution to Redundant Connection, worked below.)</li>
+  <li><strong>Counting components without traversal:</strong> start <code>count = n</code>, decrement on every successful union. No BFS, no visited set.</li>
+  <li><strong>The accounts-merge grouping pattern:</strong> when items share an attribute, union them. For Accounts Merge: give each account an index, keep a <code>Map&lt;String,Integer&gt;</code> from email → first account index seen; on a repeat email, union the two account indices. Afterwards, group all emails by <code>find(accountIndex)</code> and sort each group. The same "union by shared key, then group by root" shape powers identity resolution and fraud-ring detection at real companies.</li>
+</ul>
+
+<h3>4. Bipartite check: 2-coloring with BFS</h3>
+<p>
+  A graph is <strong>bipartite</strong> if its nodes split into two camps with every edge crossing between camps
+  (think: match interns to teams, or "possible bipartition" problems phrased as "people who dislike each other").
+  Test it by painting: color a start node 1, all its neighbors −1, their neighbors 1 again… If you ever find an edge
+  whose endpoints got the <em>same</em> color, the graph contains an odd-length cycle and is not bipartite.
+</p>
+
+<p class="code-title">Bipartite check — BFS 2-coloring, O(V+E)</p>
+<pre class="code"><code>public static boolean isBipartite(int[][] graph) {
+    int n = graph.length;
+    int[] color = new int[n];                    // 0 = uncolored, 1 / -1 = the two camps
+    for (int start = 0; start &lt; n; start++) {    // graph may be disconnected: try every start
+        if (color[start] != 0) continue;         // already colored by an earlier BFS
+        color[start] = 1;
+        Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+        queue.offer(start);
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            for (int v : graph[u]) {
+                if (color[v] == 0) {             // uncolored neighbor: paint the opposite camp
+                    color[v] = -color[u];
+                    queue.offer(v);
+                } else if (color[v] == color[u]) {
+                    return false;                // same camp across an edge -&gt; odd cycle
+                }
+            }
+        }
+    }
+    return true;
+}</code></pre>
+
+<h3>5. Bridges &amp; articulation points (concept only)</h3>
+<p>
+  A <strong>bridge</strong> is an edge whose removal disconnects the graph; an <strong>articulation point</strong> is
+  such a node. Tarjan's low-link DFS finds them in O(V+E) by tracking, for each node, the earliest-discovered ancestor
+  reachable from its subtree. They appear in interviews rarely (LeetCode's Critical Connections in a Network) — know
+  the vocabulary and that "one DFS with discovery times and low-links" solves it; implementing it live is almost never
+  required outside specialist loops.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — Kahn's topological sort (indegree + queue) with cycle detection</p>
+<pre class="code"><code>// Returns a topological order, or an empty list if the graph has a cycle.
+public static List&lt;Integer&gt; topoSort(int n, int[][] edges) {   // edges: [from, to]
+    // Step 1: adjacency list + indegree (how many unmet dependencies each node has)
+    List&lt;List&lt;Integer&gt;&gt; adj = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; n; i++) adj.add(new ArrayList&lt;&gt;());
+    int[] indegree = new int[n];
+    for (int[] e : edges) {
+        adj.get(e[0]).add(e[1]);
+        indegree[e[1]]++;
+    }
+    // Step 2: seed the queue with every node that depends on nothing
+    Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+    for (int i = 0; i &lt; n; i++)
+        if (indegree[i] == 0) queue.offer(i);
+    // Step 3: repeatedly emit a ready node and release its dependents
+    List&lt;Integer&gt; order = new ArrayList&lt;&gt;();
+    while (!queue.isEmpty()) {
+        int u = queue.poll();
+        order.add(u);
+        for (int v : adj.get(u))
+            if (--indegree[v] == 0) queue.offer(v);   // last dependency just cleared
+    }
+    // Step 4: nodes still &gt; 0 indegree never became ready -&gt; they sit on a cycle
+    return order.size() == n ? order : List.of();
+}</code></pre>
+
+<p class="code-title">Template 2 — DFS post-order topo sort (three colors; gray-hit = cycle)</p>
+<pre class="code"><code>// state: 0 = white (untouched), 1 = gray (on the current recursion stack), 2 = black (finished)
+// Returns false if a cycle is found. Popping `order` afterwards yields a topological order.
+static boolean dfs(int u, List&lt;List&lt;Integer&gt;&gt; adj, int[] state, Deque&lt;Integer&gt; order) {
+    state[u] = 1;                                  // entering: mark gray
+    for (int v : adj.get(u)) {
+        if (state[v] == 1) return false;           // edge into a gray node = back edge = CYCLE
+        if (state[v] == 0 &amp;&amp; !dfs(v, adj, state, order)) return false;
+    }
+    state[u] = 2;                                  // every descendant finished
+    order.push(u);                                 // post-order push; the stack reverses it
+    return true;
+}</code></pre>
+
+<p class="code-title">Template 3 — Union-find with path compression + union by size (memorize this)</p>
+<pre class="code"><code>class UnionFind {
+    int[] parent;   // parent[x] = x's parent; a root points to itself
+    int[] size;     // size[root] = number of nodes in that tree (for union by size)
+    int count;      // how many disjoint sets remain
+
+    UnionFind(int n) {
+        parent = new int[n];
+        size = new int[n];
+        count = n;
+        for (int i = 0; i &lt; n; i++) { parent[i] = i; size[i] = 1; }
+    }
+
+    int find(int x) {
+        while (parent[x] != x) {
+            parent[x] = parent[parent[x]];  // path compression: skip to grandparent
+            x = parent[x];
+        }
+        return x;
+    }
+
+    boolean union(int a, int b) {
+        int ra = find(a), rb = find(b);
+        if (ra == rb) return false;         // already together (this edge would close a cycle)
+        if (size[ra] &lt; size[rb]) { int t = ra; ra = rb; rb = t; }  // ra = bigger tree
+        parent[rb] = ra;                    // smaller root hangs under bigger root
+        size[ra] += size[rb];
+        count--;                            // two sets became one
+        return true;
+    }
+
+    boolean connected(int a, int b) { return find(a) == find(b); }
+}</code></pre>
+
+<div class="tip">
+  <strong>Make <code>union</code> return boolean.</strong> Returning "did a merge actually happen?" gives you cycle
+  detection (false = redundant edge), component counting (<code>count</code>), and Kruskal's accept/skip decision
+  (page 17) — all from the same five lines.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Question</th><th>Reach for</th><th>Why</th></tr>
+  <tr><td>Topo sort: Kahn's or DFS?</td><td>Kahn's (BFS) by default</td><td>Iterative (no stack-overflow risk), yields the order directly, cycle check is a simple count. DFS variant shines when you're already doing DFS for other reasons.</td></tr>
+  <tr><td>Connectivity: union-find or DFS/BFS?</td><td>Edges arrive incrementally / queries interleave with updates → <strong>UF</strong>. One-shot static graph → either; DFS is fine.</td><td>UF handles "add edge, then ask" in ~O(1) each; DFS would re-traverse per query. For a single pass over a fixed graph both are O(V+E).</td></tr>
+  <tr><td>Cycle detection, <em>directed</em> graph</td><td>Three-color DFS or Kahn's (processed &lt; n)</td><td>Direction matters: u→v→u is a cycle but v←u,u→v is not. UF ignores direction, so it can't be used here.</td></tr>
+  <tr><td>Cycle detection, <em>undirected</em> graph</td><td>Union-find (or DFS tracking the parent you came from)</td><td>An edge whose endpoints already share a root closes a cycle. Simple and incremental.</td></tr>
+  <tr><td>Split nodes into two camps</td><td>2-coloring BFS/DFS</td><td>Bipartite ⇔ no odd cycle; painting finds the violation directly.</td></tr>
+</table>
+</div>
+
+<p>Decision cues — when the problem says…</p>
+<ul>
+  <li>"prerequisites", "build order", "compile before", "alien dictionary of word order" → <strong>topological sort</strong>.</li>
+  <li>"is it possible to finish…" on a directed dependency graph → <strong>cycle detection</strong> (Kahn count or gray-node DFS).</li>
+  <li>"merge accounts / groups / provinces", "number of connected components", "which edge creates the cycle" → <strong>union-find</strong>.</li>
+  <li>"split into two groups", "everyone dislikes someone in the other group" → <strong>bipartite 2-coloring</strong>.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Build systems &amp; package managers</h4>
+    <p class="small">Maven, Gradle, make, and <code>npm install</code> all topologically sort a dependency DAG to decide
+    build/install order — and the dreaded "circular dependency detected" error is exactly Kahn's
+    <code>processed &lt; n</code> check firing. Gradle's task graph is a literal DAG you can print.</p>
+  </div>
+  <div class="card">
+    <h4>Workflow orchestration &amp; spreadsheets</h4>
+    <p class="small">Airflow calls its unit of work a DAG and schedules tasks in topological order, releasing a task when
+    its last upstream finishes — the indegree array, distributed. Excel does the same for formula cells, and Kubernetes
+    operators resolve resource dependency order the same way.</p>
+  </div>
+  <div class="card">
+    <h4>Network partitions &amp; image segmentation</h4>
+    <p class="small">Union-find answers "did the cluster split?" as links fail — merge on every healthy link, count roots.
+    In vision, classic segmentation merges adjacent similar pixels with UF, growing regions in near-linear time. It is
+    also the engine inside Kruskal's MST (page 17).</p>
+  </div>
+  <div class="card">
+    <h4>Identity resolution &amp; fraud rings</h4>
+    <p class="small">Payment companies union accounts that share a card, device, or address; a fraud ring surfaces as one
+    suspiciously large root. This is Accounts Merge at production scale — see the capstone
+    (<a href="25-real-world-systems.html">page 25</a>) for the full pipeline.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/number-of-provinces/">Number of Provinces</a></span>
+    <span class="hint">Adjacency matrix in, component count out — union every connected pair, return the number of roots.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/course-schedule/">Course Schedule</a></span>
+    <span class="hint">"Can you finish all courses?" = "is the prerequisite graph a DAG?" — Kahn's, then check processed == n.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/course-schedule-ii/">Course Schedule II</a></span>
+    <span class="hint">Same Kahn's loop, but collect the poll order — that list IS the answer (empty if a cycle blocks it).</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/redundant-connection/">Redundant Connection</a></span>
+    <span class="hint">Feed edges to union-find in order; the first edge whose endpoints already share a root is the answer.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/accounts-merge/">Accounts Merge</a></span>
+    <span class="hint">Union account indices that share an email, then group emails by find(root) and sort each group.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/is-graph-bipartite/">Is Graph Bipartite?</a></span>
+    <span class="hint">BFS 2-coloring per component; fail on any same-color edge (an odd cycle).</span>
+  </div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <span class="t"><a href="https://leetcode.com/problems/alien-dictionary/">Alien Dictionary</a></span>
+    <span class="hint">Compare adjacent words to extract letter-order edges (first differing char), then topo-sort the letters; watch the "prefix after longer word" invalid case.</span>
+  </div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Number of Provinces (union-find)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given an n×n matrix where <code>isConnected[i][j] == 1</code> means cities i and j are directly connected, count the groups of (transitively) connected cities.</p>
+    <p><strong>Idea:</strong> this is "count connected components", and union-find counts them without any traversal:
+    start with n singleton sets, union every directly-connected pair, and the number of surviving roots is the answer.
+    The matrix's upper triangle is enough — it's symmetric.</p>
+    <p class="code-title">code/16-graphs-advanced/NumberOfProvinces.java</p>
+<pre class="code"><code>public static int findCircleNum(int[][] isConnected) {
+    int n = isConnected.length;
+    UnionFind uf = new UnionFind(n);         // n cities start as n separate provinces
+    for (int i = 0; i &lt; n; i++)
+        for (int j = i + 1; j &lt; n; j++)      // upper triangle only: matrix is symmetric
+            if (isConnected[i][j] == 1)
+                uf.union(i, j);              // direct link -&gt; same province; count-- inside
+    return uf.count;                         // survivors = number of disjoint sets
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n² · α(n)) — the n² is just reading the matrix; space O(n) for the parent/size arrays.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Course Schedule (Kahn's algorithm)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given <code>numCourses</code> and pairs <code>[a, b]</code> meaning "take b before a", can every course be finished?</p>
+    <p><strong>Idea:</strong> the courses form a directed graph; an answer exists iff that graph has no cycle. Run
+    Kahn's: repeatedly "take" any course whose prerequisites are all satisfied and release its dependents. If some
+    course is never taken, its indegree never reached zero — it waits on a cycle forever.</p>
+    <p class="code-title">code/16-graphs-advanced/CourseSchedule.java</p>
+<pre class="code"><code>public static boolean canFinish(int numCourses, int[][] prerequisites) {
+    // Step 1: adjacency list + indegree. Pair [a, b] means edge b -&gt; a (b unlocks a).
+    List&lt;List&lt;Integer&gt;&gt; adj = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; numCourses; i++) adj.add(new ArrayList&lt;&gt;());
+    int[] indegree = new int[numCourses];
+    for (int[] p : prerequisites) {
+        adj.get(p[1]).add(p[0]);       // b -&gt; a
+        indegree[p[0]]++;              // a has one more unmet prerequisite
+    }
+
+    // Step 2: every course with zero prerequisites is takeable right now.
+    Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+    for (int i = 0; i &lt; numCourses; i++)
+        if (indegree[i] == 0) queue.offer(i);
+
+    // Step 3: take a ready course; that satisfies one prereq of each dependent.
+    int taken = 0;
+    while (!queue.isEmpty()) {
+        int course = queue.poll();     // safe: all its prerequisites are done
+        taken++;
+        for (int next : adj.get(course))
+            if (--indegree[next] == 0) // that was next's LAST unmet prerequisite
+                queue.offer(next);     // now takeable
+    }
+
+    // Step 4: a never-taken course means its indegree never hit 0 -&gt; it sits on
+    // (or behind) a directed cycle, so no valid order exists.
+    return taken == numCourses;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(V+E) — each course enters the queue at most once and each edge is relaxed once; space O(V+E) for the adjacency list.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Redundant Connection (union-find cycle detection)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> a tree plus exactly one extra edge; return the edge (latest in input order) that can be removed to restore a tree.</p>
+    <p><strong>Idea:</strong> a tree on n nodes has exactly n−1 edges and no cycle. Feed edges into union-find in input
+    order: while endpoints are in different sets, the edge is tree-like — merge. The first edge whose endpoints
+    <em>already</em> share a root would close the cycle, and because it's the latest such edge encountered, it's exactly
+    the one to remove.</p>
+    <p class="code-title">code/16-graphs-advanced/RedundantConnection.java</p>
+<pre class="code"><code>public static int[] findRedundantConnection(int[][] edges) {
+    UnionFind uf = new UnionFind(edges.length + 1);  // nodes are labeled 1..n; index 0 unused
+    for (int[] e : edges) {
+        // union returns false when both endpoints already share a root —
+        // adding this edge would create the cycle, so it's the redundant one.
+        if (!uf.union(e[0], e[1])) return e;
+    }
+    return new int[0];                               // unreachable for valid input
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n · α(n)) ≈ O(n); space O(n). Compare: re-running DFS per edge would be O(n²) — this is the "incremental edges → union-find" cue in action.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Read the edge direction in Course Schedule.</strong> <code>[a, b]</code> means b comes first (edge b→a). Building the adjacency list backwards passes the easy tests and fails the rest — say the direction out loud before coding.</li>
+  <li><strong>Don't use a plain visited-set for directed cycle detection.</strong> A node can be safely revisited via a different path (a "diamond" A→B→D, A→C→D has no cycle). You need the gray/black distinction — or just use Kahn's count.</li>
+  <li><strong>Union roots, not the nodes themselves.</strong> <code>parent[b] = a</code> instead of <code>parent[find(b)] = find(a)</code> corrupts the structure. Always find first.</li>
+  <li><strong>Watch 1-indexed nodes.</strong> LeetCode graph problems often label nodes 1..n — size the parent array n+1 (as in Redundant Connection) or subtract 1 everywhere, consistently.</li>
+  <li><strong>Path compression alone is enough in interviews.</strong> If you blank on union by size, say so: "compression alone is near-O(log n) amortized; adding union by size gets α(n)". Honesty + the right vocabulary beats fumbling.</li>
+  <li><strong>Recursive DFS depth:</strong> 10⁵ nodes in a chain overflows the Java call stack. Mention the iterative alternative (or that Kahn's is iterative already) — interviewers at scale-focused companies listen for this.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="15-graphs-basics.html"><span class="dir">⟵ Prev</span><span class="name">15 · Graph Basics</span></a>
+  <a class="next" href="17-shortest-paths.html"><span class="dir">Next ⟶</span><span class="name">17 · Shortest Paths &amp; MST</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('ufAnim', {
+  totalSteps: 7,
+  intervalMs: 2600,
+  captions: [
+    'Start: parent[i] = i for all six nodes — six one-node trees, six roots. find(x) walks parent pointers to the root; union(a,b) links one root under the other.',
+    'union(0,1): both are roots, so simply attach 1 under 0. Arrows always point child → parent. Roots remaining: 5.',
+    'union(2,3): same move — 3 hangs under 2. Roots remaining: 4.',
+    'union(1,3): find(1) walks up to root 0; find(3) walks up to root 2. Different roots → link root 2 under root 0 (union by size keeps the tree shallow). Roots: 3.',
+    'union(4,5): an unrelated component forms on the right. Note we never touched nodes 0–3 — operations are local, no traversal. Roots: 2.',
+    'find(3) with path compression: the walk 3 → 2 → 0 re-points 3 straight at the root. The chain flattens, so every future find(3) is one hop. This is what makes UF near-O(1).',
+    'Finished: two flat trees = two components ({0,1,2,3} and {4,5}). Count components by counting nodes with parent[i] == i — no BFS needed. Amortized cost per op: O(α(n)) ≤ 4.'
+  ],
+  apply: function (svg, step) {
+    var arrows = { ea: step >= 1, eb: step >= 2 && step < 5, ec: step >= 3, ed: step >= 4, ee: step >= 5 };
+    for (var id in arrows) svg.querySelector('#' + id).style.opacity = arrows[id] ? 1 : 0;
+    var act = [[], [0, 1], [2, 3], [0, 2], [4, 5], [0, 2, 3], []][step];
+    var done = step === 6 ? [0, 1, 2, 3] : [];
+    var frontier = step === 6 ? [4, 5] : [];
+    for (var i = 0; i < 6; i++) {
+      var a = act.indexOf(i) >= 0, d = done.indexOf(i) >= 0, f = frontier.indexOf(i) >= 0;
+      Stepper.setClass(svg, '#ufn' + i, 'active', a);
+      Stepper.setClass(svg, '#ufn' + i, 'done', d);
+      Stepper.setClass(svg, '#ufn' + i, 'frontier', f);
+      Stepper.setClass(svg, '#ufl' + i, 'onfill', a || d || f);
+    }
+    Stepper.setText(svg, '#ufcount', 'roots: ' + [6, 5, 4, 3, 2, 2, 2][step]);
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>09 · Stacks &amp; Queues — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Stacks &amp; Queues: Order of Processing as a Tool</h1>
+<p class="subtitle">LIFO for nesting and "most recent", FIFO for arrival order — and the monotonic stack, a one-trick structure that mass-produces medium-problem solutions.</p>
+<p>
+  <span class="badge phase">Phase 3 · Week 5</span>
+  <span class="badge freq">Monotonic stack = medium-question factory</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Stacks and queues aren't really containers — they're <em>policies about what to process next</em>. LIFO says
+  "the most recent unfinished thing first" (that's nesting, matching, undo, the call stack itself). FIFO says
+  "in arrival order" (that's fairness, buffering, BFS). Interviews lean on them because picking the right
+  processing order <em>is</em> the solution to a huge family of problems — and because the monotonic stack, a
+  small twist on LIFO, single-handedly powers a shelf of classic mediums.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — the <code>ArrayDeque</code> row of the collections table.</li>
+  <li><a href="08-linked-lists.html">08 · Linked Lists</a> — deques are the linked structure idea with both ends exposed.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you recognize LIFO/FIFO shapes?</strong> "Most recent open thing must close first" should trigger "stack" before you consciously think about it.</li>
+  <li><strong>Java hygiene:</strong> do you reach for <code>ArrayDeque</code>, and can you say why <code>java.util.Stack</code> is the wrong choice?</li>
+  <li><strong>The monotonic-stack argument:</strong> can you explain why the nested while-loop is still O(n)? (Amortized analysis in one sentence.)</li>
+  <li><strong>Invariant thinking:</strong> can you state what your stack contains at all times ("indices of days still waiting for a warmer day, temperatures decreasing")?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 08 was about wiring linked nodes by hand. Here you consume the polished version: <code>ArrayDeque</code>
+  gives O(1) at both ends without any pointer surgery (ironically via a circular <em>array</em>, not links —
+  cache locality wins again). Conceptually this page is a bridge: the stack you use here becomes the call stack in
+  recursion (page 10), the queue becomes BFS's frontier (pages 11/15), and the monotonic deque closes a loose end
+  from sliding window (page 03).
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. One class to rule them both: <code>ArrayDeque</code></h3>
+<p class="lead">
+  In interview Java, every stack and every queue is an <code>ArrayDeque</code> — a resizable circular array with
+  O(1) amortized push/pop/offer/poll at both ends.
+</p>
+<pre class="code"><code>Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+stack.push(x);        // add at head          LIFO: last in...
+int top = stack.pop();    // remove from head  ...first out
+int peek = stack.peek();  // look, don't remove
+
+Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+queue.offer(x);       // add at tail          FIFO: arrival order
+int front = queue.poll(); // remove from head
+// Same class, opposite end pairs. A deque exposes all four operations at once.</code></pre>
+<div class="warn">
+  <strong>Never <code>java.util.Stack</code>.</strong> It's a 1995 legacy class that extends <code>Vector</code>:
+  every method is <code>synchronized</code> (pointless locking cost in single-threaded code), and being a
+  <code>Vector</code> it exposes <code>get(i)</code>/<code>insertElementAt</code> — so it isn't even a real stack
+  abstraction. The Javadoc itself tells you to use <code>ArrayDeque</code>. Saying this in one sentence when you
+  declare your stack is free senior signal. (Same story for <code>LinkedList</code>-as-queue: it works, but
+  <code>ArrayDeque</code> is the idiomatic, faster choice.)
+</div>
+
+<h3>2. Matching &amp; nesting: the native LIFO problem</h3>
+<p>
+  Anything with nested open/close structure — brackets, HTML tags, JSON braces, expression parentheses — obeys one
+  law: <strong>the most recently opened thing must close first</strong>. That law <em>is</em> a stack. Push openers;
+  each closer must match the top. Valid Parentheses (worked below) is the distilled version, and it generalizes to
+  real parsers: push context on open, pop and verify on close.
+</p>
+
+<h3>3. Min Stack: pay memory to remember history</h3>
+<p>
+  "Design a stack that also returns its minimum in O(1)." You can't keep a single <code>min</code> variable —
+  popping the minimum leaves you asking "what was the min <em>before</em> that?" The fix: a second stack that
+  records, for every element, the min <em>at the time it was pushed</em>. Push and pop move both stacks in
+  lock-step, so the auxiliary top is always the current answer, and history restores itself for free.
+</p>
+<pre class="code"><code>class MinStack {
+    private final Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+    private final Deque&lt;Integer&gt; mins  = new ArrayDeque&lt;&gt;();  // mins.peek() = min of everything below
+
+    public void push(int x) {
+        stack.push(x);
+        // push the min-so-far alongside; if mins is empty, x starts the record
+        mins.push(mins.isEmpty() ? x : Math.min(x, mins.peek()));
+    }
+    public void pop()    { stack.pop(); mins.pop(); }  // popping rewinds the min history automatically
+    public int  top()    { return stack.peek(); }
+    public int  getMin() { return mins.peek(); }       // O(1), always current
+}</code></pre>
+
+<h3>4. Expression evaluation: stacks as tiny interpreters</h3>
+<p>
+  Reverse Polish Notation (<code>"3 4 + 2 *"</code>) is what you get when you let a stack do the parsing: numbers
+  push, an operator pops two, computes, pushes the result. No parentheses, no precedence rules — the ordering
+  encodes them. This isn't a toy: the JVM is a stack machine, and <code>javac</code> compiles
+  <code>(3 + 4) * 2</code> into exactly the RPN push/pop sequence. Worked solution below.
+  The harder cousin — LC 224 Basic Calculator, with parentheses and unary minus — keeps a <em>sign stack</em>:
+  walk the string with a running result and current sign; on <code>(</code> push the current result and sign and
+  start fresh; on <code>)</code> pop them back and fold the inner result in. Same push-context/pop-context move
+  as bracket matching.
+</p>
+
+<h3>5. The monotonic stack — the medium-question factory</h3>
+<p>
+  Problem shape: <em>"for each element, find the next element to the right (or left) that is greater (or smaller)."</em>
+  Brute force rescans → O(n²). The monotonic stack answers all n queries in one pass: keep a stack of elements
+  <strong>still waiting for their answer</strong>, arranged so values strictly decrease from bottom to top. When a
+  new element arrives that is bigger than the top, it <em>is</em> the answer for the top — pop and record, repeat
+  while it keeps beating tops, then push the newcomer to wait its own turn.
+</p>
+<div class="tip">
+  <strong>Why O(n) despite the nested while-loop:</strong> count work per <em>element</em>, not per iteration.
+  Each index is pushed exactly once and popped at most once — so all the while-loop iterations across the entire
+  run total at most n pops. Two operations per element, O(n) overall. This amortized argument is half the points;
+  say it unprompted.
+</div>
+
+<div class="anim" id="monoAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Monotonic stack solving Daily Temperatures">
+    <text x="30" y="30" class="small">temps — for each day: how many days until a warmer one?</text>
+    <!-- temperature boxes: x = 30 + i*78, y=44 -->
+    <rect id="d0" class="box" x="30"  y="44" width="68" height="42" rx="8"></rect>
+    <rect id="d1" class="box" x="108" y="44" width="68" height="42" rx="8"></rect>
+    <rect id="d2" class="box" x="186" y="44" width="68" height="42" rx="8"></rect>
+    <rect id="d3" class="box" x="264" y="44" width="68" height="42" rx="8"></rect>
+    <rect id="d4" class="box" x="342" y="44" width="68" height="42" rx="8"></rect>
+    <rect id="d5" class="box" x="420" y="44" width="68" height="42" rx="8"></rect>
+    <text x="50"  y="71" class="lbl">73</text>
+    <text x="128" y="71" class="lbl">74</text>
+    <text x="206" y="71" class="lbl">71</text>
+    <text x="284" y="71" class="lbl">69</text>
+    <text x="362" y="71" class="lbl">72</text>
+    <text x="440" y="71" class="lbl">76</text>
+    <text x="58"  y="103" class="small">0</text>
+    <text x="136" y="103" class="small">1</text>
+    <text x="214" y="103" class="small">2</text>
+    <text x="292" y="103" class="small">3</text>
+    <text x="370" y="103" class="small">4</text>
+    <text x="448" y="103" class="small">5</text>
+    <!-- answer row -->
+    <text x="30" y="132" class="small">answer</text>
+    <text id="a0" class="lbl" x="56"  y="158" style="opacity:0">1</text>
+    <text id="a1" class="lbl" x="134" y="158" style="opacity:0">4</text>
+    <text id="a2" class="lbl" x="212" y="158" style="opacity:0">2</text>
+    <text id="a3" class="lbl" x="290" y="158" style="opacity:0">1</text>
+    <text id="a4" class="lbl" x="368" y="158" style="opacity:0">1</text>
+    <text id="a5" class="lbl" x="446" y="158" style="opacity:0">0</text>
+    <!-- stack: slots grow upward at the right; slot 0 = bottom -->
+    <text x="524" y="103" class="small">stack (indices, temps ↓ toward top)</text>
+    <rect id="s0" class="box" x="536" y="216" width="72" height="34" rx="7" style="opacity:0"></rect>
+    <rect id="s1" class="box" x="536" y="176" width="72" height="34" rx="7" style="opacity:0"></rect>
+    <rect id="s2" class="box" x="536" y="136" width="72" height="34" rx="7" style="opacity:0"></rect>
+    <text id="s0t" class="lbl" x="548" y="238" style="opacity:0"></text>
+    <text id="s1t" class="lbl" x="548" y="198" style="opacity:0"></text>
+    <text id="s2t" class="lbl" x="548" y="158" style="opacity:0"></text>
+    <line x1="530" y1="256" x2="614" y2="256" class="edge"></line>
+    <text x="536" y="276" class="small">bottom</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<p>
+  Variants you now get almost for free: <strong>Next Greater Element</strong> (the pure form), <strong>Daily
+  Temperatures</strong> (worked below), and <strong>Largest Rectangle in Histogram</strong> — an <em>increasing</em>
+  stack where each pop learns both its left and right smaller neighbors, giving the widest rectangle each bar can
+  anchor. And the <strong>monotonic deque</strong> from Sliding Window Maximum (page 03) is this same idea with
+  expiry: greater-elements pop from the back, out-of-window elements leave from the front.
+</p>
+
+<h3>6. Queue via two stacks: two reversals make a forward</h3>
+<p>
+  A classic warm-up with a real lesson in amortized analysis: push into an <code>in</code> stack; to poll, if the
+  <code>out</code> stack is empty, dump all of <code>in</code> into <code>out</code> (reversing order), then pop
+  <code>out</code>. Each element makes exactly one trip: pushed on <code>in</code>, moved once, popped from
+  <code>out</code> — so every operation is amortized O(1) even though a single poll can be O(n).
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template A — matching / nesting (push context, pop &amp; verify)</p>
+<pre class="code"><code>Deque&lt;Character&gt; stack = new ArrayDeque&lt;&gt;();
+for (char c : s.toCharArray()) {
+    if (isOpener(c))       stack.push(c);            // remember the newest unclosed context
+    else {                                           // c is a closer
+        if (stack.isEmpty()) return false;           // nothing to close
+        if (!matches(stack.pop(), c)) return false;  // must close the MOST RECENT opener
+    }
+}
+return stack.isEmpty();                              // no unclosed leftovers</code></pre>
+
+<p class="code-title">Template B — monotonic stack (next greater to the right)</p>
+<pre class="code"><code>// stack holds INDICES whose "next greater" is still unknown; values decrease bottom→top
+Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+for (int i = 0; i &lt; n; i++) {
+    while (!stack.isEmpty() &amp;&amp; a[i] &gt; a[stack.peek()]) {
+        int j = stack.pop();          // a[i] is the first element right of j that beats it
+        answer[j] = /* use i and j */; // e.g. i - j (distance) or a[i] (the value)
+    }
+    stack.push(i);                     // i now waits for its own next-greater
+}
+// still on the stack at the end ⇒ no next-greater exists (answer 0 / -1)
+// Flip the comparison to &lt; for next-SMALLER; scan right-to-left for "previous" variants.</code></pre>
+
+<p class="code-title">Template C — queue via two stacks (amortized O(1))</p>
+<pre class="code"><code>class MyQueue {
+    private final Deque&lt;Integer&gt; in  = new ArrayDeque&lt;&gt;();   // arrivals pile up here
+    private final Deque&lt;Integer&gt; out = new ArrayDeque&lt;&gt;();   // reversed once, served in FIFO order
+
+    public void push(int x) { in.push(x); }
+    public int  pop()  { shift(); return out.pop(); }
+    public int  peek() { shift(); return out.peek(); }
+    public boolean empty() { return in.isEmpty() &amp;&amp; out.isEmpty(); }
+
+    private void shift() {                 // only when out runs dry — each element moves ONCE ever
+        if (out.isEmpty())
+            while (!in.isEmpty()) out.push(in.pop());   // stack reversal restores arrival order
+    }
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+<p>Four "what comes out next?" policies — the whole choice is <em>ordered by what?</em></p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Structure</th><th>Next element out</th><th>Java class</th><th>Core ops</th><th>Reach for it when…</th></tr>
+  <tr><td>Stack (LIFO)</td><td>most <strong>recent</strong></td><td><code>ArrayDeque</code> (push/pop/peek)</td><td>O(1)</td><td>nesting, matching, undo, "waiting for the next X", DFS</td></tr>
+  <tr><td>Queue (FIFO)</td><td>earliest <strong>arrival</strong></td><td><code>ArrayDeque</code> (offer/poll)</td><td>O(1)</td><td>process in order, buffering, BFS level-by-level (pages 11/15)</td></tr>
+  <tr><td>Deque</td><td>either end</td><td><code>ArrayDeque</code> (both APIs)</td><td>O(1) both ends</td><td>sliding-window max (monotonic deque, page 03), work-stealing</td></tr>
+  <tr><td><code>PriorityQueue</code></td><td>highest <strong>priority</strong></td><td><code>PriorityQueue</code></td><td>O(log n) offer/poll</td><td>"smallest/largest next", top-K, scheduling (page 12)</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>"Valid/balanced brackets", "nested", "decode string", "simplify path" → <strong>stack</strong> (push context, pop on close).</li>
+  <li>"Next greater/smaller element", "days until warmer", "stock span", "histogram rectangle" → <strong>monotonic stack</strong>.</li>
+  <li>"Process in arrival order", "first come first served", level-by-level anything → <strong>queue</strong>.</li>
+  <li>"Max/min of each sliding window" → <strong>monotonic deque</strong> (page 03).</li>
+  <li>"Always take the smallest/largest available next" → not recency or arrival: <strong>heap</strong> (page 12).</li>
+  <li>"Most recent" + "also evict oldest by capacity" → deque or LRU structure (page 24).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>The call stack &amp; your stack traces</h4>
+    <p class="small">Every thread runs on a literal stack: a method call pushes a frame (locals + return address),
+    a return pops it. A Java stack trace is that stack printed top-down; <code>StackOverflowError</code> is its
+    capacity limit — why deep recursion dies (page 10). The JVM's bytecode engine is additionally an operand
+    <em>stack machine</em>: your RPN solution is a miniature of it.</p>
+  </div>
+  <div class="card">
+    <h4>Undo/redo &amp; browser history</h4>
+    <p class="small">Editors keep two stacks: undo pops the most recent operation and pushes it onto redo; a fresh
+    edit clears redo. Browser back/forward is the same pair of stacks over visited pages. "Most recent action
+    reversed first" is inherently LIFO — no other policy makes sense.</p>
+  </div>
+  <div class="card">
+    <h4>Parsers, compilers &amp; JSON validators</h4>
+    <p class="small">Every JSON parser, XML validator, and compiler front-end runs bracket-matching at industrial
+    scale: push on <code>{</code>/<code>(</code>/open-tag, pop and verify on close. Shunting-yard converts infix to
+    RPN with an operator stack; recursive-descent parsers use the call stack itself as the context stack.</p>
+  </div>
+  <div class="card">
+    <h4>Message queues &amp; backpressure buffers</h4>
+    <p class="small">Kafka partitions and SQS queues are giant durable FIFOs: producers append at the tail,
+    consumers advance from the head, preserving per-partition arrival order. In-process, bounded queues between
+    stages (thread-pool work queues, Netty/Reactor buffers) absorb bursts and create backpressure when full —
+    FIFO fairness plus flow control.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/valid-parentheses/">Valid Parentheses</a>
+    <span class="hint">Push openers; every closer must match the top. Empty stack at the end = valid.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/min-stack/">Min Stack</a>
+    <span class="hint">Second stack recording the min-at-push-time; pop both together and history rewinds itself.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/implement-queue-using-stacks/">Implement Queue using Stacks</a>
+    <span class="hint">in + out stacks; dump in→out only when out is empty — each element moves once, amortized O(1).</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/evaluate-reverse-polish-notation/">Evaluate Reverse Polish Notation</a>
+    <span class="hint">Numbers push; operators pop two (mind the order: second pop is the LEFT operand).</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/daily-temperatures/">Daily Temperatures</a>
+    <span class="hint">Monotonic decreasing stack of indices "still waiting"; a warmer day resolves them by popping.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/car-fleet/">Car Fleet</a>
+    <span class="hint">Sort by start position descending, compute arrival times; a car catches the fleet ahead if its time ≤ the fleet's — count with a stack of fleet arrival times.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/generate-parentheses/">Generate Parentheses</a>
+    <span class="hint">Bridge to page 10: build strings recursively, pruning whenever closers would outnumber openers.</span>
+  </div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <a class="t" href="https://leetcode.com/problems/largest-rectangle-in-histogram/">Largest Rectangle in Histogram</a>
+    <span class="hint">Hint: increasing monotonic stack — when a bar pops, the new top is its left smaller neighbor and the incoming bar its right one; width = the gap between them. Sentinel bar of height 0 at the end flushes the stack.</span>
+  </div>
+</div>
+
+<details class="sol">
+  <summary>★ Worked: Valid Parentheses (LC 20)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given a string of <code>()[]{}</code>, decide whether every bracket is
+    closed by the right type in the right order.</p>
+    <p><strong>Idea:</strong> nesting means the most recently opened bracket must close first — LIFO by definition.
+    Push each opener. Each closer must match the popped top; any mismatch, or a closer with nothing open, fails
+    immediately. At the end the stack must be empty, or some opener was never closed. Three failure modes, one
+    invariant: <em>the stack holds exactly the currently-unclosed openers, newest on top</em>.</p>
+<pre class="code"><code>public static boolean isValid(String s) {
+    Deque&lt;Character&gt; stack = new ArrayDeque&lt;&gt;();  // ArrayDeque, never java.util.Stack
+    for (char c : s.toCharArray()) {
+        if (c == '(' || c == '[' || c == '{') {
+            stack.push(c);                 // opener: remember it — it's now the most recent debt to repay
+        } else {
+            if (stack.isEmpty()) return false;      // a closer with nothing open — e.g. ")(" — invalid
+            char open = stack.pop();                // the most recent unclosed opener MUST match this closer
+            if (c == ')' &amp;&amp; open != '(') return false;   // mismatched pair like "(]"
+            if (c == ']' &amp;&amp; open != '[') return false;
+            if (c == '}' &amp;&amp; open != '{') return false;
+        }
+    }
+    return stack.isEmpty();                // leftovers like "((" mean unclosed openers — invalid
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — one pass, O(1) per char; space O(n) worst case (all openers).
+    Runnable version: <code>code/09-stacks-queues/ValidParentheses.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Evaluate Reverse Polish Notation (LC 150)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> evaluate tokens in postfix form, e.g. <code>["2","1","+","3","*"]</code>
+    = (2+1)·3 = 9.</p>
+    <p><strong>Idea:</strong> postfix order is exactly stack-evaluation order: a number waits on the stack until an
+    operator claims it; an operator always applies to the two most recent values. The only real trap is operand
+    order — the top of the stack is the <em>right</em> operand (it was pushed last), which matters for
+    <code>-</code> and <code>/</code>. Results are pushed back, becoming operands for later operators.</p>
+<pre class="code"><code>public static int evalRPN(String[] tokens) {
+    Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+    for (String t : tokens) {
+        switch (t) {
+            case "+": case "-": case "*": case "/": {
+                int b = stack.pop();       // top of stack = RIGHT operand (pushed most recently)
+                int a = stack.pop();       // next = LEFT operand — order matters for - and /
+                int r = switch (t) {
+                    case "+" -&gt; a + b;
+                    case "-" -&gt; a - b;     // a - b, NOT b - a: "3 4 -" means 3 - 4
+                    case "*" -&gt; a * b;
+                    default  -&gt; a / b;     // Java int division truncates toward zero, as LC 150 specifies
+                };
+                stack.push(r);             // the result becomes an operand for later operators
+                break;
+            }
+            default:
+                stack.push(Integer.parseInt(t));   // a number: park it until an operator claims it
+        }
+    }
+    return stack.pop();                    // a valid RPN expression leaves exactly one value
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — each token handled once; space O(n) for the operand stack.
+    Runnable version: <code>code/09-stacks-queues/EvalRPN.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Daily Temperatures (LC 739)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> for each day, how many days until a strictly warmer temperature
+    (0 if never)?</p>
+    <p><strong>Idea:</strong> walk left to right keeping a stack of indices of days <em>still waiting for a warmer
+    day</em> — their temperatures necessarily decrease toward the top (a warmer earlier day would already have
+    resolved anything cooler above it). When today is warmer than the day on top, today is that day's answer: pop
+    it, record the index distance, and keep popping while today keeps winning. Then today joins the wait. Each index
+    is pushed once and popped at most once, so the whole run is O(n).</p>
+<pre class="code"><code>public static int[] dailyTemperatures(int[] temps) {
+    int n = temps.length;
+    int[] answer = new int[n];             // defaults to 0 = "no warmer day ever comes"
+    Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();  // indices; temps strictly decrease bottom→top
+    for (int i = 0; i &lt; n; i++) {
+        // Today resolves every colder day still waiting on the stack
+        while (!stack.isEmpty() &amp;&amp; temps[i] &gt; temps[stack.peek()]) {
+            int j = stack.pop();           // day j finally sees a warmer day: today
+            answer[j] = i - j;             // the wait was exactly the index distance
+        }
+        stack.push(i);                     // today now waits for ITS next warmer day
+    }
+    return answer;                         // indices left on the stack keep answer 0 — correct by default
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) amortized — ≤ n pushes and ≤ n pops total; space O(n) for the stack
+    (worst case: strictly decreasing temperatures).
+    Runnable version: <code>code/09-stacks-queues/DailyTemperatures.java</code>.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Declare <code>Deque&lt;T&gt; s = new ArrayDeque&lt;&gt;()</code> and say the <code>java.util.Stack</code> sentence</strong> (legacy, synchronized, extends Vector). Two seconds, real signal.</li>
+  <li><strong>Know your API pairs:</strong> stack = <code>push/pop/peek</code>, queue = <code>offer/poll/peek</code>. Mixing <code>push</code> (head) with <code>poll</code> (head) on the same deque silently gives you LIFO when you wanted FIFO — a brutal quiet bug.</li>
+  <li><strong>Store <em>indices</em>, not values, in monotonic stacks.</strong> Indices give you distances and widths for free; you can always recover the value via <code>a[i]</code>, never the reverse.</li>
+  <li><strong>Strict vs non-strict comparison matters:</strong> "next greater" (<code>&gt;</code>) vs "next greater-or-equal" (<code>&gt;=</code>) changes how equal values chain. Decide from the problem statement and say which you chose.</li>
+  <li><strong><code>ArrayDeque</code> rejects <code>null</code></strong> (throws NPE) — it uses null internally as its empty marker. Also, <code>poll</code>/<code>peek</code> return null on empty while <code>pop</code>/<code>remove</code> throw; pick one style and guard accordingly.</li>
+  <li><strong>State the stack invariant before coding:</strong> "the stack holds indices of days still awaiting a warmer day, temperatures decreasing". If you can't finish that sentence, you don't have the solution yet — and saying it is precisely what interviewers grade.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="08-linked-lists.html"><span class="dir">⟵ Prev</span><span class="name">08 · Linked Lists</span></a>
+  <a class="next" href="10-recursion-backtracking.html"><span class="dir">Next ⟶</span><span class="name">10 · Recursion &amp; Backtracking</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('monoAnim', {
+  totalSteps: 8,
+  intervalMs: 1700,
+  captions: [
+    'temps = [73, 74, 71, 69, 72, 76]. For each day we want the wait until a strictly warmer day. The stack will hold indices of days still waiting, temperatures decreasing toward the top.',
+    'i=0 (73°): the stack is empty — nothing to resolve. Push index 0. It now waits for its warmer day.',
+    'i=1 (74°): 74 > 73, so today answers day 0 — pop it, answer[0] = 1 - 0 = 1. Nothing else to beat; push index 1.',
+    'i=2 (71°): 71 < 74 — it resolves nothing. Push index 2. Note the stack temps: 74, 71 — decreasing, as always.',
+    'i=3 (69°): colder again, push index 3. Stack: 74, 71, 69. Three days all waiting for warmth.',
+    'i=4 (72°): 72 > 69 → pop 3, answer[3] = 1. Then 72 > 71 → pop 2, answer[2] = 2. But 72 < 74 — stop. Push 4. One new day resolved two old ones.',
+    'i=5 (76°): 76 beats everything: pop 4 (answer[4] = 1), pop 1 (answer[1] = 4 — day 1 waited four days!). Push 5.',
+    'End of input. Index 5 never found a warmer day — its answer stays 0. Total work: 6 pushes, 5 pops — O(n), despite the loop inside a loop.'
+  ],
+  apply: function (svg, step) {
+    // stack contents (as "i:temp" strings, bottom → top) per step
+    var stacks = [
+      [],
+      ['0 · 73'],
+      ['1 · 74'],
+      ['1 · 74', '2 · 71'],
+      ['1 · 74', '2 · 71', '3 · 69'],
+      ['1 · 74', '4 · 72'],
+      ['5 · 76'],
+      ['5 · 76']
+    ];
+    var st = stacks[step];
+    for (var k = 0; k < 3; k++) {
+      var on = k < st.length;
+      svg.querySelector('#s' + k).style.opacity = on ? 1 : 0;
+      var t = svg.querySelector('#s' + k + 't');
+      t.style.opacity = on ? 1 : 0;
+      t.textContent = on ? st[k] : '';
+    }
+    // answers revealed: a0 at step2, a3+a2 at step5, a4+a1 at step6, a5 at step7
+    var ansStep = { a0: 2, a1: 6, a2: 5, a3: 5, a4: 6, a5: 7 };
+    for (var id in ansStep) {
+      svg.querySelector('#' + id).style.opacity = step >= ansStep[id] ? 1 : 0;
+    }
+    // day boxes: active = current i; done = answer recorded
+    var currIdx = step - 1;                 // step1→i=0 ... step6→i=5; step0/7 none
+    var doneAt = [2, 6, 5, 5, 6, 7];        // step at which each day's answer appears
+    for (var i = 0; i < 6; i++) {
+      Stepper.setClass(svg, '#d' + i, 'active', step >= 1 && step <= 6 && i === currIdx);
+      Stepper.setClass(svg, '#d' + i, 'done', step >= doneAt[i] && !(step >= 1 && step <= 6 && i === currIdx));
+    }
+  }
+});
+</script>
+
+</body>
+</html>

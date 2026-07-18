@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>07 · Binary Search — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Binary Search: Halving Your Way to O(log n)</h1>
+<p class="subtitle">One invariant-driven template, its boundary variants, and the "search on the answer" trick that quietly solves hard problems.</p>
+<p>
+  <span class="badge phase">Phase 2 · Week 4</span>
+  <span class="badge freq">Top-5 pattern — the "search on answer" trick unlocks hards</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Binary search is the purest expression of the interview's favorite move: <em>use structure to discard work</em>.
+  If the data (or the answer space) is ordered, one comparison eliminates half of everything remaining — a million
+  candidates collapse in ~20 steps. The catch: it's famously easy to get subtly wrong. Jon Bentley found that 90% of
+  professional programmers couldn't write a bug-free binary search, and even the JDK's own version shipped with an
+  overflow bug for nine years. This page gives you one template and one mental model that make it hard to get wrong.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — why halving means O(log n).</li>
+  <li><a href="06-sorting.html">06 · Sorting</a> — binary search's price of admission is sorted data (or a monotonic answer).</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you avoid the classic bugs?</strong> Infinite loops, off-by-one boundaries, and the <code>(lo+hi)/2</code> overflow are exactly what they watch for.</li>
+  <li><strong>Do you know the boundary variants?</strong> "Find the <em>first</em> occurrence" is a different template than "find any occurrence" — most candidates fumble it.</li>
+  <li><strong>Can you spot hidden binary search?</strong> Nothing in "minimum eating speed" says "sorted array". Recognizing a monotonic answer space is the senior-level signal.</li>
+  <li><strong>Can you state the invariant?</strong> Saying "everything left of <code>lo</code> is known-false, everything from <code>hi</code> on is known-true" proves you're reasoning, not pattern-matching.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 06 established what sortedness costs to obtain — O(n log n). This page is the payoff: once order exists,
+  membership queries drop from O(n) to O(log n), which is why you sort at all. And the deeper idea carries forward:
+  binary search doesn't actually need a sorted <em>array</em>, it needs a <em>monotonic predicate</em> — a
+  yes/no question whose answers look like <code>F F F F T T T</code>. That reframing powers half the problems below.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. The classic search, done safely</h3>
+<p class="lead">
+  Keep a range <code>[lo..hi]</code> that is guaranteed to contain the target if it exists. Probe the middle;
+  one comparison tells you which half to throw away. Repeat until the range is empty or you hit the target.
+</p>
+
+<div class="anim" id="bsAnim">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Binary search halving a sorted array">
+    <text x="40" y="34" class="lbl">target = 31</text>
+    <text x="40" y="58" class="small">sorted array, 8 elements — watch how many survive each comparison</text>
+    <!-- array boxes: index i at x = 40 + i*70 -->
+    <rect id="bx0" class="box" x="40"  y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx1" class="box" x="110" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx2" class="box" x="180" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx3" class="box" x="250" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx4" class="box" x="320" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx5" class="box" x="390" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx6" class="box" x="460" y="80" width="60" height="46" rx="8"></rect>
+    <rect id="bx7" class="box" x="530" y="80" width="60" height="46" rx="8"></rect>
+    <text x="61"  y="109" class="lbl">3</text>
+    <text x="131" y="109" class="lbl">7</text>
+    <text x="197" y="109" class="lbl">11</text>
+    <text x="267" y="109" class="lbl">15</text>
+    <text x="337" y="109" class="lbl">19</text>
+    <text x="407" y="109" class="lbl">24</text>
+    <text x="477" y="109" class="lbl">31</text>
+    <text x="547" y="109" class="lbl">42</text>
+    <!-- index row -->
+    <text x="66"  y="144" class="small">0</text>
+    <text x="136" y="144" class="small">1</text>
+    <text x="206" y="144" class="small">2</text>
+    <text x="276" y="144" class="small">3</text>
+    <text x="346" y="144" class="small">4</text>
+    <text x="416" y="144" class="small">5</text>
+    <text x="486" y="144" class="small">6</text>
+    <text x="556" y="144" class="small">7</text>
+    <!-- pointers (moved via translate from ORIGINAL positions) -->
+    <text id="loPtr" class="ptrlbl" x="58"  y="176">lo</text>
+    <text id="hiPtr" class="ptrlbl" x="552" y="176">hi</text>
+    <text id="midPtr" class="ptrlbl" x="262" y="204" style="opacity:0">mid</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<p class="code-title">The classic template — memorize this exact shape</p>
+<pre class="code"><code>// Returns the index of target, or -1. Works on any sorted int[].
+public static int binarySearch(int[] nums, int target) {
+    int lo = 0, hi = nums.length - 1;      // INVARIANT: if target exists, its index is in [lo..hi]
+    while (lo &lt;= hi) {                     // &lt;= because [lo..lo] is still a valid 1-element range
+        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint — see the warning below
+        if (nums[mid] == target) return mid;
+        if (nums[mid] &lt; target) lo = mid + 1;  // mid is too small: mid and everything left of it is out
+        else                    hi = mid - 1;  // mid is too big: mid and everything right of it is out
+    }
+    return -1;                             // range emptied — target isn't there
+}</code></pre>
+
+<div class="warn">
+  <strong>The overflow pitfall.</strong> The "obvious" midpoint <code>mid = (lo + hi) / 2</code> is a real bug:
+  for arrays near a billion elements, <code>lo + hi</code> can exceed <code>Integer.MAX_VALUE</code> and wrap
+  negative. This exact bug sat in the JDK's <code>Arrays.binarySearch</code> from 1997 until 2006. Always write
+  <code>mid = lo + (hi - lo) / 2</code> — the subtraction can't overflow because <code>hi ≥ lo</code>. Mentioning
+  this unprompted is an easy senior point.
+</div>
+
+<div class="tip">
+  <strong>No infinite loops, guaranteed.</strong> The loop always terminates because every branch strictly shrinks
+  the range: <code>lo = mid + 1</code> or <code>hi = mid - 1</code> — never bare <code>lo = mid</code>. If you ever
+  write <code>lo = mid</code> in a <code>lo &lt;= hi</code> loop, a 2-element range can compute <code>mid == lo</code>
+  and spin forever. When a variant genuinely needs to keep <code>mid</code> in play, switch to the boundary template
+  below, whose <code>lo &lt; hi</code> guard plus <code>hi = mid</code> is safe.
+</div>
+
+<h3>2. The mental model that unifies everything: a predicate over F...FT...T</h3>
+<p>
+  Here's the reframe that turns binary search from a memorized ritual into a tool you can adapt. Forget arrays for a
+  second. Imagine any yes/no question <code>P(x)</code> over an ordered range of candidates, with one property:
+  <strong>once it becomes true, it stays true</strong>:
+</p>
+<pre class="code"><code>candidates:  x0   x1   x2   x3   x4   x5   x6   x7
+P(x):         F    F    F    T    T    T    T    T
+                             ↑
+                             the boundary — binary search finds THIS</code></pre>
+<p>
+  Binary search is really a <em>boundary finder</em> for any such monotonic predicate. Every variant is just a
+  different choice of predicate:
+</p>
+<ul>
+  <li><strong>First position of <code>target</code></strong> → P(i) = "<code>nums[i] ≥ target</code>".</li>
+  <li><strong>Last position of <code>target</code></strong> → one left of the first i where "<code>nums[i] &gt; target</code>".</li>
+  <li><strong>First Bad Version</strong> → P(v) = "<code>isBadVersion(v)</code>" (no array anywhere!).</li>
+  <li><strong>Koko's eating speed</strong> → P(s) = "at speed s, she finishes in time" — slow speeds fail, fast speeds work.</li>
+</ul>
+
+<p class="code-title">The boundary template — "first index where the predicate is true"</p>
+<pre class="code"><code>// Returns the FIRST index where p(i) is true, or n if it's never true.
+// Requires: p is monotonic (false...false, true...true).
+public static int firstTrue(int n, java.util.function.IntPredicate p) {
+    int lo = 0, hi = n;                    // hi is EXCLUSIVE — "n" encodes "never true"
+    while (lo &lt; hi) {                      // INVARIANT: answer is always inside [lo..hi]
+        int mid = lo + (hi - lo) / 2;
+        if (p.test(mid)) hi = mid;         // mid is true: it might BE the first true — keep it
+        else             lo = mid + 1;     // mid is false: first true is strictly right of mid
+    }
+    return lo;                             // lo == hi: the range closed onto the boundary
+}</code></pre>
+<p>
+  Notice the two deliberate differences from the classic template: the loop guard is <code>lo &lt; hi</code>
+  (we stop when the range is a single point — the answer), and the true-branch keeps <code>mid</code> via
+  <code>hi = mid</code> rather than discarding it. This pair is safe together because <code>mid</code> is always
+  strictly less than <code>hi</code>, so the range still shrinks every iteration.
+</p>
+
+<h3>3. Rotated sorted arrays: order survives, mostly</h3>
+<p>
+  Take a sorted array and rotate it: <code>[4,5,6,7,0,1,2]</code>. Global order is broken, but a crucial local fact
+  survives: <strong>cut it anywhere, and at least one of the two halves is perfectly sorted</strong> (the rotation
+  point can only be in one of them). A sorted half is checkable in O(1) — compare its endpoints — so you can still
+  decide which half to discard, and O(log n) survives. The worked solution below shows the exact decision table.
+</p>
+
+<h3>4. Search on the ANSWER: when the input isn't sorted at all</h3>
+<p>
+  This is the trick that turns mediums and hards into templates. Many optimization problems have the shape
+  "find the <em>minimum</em> capacity / speed / size that satisfies a constraint". The inputs are unsorted — but the
+  <em>candidate answers</em> are monotonic: if capacity 10 works, capacity 11 certainly works. That's exactly a
+  <code>F F F T T T</code> predicate, so binary-search the answer range and write a <code>canDo(x)</code> checker:
+</p>
+<pre class="code"><code>// The "search on answer" recipe:
+// 1. Identify the answer range [lo..hi]  (e.g. speed 1 .. max pile size)
+// 2. Write boolean canDo(x) — usually a simple O(n) greedy check
+// 3. Confirm monotonicity: canDo(x) true ⇒ canDo(x+1) true
+// 4. firstTrue over [lo..hi]  →  total cost O(n log(range))</code></pre>
+<div class="note">
+  <strong>How to spot it.</strong> Trigger phrases: "minimum speed so that…", "least capacity to ship within D days",
+  "smallest divisor such that…", "minimize the maximum…". If checking a <em>given</em> answer is easy but finding the
+  <em>best</em> answer looks hard, you're almost certainly meant to binary-search the answer space.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+<p>Two templates cover every problem on this page. Know when each applies:</p>
+
+<p class="code-title">Template A — exact match (classic): find target's index or -1</p>
+<pre class="code"><code>int lo = 0, hi = n - 1;                    // inclusive range
+while (lo &lt;= hi) {                         // 1-element range still gets probed
+    int mid = lo + (hi - lo) / 2;
+    if (nums[mid] == target) return mid;   // can exit early
+    if (nums[mid] &lt; target) lo = mid + 1;  // both branches EXCLUDE mid
+    else                    hi = mid - 1;
+}
+return -1;</code></pre>
+
+<p class="code-title">Template B — boundary (first true): for duplicates, insert position, answer-space search</p>
+<pre class="code"><code>int lo = 0, hi = n;                        // hi EXCLUSIVE; n means "no true exists"
+while (lo &lt; hi) {                          // stop at a single point — no early exit
+    int mid = lo + (hi - lo) / 2;
+    if (predicate(mid)) hi = mid;          // true: keep mid as a candidate answer
+    else                lo = mid + 1;      // false: discard mid and all before it
+}
+return lo;                                 // the boundary (first true index)</code></pre>
+
+<div class="tip">
+  <strong>Which template?</strong> Ask: "do I need <em>any</em> match, or a <em>boundary</em>?" Unique elements +
+  "does it exist" → Template A. Duplicates, first/last occurrence, insert position, min-that-works → Template B.
+  When in doubt, Template B answers everything Template A does (search <code>firstTrue(nums[i] ≥ target)</code>,
+  then check the value) — many strong candidates use only B.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Approach</th><th>Cost per query</th><th>Requires</th><th>Reach for it when…</th></tr>
+  <tr><td>Linear scan</td><td>O(n)</td><td>nothing</td><td>one-off query on small/unsorted data; simplest correct thing</td></tr>
+  <tr><td>Binary search</td><td>O(log n)</td><td>sorted data (or monotonic predicate)</td><td>many queries on sorted data; or answer space is monotonic</td></tr>
+  <tr><td><code>HashMap</code>/<code>HashSet</code></td><td>O(1) average</td><td>O(n) extra space, exact-match only</td><td>pure membership/lookup, no order needed (page 01)</td></tr>
+  <tr><td><code>TreeMap</code></td><td>O(log n)</td><td>O(n) space, mutable</td><td>sorted data that also changes: <code>floorKey</code>/<code>ceilingKey</code> are binary search as a library (page 24)</td></tr>
+  <tr><td>Interpolation search</td><td>O(log log n) avg</td><td>sorted + uniformly distributed keys</td><td>mention-only: guesses position proportionally; degrades to O(n) on skewed data</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>Problem says <strong>"sorted array"</strong> → binary search is almost certainly the intended tool.</li>
+  <li>Problem asks for <strong>O(log n)</strong> explicitly → it's binary search (possibly twice, or on a rotated array).</li>
+  <li><strong>"Find first/last/leftmost/rightmost…"</strong> → Template B boundary search.</li>
+  <li><strong>"Minimum X such that condition holds"</strong> with an easy checker → search on the answer space.</li>
+  <li>Unsorted input, exact-match lookup, no order requirement → hash, not search (page 01).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>git bisect</h4>
+    <p class="small">Finding the commit that broke the build is exactly "first bad version": commits are ordered, and
+    once a bug is introduced it stays introduced — a monotonic predicate. <code>git bisect</code> binary-searches
+    history, so 4,096 commits take 12 test runs, not 4,096. Arguably the most-used debugging algorithm in industry.</p>
+  </div>
+  <div class="card">
+    <h4>Database indexes: B-tree node search</h4>
+    <p class="small">Every lookup in PostgreSQL or MySQL's InnoDB descends a B-tree; <em>inside each node</em>, the
+    engine binary-searches a sorted array of keys to pick the child page. Same story inside SSTable index blocks in
+    Cassandra/RocksDB. Your <code>WHERE id = ?</code> runs binary search several times per query.</p>
+  </div>
+  <div class="card">
+    <h4>Feature-flag &amp; release bisection</h4>
+    <p class="small">When a metric regresses after a rollout, platforms like Chrome's bisect-builds tooling
+    binary-search across build numbers to isolate the culprit build, and experiment platforms bisect config changes.
+    "Once broken, stays broken" monotonicity is what makes it valid.</p>
+  </div>
+  <div class="card">
+    <h4>Autoscaling &amp; capacity search</h4>
+    <p class="small">"Smallest instance count that keeps p99 under 200ms" is search-on-answer in production: capacity
+    is monotonic (more replicas never raises latency), the checker is a load test. Kubernetes VPA-style recommenders
+    and load-test harnesses walk this boundary just like Koko's bananas.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/binary-search/">Binary Search</a>
+    <span class="hint">Template A verbatim — build muscle memory for the guard and the overflow-safe mid.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/first-bad-version/">First Bad Version</a>
+    <span class="hint">Pure Template B with no array — the predicate is the API call itself. Minimize calls.</span>
+  </div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/search-insert-position/">Search Insert Position</a>
+    <span class="hint">The insert position IS the boundary: first index where nums[i] ≥ target. Template B returns it directly.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">Find First and Last Position of Element in Sorted Array</a>
+    <span class="hint">Run firstTrue twice: ≥ target gives the left edge, ≥ target+1 gives one past the right edge.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/search-in-rotated-sorted-array/">Search in Rotated Sorted Array</a>
+    <span class="hint">At every mid, one half is sorted — check its endpoints to decide where target can live.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/">Find Minimum in Rotated Sorted Array</a>
+    <span class="hint">Predicate "nums[i] ≤ nums[n-1]" is false before the rotation point, true after — boundary search.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/koko-eating-bananas/">Koko Eating Bananas</a>
+    <span class="hint">Search the answer (speed 1..max pile); the checker is a one-pass ceil-division sum.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/">Capacity To Ship Packages Within D Days</a>
+    <span class="hint">Same recipe as Koko: answer range [max weight .. total weight], greedy day-count checker.</span>
+  </div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <a class="t" href="https://leetcode.com/problems/median-of-two-sorted-arrays/">Median of Two Sorted Arrays</a>
+    <span class="hint">Hint only: binary-search the CUT position in the shorter array so left halves balance; check the four boundary values. O(log min(m,n)).</span>
+  </div>
+</div>
+
+<details class="sol">
+  <summary>★ Worked: Find First and Last Position of Element in Sorted Array (LC 34)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> in a sorted array with duplicates, return the first and last index of
+    <code>target</code>, or <code>[-1,-1]</code> — in O(log n).</p>
+    <p><strong>Idea:</strong> Template A can land on <em>any</em> duplicate, so it can't answer this. Instead find two
+    boundaries with Template B: the first index where <code>nums[i] ≥ target</code> is the left edge; the first index
+    where <code>nums[i] ≥ target+1</code> is one <em>past</em> the right edge. Two boundary searches, no scanning —
+    duplicates never hurt because we never walk along equal values.</p>
+<pre class="code"><code>public static int[] searchRange(int[] nums, int target) {
+    // First index whose value is &gt;= target  (first position of target, if present)
+    int first = lowerBound(nums, target);
+    // If we ran off the end, or the value there isn't target, target is absent
+    if (first == nums.length || nums[first] != target) return new int[]{-1, -1};
+    // First index whose value is &gt;= target+1 sits one past the LAST target
+    int last = lowerBound(nums, target + 1) - 1;
+    return new int[]{first, last};
+}
+
+// Classic "first index where predicate is true" template.
+// Predicate here: nums[i] &gt;= target. It's false,false,...,true,true — monotonic.
+static int lowerBound(int[] nums, int target) {
+    int lo = 0, hi = nums.length;          // hi is EXCLUSIVE: answer may be nums.length ("never true")
+    while (lo &lt; hi) {                      // stop when the range is empty: lo == hi is the answer
+        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint (never write (lo+hi)/2)
+        if (nums[mid] &gt;= target) {
+            hi = mid;                      // mid satisfies the predicate: it COULD be the first true — keep it in range
+        } else {
+            lo = mid + 1;                  // mid is false: the first true must be strictly to the right
+        }
+    }
+    return lo;                             // lo == hi == first index where nums[i] &gt;= target
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(log n) — two boundary searches; space O(1).
+    Runnable version: <code>code/07-binary-search/SearchRange.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Search in Rotated Sorted Array (LC 33)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> a sorted, distinct array was rotated at an unknown pivot
+    (<code>[4,5,6,7,0,1,2]</code>); find <code>target</code>'s index in O(log n).</p>
+    <p><strong>Idea:</strong> at any <code>mid</code>, the rotation point lies in only one half — so the <em>other</em>
+    half is perfectly sorted, and <code>nums[lo] ≤ nums[mid]</code> tells you which (using ≤ handles the 1-element
+    half). A sorted half's endpoints tell you in O(1) whether the target is inside it: if yes, search it; if no,
+    the target must be in the messy half. Either way, half the range is discarded per step.</p>
+<pre class="code"><code>public static int search(int[] nums, int target) {
+    int lo = 0, hi = nums.length - 1;      // inclusive range this time — we're hunting an exact index
+    while (lo &lt;= hi) {
+        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint
+        if (nums[mid] == target) return mid;
+
+        if (nums[lo] &lt;= nums[mid]) {
+            // Left half [lo..mid] is sorted (no rotation point inside it)
+            if (nums[lo] &lt;= target &amp;&amp; target &lt; nums[mid]) {
+                hi = mid - 1;              // target sits inside the sorted left half — search there
+            } else {
+                lo = mid + 1;              // otherwise it can only be in the (possibly rotated) right half
+            }
+        } else {
+            // Right half [mid..hi] is sorted
+            if (nums[mid] &lt; target &amp;&amp; target &lt;= nums[hi]) {
+                lo = mid + 1;              // target sits inside the sorted right half
+            } else {
+                hi = mid - 1;              // otherwise it's in the rotated left half
+            }
+        }
+    }
+    return -1;                             // range emptied without a hit — not present
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(log n), space O(1). (With duplicates — LC 81 — the
+    <code>nums[lo] == nums[mid]</code> case becomes ambiguous and worst case degrades to O(n).)
+    Runnable version: <code>code/07-binary-search/SearchRotated.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked: Koko Eating Bananas (LC 875)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given banana piles and <code>h</code> hours (one pile per hour max,
+    eating <code>k</code> bananas/hour), find the minimum speed <code>k</code> that finishes everything in time.</p>
+    <p><strong>Idea:</strong> nothing here is sorted — but the <em>answers</em> are monotonic: if speed 4 works,
+    every speed above 4 works. So the speeds form <code>F F F T T T</code> and we binary-search for the first true.
+    The checker is a one-pass simulation: hours for a pile of <code>p</code> at speed <code>s</code> is
+    <code>ceil(p/s)</code>. Answer range: 1 to the largest pile (faster than that changes nothing).</p>
+<pre class="code"><code>public static int minEatingSpeed(int[] piles, int h) {
+    int lo = 1, hi = 0;                    // candidate speeds: 1 .. max(pile)
+    for (int p : piles) hi = Math.max(hi, p);  // eating faster than the biggest pile is pointless
+    while (lo &lt; hi) {                      // "first true" template: shrink to a single candidate
+        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint speed to test
+        if (canFinish(piles, mid, h)) {
+            hi = mid;                      // mid works — the minimum is mid or something slower
+        } else {
+            lo = mid + 1;                  // mid too slow — minimum must be faster
+        }
+    }
+    return lo;                             // lo == hi == slowest speed that still finishes in h hours
+}
+
+// The predicate: can Koko finish every pile within h hours at this speed?
+static boolean canFinish(int[] piles, int speed, int h) {
+    long hours = 0;                        // long: up to 10^4 piles * 10^9 bananas — int would overflow
+    for (int p : piles) {
+        hours += (p + (long) speed - 1) / speed;   // ceil(p / speed) without floating point
+    }
+    return hours &lt;= h;                     // monotonic: a faster speed never needs MORE hours
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n · log(max pile)) — each of ~30 probes runs an O(n) check; space O(1).
+    Runnable version: <code>code/07-binary-search/KokoBananas.java</code>.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Never write <code>(lo + hi) / 2</code>.</strong> Use <code>lo + (hi - lo) / 2</code> and say why (int overflow — the nine-year JDK bug). One sentence, instant credibility.</li>
+  <li><strong>Match the guard to the moves.</strong> Template A: <code>lo &lt;= hi</code> with <code>mid ± 1</code> moves. Template B: <code>lo &lt; hi</code> with <code>hi = mid</code>. Mixing them (e.g. <code>lo &lt;= hi</code> with <code>hi = mid</code>) is the #1 infinite-loop recipe.</li>
+  <li><strong>Test the tiny cases by hand:</strong> empty array, one element, two elements, target absent, target at each end. Nearly every binary-search bug shows up on n ≤ 2 — trace before declaring done.</li>
+  <li><strong>Duplicates change the problem.</strong> "Find target" is Template A; "find <em>first</em>/<em>last</em> target" needs Template B. Say which variant you're using and why.</li>
+  <li><strong>Know the JDK quirk:</strong> <code>Arrays.binarySearch</code> returns <code>-(insertionPoint) - 1</code> for misses and an <em>arbitrary</em> matching index for duplicates — fine in application code, but interviewers want the hand-rolled version.</li>
+  <li><strong>Say the invariant out loud.</strong> "Everything before <code>lo</code> is known too small; everything after <code>hi</code> is known too big." If every branch of your code preserves that sentence, the code is correct — and the interviewer hears you <em>prove</em> it, not guess it.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="06-sorting.html"><span class="dir">⟵ Prev</span><span class="name">06 · Sorting</span></a>
+  <a class="next" href="08-linked-lists.html"><span class="dir">Next ⟶</span><span class="name">08 · Linked Lists</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('bsAnim', {
+  totalSteps: 7,
+  captions: [
+    'Setup: a sorted array of 8 values, target 31. The invariant range [lo..hi] starts as the whole array — if 31 exists, it lives in here.',
+    'Probe the middle: mid = 0 + (7-0)/2 = 3. Compare nums[3] = 15 against the target 31.',
+    '15 < 31, and the array is sorted — so indices 0..3 are ALL too small. Discard half the array with one comparison; lo jumps to 4.',
+    'New range [4..7]. Probe its middle: mid = 4 + (7-4)/2 = 5. Compare nums[5] = 24 with 31.',
+    '24 < 31 again — indices 4..5 are out too. lo jumps to 6. Two comparisons in, six of eight candidates already eliminated.',
+    'Range [6..7], mid = 6. Compare nums[6] = 31 with the target…',
+    'Found at index 6 — three comparisons for 8 elements (log₂ 8 = 3). A million elements would take ~20. That is the entire pitch for keeping data sorted.'
+  ],
+  apply: function (svg, step) {
+    // lo pointer position by step (array index it sits under); hi never moves in this run
+    var loIdx = step >= 4 ? 6 : (step >= 2 ? 4 : 0);
+    Stepper.movePtr(svg, '#loPtr', loIdx * 70, 0);
+    Stepper.movePtr(svg, '#hiPtr', 0, 0);
+    // mid marker: visible on probe/compare steps, at the current mid index
+    var midIdx = (step >= 5) ? 6 : (step >= 3 ? 5 : 3);
+    var midOn = step >= 1;
+    svg.querySelector('#midPtr').style.opacity = midOn ? 1 : 0;
+    Stepper.movePtr(svg, '#midPtr', (midIdx - 3) * 70, 0);
+    for (var i = 0; i < 8; i++) {
+      var dim = (step >= 2 && i <= 3) || (step >= 4 && i <= 5);
+      var active = (step === 1 || step === 2) && i === 3 ||
+                   (step === 3 || step === 4) && i === 5 ||
+                   step === 5 && i === 6;
+      var done = step === 6 && i === 6;
+      Stepper.setClass(svg, '#bx' + i, 'dim', dim && !done);
+      Stepper.setClass(svg, '#bx' + i, 'active', active && !dim);
+      Stepper.setClass(svg, '#bx' + i, 'done', done);
+    }
+  }
+});
+</script>
+
+</body>
+</html>

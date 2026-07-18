@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05 · Matrix &amp; 2D Simulation — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Matrix &amp; 2D Simulation: Grids Without Tears</h1>
+<p class="subtitle">Row/column discipline, boundary walks, layer-by-layer thinking, and the in-place encoding tricks that turn "simulate this grid" questions into routine wins.</p>
+<p>
+  <span class="badge phase">Phase 1 · Weeks 2–3</span>
+  <span class="badge freq">Simulation staple at big tech — tests carefulness, not cleverness</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Matrix problems rarely need a clever algorithm — spiral traversal is "just a loop", rotation is "just swaps". What
+  they test is whether you can manage <em>two indices, four boundaries, and mutation-while-reading</em> without a
+  single off-by-one. That's why big-tech interviews love them: they simulate real engineering, where the hard part is
+  not the idea but executing it cleanly. A handful of disciplines — fixed index names, boundary variables, layer
+  thinking, and in-place state encoding — turn this whole category from fiddly to formulaic. They're also your warm-up
+  for grid <em>graph</em> problems (islands, shortest paths) coming on <a href="15-graphs-basics.html">page 15</a>.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — cost model; a full grid scan is O(m·n), and that's usually the floor.</li>
+  <li><a href="02-two-pointers.html">02 · Two Pointers</a> — reversing a row in place is the converging-pointer swap you already know.</li>
+  <li><a href="04-prefix-sum.html">04 · Prefix Sum</a> — the 2D prefix table mentioned there is a matrix precompute pattern.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Index discipline under pressure.</strong> Do you confuse <code>matrix[r][c]</code> with <code>matrix[c][r]</code> when the grid isn't square? (Everyone does, once. They're watching for it.)</li>
+  <li><strong>Edge cases:</strong> single row, single column, 1×1, non-square — spiral and rotation bugs live exactly there.</li>
+  <li><strong>Can you avoid the extra O(m·n) copy?</strong> The follow-up is almost always "now do it in place".</li>
+  <li><strong>Mutation-while-reading awareness:</strong> do you notice that overwriting cells you still need to read corrupts the simulation — and can you design an encoding that dodges it?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Prefix sums (page 04) taught you to precompute along one axis; a matrix is just two axes, and several tricks here
+  (2D prefix tables, transpose-then-reverse) are that same idea applied twice. More importantly, pages 01–04 were about
+  <em>finding</em> answers in data — this page is about <em>transforming</em> data correctly, which is its own skill
+  and the one that simulation questions grade.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Index discipline: rows first, and never say x,y</h3>
+<p class="lead">
+  In Java, <code>int[][] m</code> is an array of rows: <code>m[r][c]</code> means row <code>r</code>, column
+  <code>c</code>. <code>m.length</code> is the number of rows; <code>m[0].length</code> the number of columns.
+  Commit to the names <code>r</code> and <code>c</code> and banish <code>x</code>/<code>y</code> — screen coordinates
+  put x horizontal, which is <em>backwards</em> from row-major indexing, and that mismatch is the source of half of
+  all grid bugs.
+</p>
+<div class="tip">
+  <strong>Test with a non-square grid.</strong> On a 3×3, swapping <code>r</code> and <code>c</code> still runs and
+  may even pass. On a 2×4 it throws <code>ArrayIndexOutOfBoundsException</code> immediately. Always trace your code
+  on a rectangle, never a square — it's a free bug detector.
+</div>
+
+<h3>2. Boundary walks and layer-by-layer thinking</h3>
+<p>
+  Problems that travel the edge of the grid (spiral order, rotating a ring, border cells) become easy when you stop
+  tracking "where am I heading?" and instead track <strong>four boundary variables</strong> —
+  <code>top, bottom, left, right</code> — that fence the unvisited region. Each pass walks one fence, then moves that
+  fence inward. The traversal is over when the fences cross (<code>top &gt; bottom</code> or
+  <code>left &gt; right</code>). The grid becomes an onion: process a layer, peel it, repeat on the smaller rectangle.
+</p>
+
+<div class="anim" id="spiralAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Spiral traversal of a 4 by 4 grid with shrinking boundaries">
+    <text class="small" x="24" y="60">boundaries</text>
+    <text id="bounds" class="lbl" x="24" y="86" style="font-size:13px">t=0 b=3 l=0 r=3</text>
+    <text class="small" x="24" y="130">order shown</text>
+    <text class="small" x="24" y="148">inside cells</text>
+
+    <rect id="ring0" x="196" y="16" width="248" height="248" rx="12" class="edge" style="stroke-dasharray:6 5"></rect>
+    <rect id="ring1" x="257" y="77" width="122" height="122" rx="10" class="edge" style="stroke-dasharray:6 5"></rect>
+
+    <rect id="c0" class="box" x="200" y="20" width="56" height="56" rx="8"></rect>
+    <rect id="c1" class="box" x="260" y="20" width="56" height="56" rx="8"></rect>
+    <rect id="c2" class="box" x="320" y="20" width="56" height="56" rx="8"></rect>
+    <rect id="c3" class="box" x="380" y="20" width="56" height="56" rx="8"></rect>
+    <rect id="c4" class="box" x="200" y="80" width="56" height="56" rx="8"></rect>
+    <rect id="c5" class="box" x="260" y="80" width="56" height="56" rx="8"></rect>
+    <rect id="c6" class="box" x="320" y="80" width="56" height="56" rx="8"></rect>
+    <rect id="c7" class="box" x="380" y="80" width="56" height="56" rx="8"></rect>
+    <rect id="c8" class="box" x="200" y="140" width="56" height="56" rx="8"></rect>
+    <rect id="c9" class="box" x="260" y="140" width="56" height="56" rx="8"></rect>
+    <rect id="c10" class="box" x="320" y="140" width="56" height="56" rx="8"></rect>
+    <rect id="c11" class="box" x="380" y="140" width="56" height="56" rx="8"></rect>
+    <rect id="c12" class="box" x="200" y="200" width="56" height="56" rx="8"></rect>
+    <rect id="c13" class="box" x="260" y="200" width="56" height="56" rx="8"></rect>
+    <rect id="c14" class="box" x="320" y="200" width="56" height="56" rx="8"></rect>
+    <rect id="c15" class="box" x="380" y="200" width="56" height="56" rx="8"></rect>
+
+    <text id="n0" class="lbl" x="228" y="54" text-anchor="middle">1</text>
+    <text id="n1" class="lbl" x="288" y="54" text-anchor="middle">2</text>
+    <text id="n2" class="lbl" x="348" y="54" text-anchor="middle">3</text>
+    <text id="n3" class="lbl" x="408" y="54" text-anchor="middle">4</text>
+    <text id="n4" class="lbl" x="228" y="114" text-anchor="middle">12</text>
+    <text id="n5" class="lbl" x="288" y="114" text-anchor="middle">13</text>
+    <text id="n6" class="lbl" x="348" y="114" text-anchor="middle">14</text>
+    <text id="n7" class="lbl" x="408" y="114" text-anchor="middle">5</text>
+    <text id="n8" class="lbl" x="228" y="174" text-anchor="middle">11</text>
+    <text id="n9" class="lbl" x="288" y="174" text-anchor="middle">16</text>
+    <text id="n10" class="lbl" x="348" y="174" text-anchor="middle">15</text>
+    <text id="n11" class="lbl" x="408" y="174" text-anchor="middle">6</text>
+    <text id="n12" class="lbl" x="228" y="234" text-anchor="middle">10</text>
+    <text id="n13" class="lbl" x="288" y="234" text-anchor="middle">9</text>
+    <text id="n14" class="lbl" x="348" y="234" text-anchor="middle">8</text>
+    <text id="n15" class="lbl" x="408" y="234" text-anchor="middle">7</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. Rotation = transpose + reverse</h3>
+<p>
+  Rotating an n×n matrix 90° clockwise looks like it needs careful four-way cycles. There's a two-step identity that's
+  far harder to get wrong: <strong>transpose</strong> (mirror across the main diagonal — rows become columns), then
+  <strong>reverse each row</strong> (flip left/right). Two operations you can each verify independently in seconds,
+  composing into the rotation. Counter-clockwise? Transpose, then reverse each <em>column</em>. This
+  "decompose into two trivially-checkable transforms" move is worth remembering beyond matrices.
+</p>
+
+<h3>4. In-place state encoding: mutating without destroying your input</h3>
+<p>
+  The hardest matrix questions mutate the grid <em>while still needing to read the old values</em>. Two standard
+  escapes, both worth saying out loud in an interview:
+</p>
+<ul>
+  <li><strong>Encode old + new in one cell.</strong> Game of Life stores two bits per cell: bit 0 = current state,
+    bit 1 = next state. First pass computes bit 1 everywhere while every neighbor read masks with
+    <code>&amp; 1</code> to see only the <em>old</em> state; second pass shifts everything right. No copy, no
+    corruption.</li>
+  <li><strong>Reuse a slice of the matrix as your scratch space.</strong> Set Matrix Zeroes uses row 0 and column 0
+    as flag storage for "this row/column must be zeroed" — after first saving whether those headers themselves
+    contained a zero. O(1) extra space, and it's the follow-up the interviewer is fishing for.</li>
+</ul>
+<div class="note">
+  <strong>Why interviewers care about O(1) space here.</strong> Cloning the grid is always the easy out — one line,
+  O(m·n) memory. The in-place versions prove you can reason about <em>read-after-write hazards</em>, the same class of
+  bug behind concurrent-update production incidents. Offer the copy solution first for correctness, then volunteer
+  the in-place refinement.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — the shape of every grid scan (plus the neighbor loop you'll reuse for years)</p>
+<pre class="code"><code>int rows = m.length, cols = m[0].length;      // name these ONCE, reuse everywhere
+for (int r = 0; r &lt; rows; r++) {
+    for (int c = 0; c &lt; cols; c++) {
+        // visit m[r][c]
+    }
+}
+
+// 4-directional neighbors: pair the deltas, then bounds-check BEFORE touching
+int[][] DIRS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};   // up, down, left, right
+for (int[] d : DIRS) {
+    int nr = r + d[0], nc = c + d[1];
+    if (nr &lt; 0 || nr &gt;= rows || nc &lt; 0 || nc &gt;= cols) continue;  // off the board
+    // visit m[nr][nc]
+}</code></pre>
+
+<p class="code-title">Template 2 — four shrinking boundaries (spiral, ring-by-ring processing)</p>
+<pre class="code"><code>int top = 0, bottom = rows - 1, left = 0, right = cols - 1;
+while (top &lt;= bottom &amp;&amp; left &lt;= right) {   // fences haven't crossed = cells remain
+    for (int c = left; c &lt;= right; c++)  visit(top, c);      // walk top fence →
+    top++;                                                   // retire that row
+    for (int r = top; r &lt;= bottom; r++)  visit(r, right);    // walk right fence ↓
+    right--;
+    if (top &lt;= bottom) {                 // guard: a single leftover ROW would be re-walked
+        for (int c = right; c &gt;= left; c--) visit(bottom, c); // bottom fence ←
+        bottom--;
+    }
+    if (left &lt;= right) {                 // guard: same for a single leftover COLUMN
+        for (int r = bottom; r &gt;= top; r--) visit(r, left);   // left fence ↑
+        left++;
+    }
+}</code></pre>
+
+<p class="code-title">Template 3 — transpose and row-reverse building blocks (n×n)</p>
+<pre class="code"><code>// transpose: swap across the main diagonal — upper triangle only, or you undo yourself
+for (int r = 0; r &lt; n; r++)
+    for (int c = r + 1; c &lt; n; c++) {
+        int t = m[r][c]; m[r][c] = m[c][r]; m[c][r] = t;
+    }
+
+// reverse one row: the converging two-pointer swap from page 02
+for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
+    int t = row[i]; row[i] = row[j]; row[j] = t;
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Situation</th><th>Approach</th><th>Space</th><th>Notes</th></tr>
+  <tr><td>Result shape ≠ input shape (transpose of m×n, spiral output list)</td><td>build a new structure</td><td>O(m·n)</td><td>in-place is impossible or pointless — don't force it</td></tr>
+  <tr><td>Same-shape transform, correctness first</td><td>copy the grid, write into the copy</td><td>O(m·n)</td><td>the honest first answer; zero read-after-write risk</td></tr>
+  <tr><td>Same-shape transform, follow-up</td><td>in-place: bit-encode old+new, or borrow row 0 / col 0 as flags</td><td>O(1)</td><td>state clearly which values are "old" vs "new" at every read</td></tr>
+  <tr><td>Walk the border / process rings</td><td>four boundary variables</td><td>O(1)</td><td>loop while <code>top ≤ bottom &amp;&amp; left ≤ right</code>; guard the last row/column</td></tr>
+  <tr><td>Rotate n×n by 90°</td><td>transpose + reverse rows</td><td>O(1)</td><td>two independently-verifiable steps beat one clever four-way cycle</td></tr>
+  <tr><td>Many rectangle-sum queries</td><td>2D prefix table (<a href="04-prefix-sum.html">04</a>)</td><td>O(m·n)</td><td>precompute once, O(1) per query via inclusion–exclusion</td></tr>
+  <tr><td>Connectivity / shortest path on a grid</td><td>treat cells as graph nodes → DFS/BFS</td><td>—</td><td>that's <a href="15-graphs-basics.html">page 15</a>, not simulation</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>"Rotate / transpose / reflect" → think <strong>transform decomposition</strong>, not cell-by-cell navigation.</li>
+  <li>"Spiral", "border", "layer", "ring" → <strong>four boundaries</strong>, shrinking inward.</li>
+  <li>"Update every cell simultaneously" (Game of Life wording) → <strong>read-after-write hazard</strong>: copy or encode.</li>
+  <li>"Do it without extra space" → look for <strong>spare bits</strong> in the values or a <strong>sacrificial row/column</strong> for flags.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Image processing pipelines</h4>
+    <p class="small">A photo is a matrix of pixels. The rotate button in your camera app is transpose+reverse over
+    pixel blocks; convolution filters (blur, sharpen, the kernels inside CNNs) are the neighbor-loop template run
+    over every cell. Libraries like OpenCV are, at their core, extremely optimized versions of this page.</p>
+  </div>
+  <div class="card">
+    <h4>Spreadsheet engines</h4>
+    <p class="small">Excel and Google Sheets model the sheet as a sparse 2D grid with row/column indexing, and
+    operations like "delete column C" or transpose-paste are boundary-disciplined matrix transforms. Their
+    recalculation engines must also solve read-after-write ordering — the same hazard as Game of Life, solved with
+    dependency ordering instead of bit tricks.</p>
+  </div>
+  <div class="card">
+    <h4>Game boards &amp; cellular automata</h4>
+    <p class="small">Chess engines, Go engines, and falling-sand games all keep board state in matrices; move
+    generation is neighbor loops with bounds checks. Conway's Game of Life itself powers procedural map generation
+    (cave generation in roguelikes runs a few Life-like smoothing passes over a random grid).</p>
+  </div>
+  <div class="card">
+    <h4>GPU tiling &amp; matrix math</h4>
+    <p class="small">GPUs execute matrix multiplies (graphics, ML) by cutting matrices into tiles that fit fast
+    on-chip memory — layer-by-layer thinking industrialized. Transposes are real, costed operations scheduled to make
+    memory access sequential; knowing "row-major means walking a column is a cache miss per step" is exactly the
+    locality intuition this page builds.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/transpose-matrix/">Transpose Matrix</a>
+    <span class="hint">m×n, so you must build a new n×m — note why in-place only works when square.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/spiral-matrix/">Spiral Matrix</a>
+    <span class="hint">Four boundaries, four walks, two guards for the leftover row/column. Worked below. ★</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/rotate-image/">Rotate Image</a>
+    <span class="hint">Transpose, then reverse each row — two verifiable steps, O(1) space. Worked below. ★</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/set-matrix-zeroes/">Set Matrix Zeroes</a>
+    <span class="hint">Borrow row 0 and column 0 as flag storage; save their own status first. Worked below. ★</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/game-of-life/">Game of Life</a>
+    <span class="hint">Two bits per cell: bit 0 = current, bit 1 = next; neighbors read with <code>&amp; 1</code>, final pass shifts right.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/valid-sudoku/">Valid Sudoku</a>
+    <span class="hint">One pass, three seen-sets per unit; the box index is <code>(r/3)*3 + c/3</code> — pure index discipline plus page-01 hashing.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution — Spiral Matrix (LC 54)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> return all elements of an m×n matrix in clockwise spiral order.</p>
+    <p><strong>Idea:</strong> keep four fences around the unvisited rectangle. Walk top→, right↓, bottom←, left↑;
+    after each walk, pull that fence inward. The two <code>if</code> guards are the whole difficulty: when the
+    remaining region collapses to a single row (or column), the bottom (or left) walk would re-visit cells the top
+    (or right) walk just consumed — so re-check the fence before walking it.</p>
+<p class="code-title">SpiralMatrix.java</p>
+<pre class="code"><code>public static List&lt;Integer&gt; spiralOrder(int[][] matrix) {
+    List&lt;Integer&gt; out = new ArrayList&lt;&gt;();
+    // The unvisited region is always the rectangle [top..bottom] x [left..right].
+    int top = 0, bottom = matrix.length - 1;
+    int left = 0, right = matrix[0].length - 1;
+
+    while (top &lt;= bottom &amp;&amp; left &lt;= right) {
+        // 1) walk the top row left -&gt; right, then retire that row
+        for (int c = left; c &lt;= right; c++) out.add(matrix[top][c]);
+        top++;
+        // 2) walk the right column top -&gt; bottom, then retire that column
+        for (int r = top; r &lt;= bottom; r++) out.add(matrix[r][right]);
+        right--;
+        // 3) bottom row right -&gt; left — but only if a row remains
+        //    (guards against double-walking a single leftover row)
+        if (top &lt;= bottom) {
+            for (int c = right; c &gt;= left; c--) out.add(matrix[bottom][c]);
+            bottom--;
+        }
+        // 4) left column bottom -&gt; top — only if a column remains
+        if (left &lt;= right) {
+            for (int r = bottom; r &gt;= top; r--) out.add(matrix[r][left]);
+            left++;
+        }
+    }
+    return out;
+}</code></pre>
+    <p><strong>Complexity:</strong> O(m·n) time — each cell visited exactly once — and O(1) extra space beyond the
+    output list.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Rotate Image (LC 48)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> rotate an n×n matrix 90° clockwise, in place.</p>
+    <p><strong>Idea:</strong> decompose the rotation into transpose (mirror across the main diagonal) followed by
+    reversing each row. Trace one cell to convince yourself: <code>(r, c) → (c, r)</code> by the transpose, then
+    reversing row <code>c</code> sends it to <code>(c, n−1−r)</code> — exactly where a clockwise rotation puts it.
+    The only subtlety is transposing over the <em>upper triangle only</em>; swapping every pair twice would silently
+    restore the original.</p>
+<p class="code-title">RotateImage.java</p>
+<pre class="code"><code>public static void rotate(int[][] m) {
+    int n = m.length;
+    // Step 1: transpose — mirror across the main diagonal (swap m[r][c] with m[c][r]).
+    // Only touch the upper triangle (c &gt; r) or every pair would swap twice (a no-op).
+    for (int r = 0; r &lt; n; r++) {
+        for (int c = r + 1; c &lt; n; c++) {
+            int tmp = m[r][c];
+            m[r][c] = m[c][r];
+            m[c][r] = tmp;
+        }
+    }
+    // Step 2: reverse each row — the transpose turned rows into columns;
+    // flipping left/right then lands every cell at its rotated position.
+    for (int[] row : m) {
+        for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
+            int tmp = row[i];
+            row[i] = row[j];
+            row[j] = tmp;
+        }
+    }
+}</code></pre>
+    <p><strong>Complexity:</strong> O(n²) time (every cell moved a constant number of times), O(1) extra space.
+    Mention in the interview: for m×n (non-square) a true in-place rotation is impossible since the shape changes —
+    you'd return a new n×m matrix.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Set Matrix Zeroes (LC 73)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> if a cell is 0, set its entire row and column to 0 — in place.</p>
+    <p><strong>Idea:</strong> the naive trap is zeroing as you scan, which cascades (freshly-written zeros trigger more
+    zeroing). You need to <em>record</em> which rows/columns are doomed, then apply. Recording in
+    <code>boolean[rows]</code> + <code>boolean[cols]</code> is O(m+n) space; the O(1) refinement stores those flags in
+    row 0 and column 0 themselves — after first noting (in two booleans) whether row 0 / column 0 contained zeros of
+    their own. Order matters: zero the interior first, headers last, or you destroy your flags while they're still
+    being read.</p>
+<p class="code-title">SetMatrixZeroes.java</p>
+<pre class="code"><code>public static void setZeroes(int[][] m) {
+    int rows = m.length, cols = m[0].length;
+
+    // Row 0 and column 0 will store the flags, so first remember
+    // whether THEY need zeroing themselves (before we overwrite them).
+    boolean zeroRow0 = false, zeroCol0 = false;
+    for (int c = 0; c &lt; cols; c++) if (m[0][c] == 0) zeroRow0 = true;
+    for (int r = 0; r &lt; rows; r++) if (m[r][0] == 0) zeroCol0 = true;
+
+    // Scan the interior: a zero at (r,c) marks its row head and column head.
+    for (int r = 1; r &lt; rows; r++)
+        for (int c = 1; c &lt; cols; c++)
+            if (m[r][c] == 0) { m[r][0] = 0; m[0][c] = 0; }
+
+    // Zero interior cells whose row head or column head is flagged.
+    // (Interior first: the flag cells themselves must survive until read.)
+    for (int r = 1; r &lt; rows; r++)
+        for (int c = 1; c &lt; cols; c++)
+            if (m[r][0] == 0 || m[0][c] == 0) m[r][c] = 0;
+
+    // Finally settle row 0 and column 0 from the saved booleans.
+    if (zeroRow0) Arrays.fill(m[0], 0);
+    if (zeroCol0) for (int r = 0; r &lt; rows; r++) m[r][0] = 0;
+}</code></pre>
+    <p><strong>Complexity:</strong> O(m·n) time, O(1) extra space (two booleans). In the interview, present the
+    O(m+n) boolean-array version first — it's obviously correct — then offer this as the space refinement.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong><code>rows = m.length; cols = m[0].length;</code> on line one, always.</strong> Re-deriving dimensions
+    mid-function is where <code>r</code>/<code>c</code> swaps sneak in. And trace on a rectangle, never a square.</li>
+  <li><strong>Spiral's killer edge cases are one row / one column.</strong> Without the two guards, a 1×n input emits
+    cells twice. Say the guard's purpose out loud — it's the point of the question.</li>
+  <li><strong>Transpose over the upper triangle only</strong> (<code>c</code> from <code>r+1</code>): a full double
+    loop swaps every pair twice and hands back the untouched matrix — an eerie bug to debug live.</li>
+  <li><strong>Java gotcha — cloning:</strong> <code>matrix.clone()</code> is <em>shallow</em>; the clone shares row
+    arrays, so "writing into the copy" mutates the original. Deep-copy row by row
+    (<code>m[r].clone()</code> per row).</li>
+  <li><strong>Never modify what you're still reading</strong> without a plan: spare bits (Game of Life), sacrificial
+    headers (Set Matrix Zeroes), or an honest copy. Name the hazard before writing code — that sentence is worth more
+    than the code.</li>
+  <li><strong>Don't hand-unroll directions.</strong> Four copy-pasted if-blocks for up/down/left/right is where typos
+    hide; the <code>DIRS</code> array pattern is shorter and scales to 8 directions (Game of Life neighbors) for
+    free.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="04-prefix-sum.html"><span class="dir">⟵ Previous</span><span class="name">04 · Prefix Sum</span></a>
+  <a class="next" href="06-sorting.html"><span class="dir">Next ⟶</span><span class="name">06 · Sorting</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('spiralAnim', {
+  totalSteps: 7,
+  intervalMs: 1700,
+  captions: [
+    'A 4×4 grid. Four boundary variables fence the unvisited region: top=0, bottom=3, left=0, right=3. The spiral is nothing more than four walks along these fences, repeated.',
+    'Walk the top fence left→right (cells 1–4), then retire that row: top becomes 1. The fence moves inward.',
+    'Walk the right fence top→bottom (cells 5–7), then right becomes 2.',
+    'Walk the bottom fence right→left (cells 8–10) — note the direction flips — then bottom becomes 2.',
+    'Walk the left fence bottom→top (cells 11–12), then left becomes 1. One full layer peeled: the dashed boundary has shrunk to the inner 2×2.',
+    'Repeat the same four walks on the inner rectangle: top row gives cells 13–14, top becomes 2.',
+    'Right column (15) and bottom row (16) finish the inner layer. The loop exits when top &gt; bottom or left &gt; right. Every cell visited exactly once: O(m·n).'
+  ],
+  apply: function (svg, step) {
+    var spiral = [0, 1, 2, 3, 7, 11, 15, 14, 13, 12, 8, 4, 5, 6, 10, 9];
+    var counts = [0, 4, 7, 10, 12, 14, 16];
+    var shown = counts[step];
+    var prev = step > 0 ? counts[step - 1] : 0;
+    var visitIndex = {};
+    for (var s = 0; s < spiral.length; s++) visitIndex[spiral[s]] = s;
+    for (var k = 0; k < 16; k++) {
+      var vi = visitIndex[k];
+      var isDone = vi < prev;
+      var isActive = vi >= prev && vi < shown;
+      Stepper.setClass(svg, '#c' + k, 'done', isDone);
+      Stepper.setClass(svg, '#c' + k, 'active', isActive);
+      Stepper.setClass(svg, '#n' + k, 'onfill', isDone || isActive);
+      svg.querySelector('#n' + k).style.opacity = (isDone || isActive) ? 1 : 0;
+    }
+    svg.querySelector('#ring0').style.opacity = step <= 4 ? 1 : 0;
+    svg.querySelector('#ring1').style.opacity = step >= 4 ? 1 : 0;
+    Stepper.setClass(svg, '#ring0', 'active', step >= 1 && step <= 4);
+    Stepper.setClass(svg, '#ring1', 'active', step >= 5);
+    var bounds = [
+      't=0 b=3 l=0 r=3',
+      't=1 b=3 l=0 r=3',
+      't=1 b=3 l=0 r=2',
+      't=1 b=2 l=0 r=2',
+      't=1 b=2 l=1 r=2',
+      't=2 b=2 l=1 r=2',
+      't=2 b=1 l=1 r=1'
+    ];
+    Stepper.setText(svg, '#bounds', bounds[step]);
+  }
+});
+</script>
+
+</body>
+</html>

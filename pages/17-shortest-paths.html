@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>17 · Shortest Paths &amp; MST — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Shortest Paths &amp; MST: The Decision Guide</h1>
+<p class="subtitle">BFS, Dijkstra, Bellman-Ford, Floyd-Warshall, DP-on-DAG, A*, and minimum spanning trees — and, above all, how to pick the right one in 30 seconds.</p>
+<p>
+  <span class="badge phase">Phase 6 · Weeks 9–10</span>
+  <span class="badge freq">The decision-guide page — also covers MST</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  "Find the cheapest/shortest/fastest way from A to B" has at least six standard algorithms, and interviews rarely
+  say which one they want — <em>the choice is the test</em>. Each algorithm is a small variation on the same move
+  (<strong>relaxation</strong>: "can I reach v more cheaply through u?"); what differs is which constraints it
+  tolerates: negative weights? all pairs? a DAG? a heuristic? This page's job is to make that choice a reflex, so
+  a weighted-graph question costs you 30 seconds of classification instead of 20 minutes of doubt.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="15-graphs-basics.html">15 · Graph Basics</a> — adjacency lists, BFS on graphs and grids, the visited-set discipline.</li>
+  <li><a href="16-graphs-advanced.html">16 · Graphs Advanced</a> — union-find (Kruskal's MST is sorted edges + UF), DAGs and topological order.</li>
+  <li><a href="12-heaps.html">12 · Heaps &amp; Priority Queues</a> — Dijkstra is "process cheapest next" powered by a <code>PriorityQueue</code>.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Classification:</strong> can you look at the constraints (weights? negatives? K-stop limit? grid movement rules?) and name the right algorithm <em>before</em> coding?</li>
+  <li><strong>The Dijkstra idiom:</strong> PQ of <code>(dist, node)</code>, and the lazy-deletion skip — the line most candidates get wrong.</li>
+  <li><strong>Boundary knowledge:</strong> you know <em>why</em> Dijkstra fails on negative edges and that MST ≠ shortest paths — the two classic trick follow-ups.</li>
+  <li><strong>Complexity fluency:</strong> O(V+E) vs O(E log V) vs O(VE) vs O(V³), and which graph sizes each can survive.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 15's BFS already solves shortest paths — for unweighted graphs. This page is what happens when edges get
+  <em>weights</em>: BFS's queue becomes Dijkstra's priority queue, Dijkstra's greedy relaxation becomes Bellman-Ford's
+  exhaustive rounds when negatives appear, and page 16's union-find plus one sort gives you Kruskal's spanning tree.
+  Nothing here is new machinery — it's the graph toolkit you already have, re-ordered by cost.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>0. The decision flowchart (memorize this shape)</h3>
+<p class="lead">
+  Everything on this page compresses into one chain of questions. Run it top to bottom on every weighted-graph
+  problem; the worked problems below each cite the exact branch they took.
+</p>
+
+<div class="card">
+<svg viewBox="0 0 640 590" role="img" aria-label="Decision flowchart: which shortest-path algorithm to use">
+  <defs>
+    <marker id="fcArw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"></path>
+    </marker>
+  </defs>
+  <!-- no-arrows (vertical) -->
+  <line x1="180" y1="66"  x2="180" y2="98"  class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="180" y1="146" x2="180" y2="178" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="180" y1="226" x2="180" y2="258" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="180" y1="306" x2="180" y2="338" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="180" y1="386" x2="180" y2="418" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="180" y1="466" x2="180" y2="498" class="edge" marker-end="url(#fcArw)"></line>
+  <text x="192" y="88"  class="small">no</text>
+  <text x="192" y="168" class="small">no</text>
+  <text x="192" y="248" class="small">no</text>
+  <text x="192" y="328" class="small">no</text>
+  <text x="192" y="408" class="small">no</text>
+  <text x="192" y="488" class="small">no</text>
+  <!-- yes-arrows (horizontal) -->
+  <line x1="345" y1="43"  x2="392" y2="43"  class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="345" y1="123" x2="392" y2="123" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="345" y1="203" x2="392" y2="203" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="345" y1="283" x2="392" y2="283" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="345" y1="363" x2="392" y2="363" class="edge" marker-end="url(#fcArw)"></line>
+  <line x1="345" y1="443" x2="392" y2="443" class="edge" marker-end="url(#fcArw)"></line>
+  <text x="355" y="36"  class="small">yes</text>
+  <text x="355" y="116" class="small">yes</text>
+  <text x="355" y="196" class="small">yes</text>
+  <text x="355" y="276" class="small">yes</text>
+  <text x="355" y="356" class="small">yes</text>
+  <text x="355" y="436" class="small">yes</text>
+  <!-- question boxes (left column) -->
+  <rect x="15"  y="20"  width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="39"  text-anchor="middle" class="lbl" font-size="12.5">Connect ALL nodes as cheaply as</text>
+  <text x="180" y="56"  text-anchor="middle" class="lbl" font-size="12.5">possible (no source → target)?</text>
+  <rect x="15"  y="100" width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="119" text-anchor="middle" class="lbl" font-size="12.5">Unweighted, or all edge</text>
+  <text x="180" y="136" text-anchor="middle" class="lbl" font-size="12.5">weights equal?</text>
+  <rect x="15"  y="180" width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="207" text-anchor="middle" class="lbl" font-size="12.5">Edge weights only 0 or 1?</text>
+  <rect x="15"  y="260" width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="279" text-anchor="middle" class="lbl" font-size="12.5">Any negative edge weights</text>
+  <text x="180" y="296" text-anchor="middle" class="lbl" font-size="12.5">(or a limit like "≤ K stops")?</text>
+  <rect x="15"  y="340" width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="359" text-anchor="middle" class="lbl" font-size="12.5">DAG, or movement restricted so no</text>
+  <text x="180" y="376" text-anchor="middle" class="lbl" font-size="12.5">cycles (grid: right/down only)?</text>
+  <rect x="15"  y="420" width="330" height="46" rx="9" class="box"></rect>
+  <text x="180" y="439" text-anchor="middle" class="lbl" font-size="12.5">Need distances between ALL pairs</text>
+  <text x="180" y="456" text-anchor="middle" class="lbl" font-size="12.5">(small, dense graph)?</text>
+  <!-- answer boxes (right column, green) -->
+  <rect x="395" y="20"  width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="39"  text-anchor="middle" class="lbl onfill" font-size="12.5">MST — Kruskal (sort + UF)</text>
+  <text x="510" y="56"  text-anchor="middle" class="lbl onfill" font-size="12.5">or Prim (PQ)</text>
+  <rect x="395" y="100" width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="127" text-anchor="middle" class="lbl onfill" font-size="12.5">BFS — O(V+E)</text>
+  <rect x="395" y="180" width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="207" text-anchor="middle" class="lbl onfill" font-size="12.5">0-1 BFS (deque)</text>
+  <rect x="395" y="260" width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="279" text-anchor="middle" class="lbl onfill" font-size="12.5">Bellman-Ford — O(V·E)</text>
+  <text x="510" y="296" text-anchor="middle" class="lbl onfill" font-size="12.5">(also finds negative cycles)</text>
+  <rect x="395" y="340" width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="359" text-anchor="middle" class="lbl onfill" font-size="12.5">DP in topological order</text>
+  <text x="510" y="376" text-anchor="middle" class="lbl onfill" font-size="12.5">(e.g. LC 64 Min Path Sum)</text>
+  <rect x="395" y="420" width="230" height="46" rx="9" fill="#16a34a"></rect>
+  <text x="510" y="447" text-anchor="middle" class="lbl onfill" font-size="12.5">Floyd-Warshall — O(V³)</text>
+  <!-- terminal box -->
+  <rect x="15" y="500" width="330" height="56" rx="9" fill="#16a34a"></rect>
+  <text x="180" y="523" text-anchor="middle" class="lbl onfill" font-size="13">Dijkstra — O(E log V)</text>
+  <text x="180" y="543" text-anchor="middle" class="lbl onfill" font-size="12.5">good heuristic toward a goal? → A*</text>
+</svg>
+</div>
+
+<h3>1. BFS: shortest path when every step costs the same</h3>
+<p>
+  When all edges cost the same (unweighted graphs, grids where every move costs 1), plain BFS from page 15 <em>is</em>
+  the shortest-path algorithm: it explores in expanding rings, so the first time a node is reached is via a
+  minimum-edge-count path. O(V+E), no priority queue needed — using Dijkstra here is correct but wasteful, and
+  interviewers notice. This solves an entire family of grid problems ("minimum steps from start to exit").
+</p>
+<div class="note">
+  <strong>0-1 BFS, in one paragraph.</strong> If edge weights are only 0 or 1 (e.g. "moving costs 1, breaking a wall
+  costs 0… or vice versa"), you don't need a heap. Use an <code>ArrayDeque</code> as a double-ended queue: relax a
+  0-edge → push the node at the <em>front</em> (same distance, same ring); relax a 1-edge → push at the <em>back</em>.
+  The deque stays sorted by distance automatically, giving Dijkstra's answer in O(V+E).
+</div>
+
+<h3>2. Dijkstra: non-negative weights, greedy settling</h3>
+<p>
+  With arbitrary non-negative weights, "fewest edges" no longer means "cheapest" — a 3-hop path of cost 3 beats a
+  1-hop edge of cost 4. Dijkstra fixes BFS with one change: the FIFO queue becomes a <strong>min-priority queue of
+  <code>(distance, node)</code></strong>, so the next node processed is always the unsettled node with the smallest
+  known distance. That node's distance is then <em>final</em> ("settled"): every alternative route into it would have
+  to leave through some other frontier node that is already ≥ as far away — and with no negative edges, the detour
+  can only get worse from there. Cost: O(E log V) with a binary heap.
+</p>
+<p>
+  Java's <code>PriorityQueue</code> can't decrease a key in place, so we use <strong>lazy deletion</strong>: when a
+  node's distance improves, just <code>offer</code> a new entry and let the stale one surface later — then skip it
+  with one guard line. Watch the idiom in action (node C improves B from 4 to 3 mid-run):
+</p>
+
+<div class="anim" id="dijAnim">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Dijkstra frontier expanding over a small weighted graph">
+    <!-- edges (drawn first, under the nodes) -->
+    <line id="eAB" x1="80"  y1="150" x2="280" y2="60"  class="edge"></line>
+    <line id="eAC" x1="80"  y1="150" x2="280" y2="240" class="edge"></line>
+    <line id="eCB" x1="280" y1="240" x2="280" y2="60"  class="edge"></line>
+    <line id="eBD" x1="280" y1="60"  x2="460" y2="150" class="edge"></line>
+    <line id="eCD" x1="280" y1="240" x2="460" y2="150" class="edge"></line>
+    <line id="eDE" x1="460" y1="150" x2="590" y2="150" class="edge"></line>
+    <!-- edge weights -->
+    <text x="166" y="94"  class="small">4</text>
+    <text x="166" y="216" class="small">1</text>
+    <text x="290" y="154" class="small">2</text>
+    <text x="382" y="94"  class="small">5</text>
+    <text x="382" y="216" class="small">8</text>
+    <text x="520" y="140" class="small">3</text>
+    <!-- nodes -->
+    <circle id="dnA" cx="80"  cy="150" r="24" class="box"></circle>
+    <circle id="dnB" cx="280" cy="60"  r="24" class="box"></circle>
+    <circle id="dnC" cx="280" cy="240" r="24" class="box"></circle>
+    <circle id="dnD" cx="460" cy="150" r="24" class="box"></circle>
+    <circle id="dnE" cx="590" cy="150" r="24" class="box"></circle>
+    <text id="dlA" x="80"  y="155" text-anchor="middle" class="lbl">A</text>
+    <text id="dlB" x="280" y="65"  text-anchor="middle" class="lbl">B</text>
+    <text id="dlC" x="280" y="245" text-anchor="middle" class="lbl">C</text>
+    <text id="dlD" x="460" y="155" text-anchor="middle" class="lbl">D</text>
+    <text id="dlE" x="590" y="155" text-anchor="middle" class="lbl">E</text>
+    <!-- tentative distances -->
+    <text id="ddA" x="80"  y="196" text-anchor="middle" class="lbl" font-size="13">0</text>
+    <text id="ddB" x="280" y="26"  text-anchor="middle" class="lbl" font-size="13">∞</text>
+    <text id="ddC" x="280" y="286" text-anchor="middle" class="lbl" font-size="13">∞</text>
+    <text id="ddD" x="460" y="196" text-anchor="middle" class="lbl" font-size="13">∞</text>
+    <text id="ddE" x="590" y="196" text-anchor="middle" class="lbl" font-size="13">∞</text>
+    <!-- legend -->
+    <text x="18" y="24" class="small">amber = in frontier (PQ) · blue = being settled · green = settled (final)</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<div class="warn">
+  <strong>Why Dijkstra fails with negative edges.</strong> The whole algorithm rests on "once settled, final".
+  Suppose A→B costs 10, A→C costs 1, and C→B costs… −8. Dijkstra settles C (dist 1), then relaxes C→B to 1−8=−7?
+  No — the trap is subtler: with A→B=2, A→C=3, C→B=−2, Dijkstra settles B at distance 2 <em>first</em> (it's the
+  minimum) and never reconsiders — but the true shortest path is A→C→B = 3−2 = 1. Greedy finalization assumed
+  "detours only add cost", and a negative edge broke that assumption. One negative edge anywhere → switch to
+  Bellman-Ford.
+</div>
+
+<h3>3. Bellman-Ford: negatives welcome, cycles detected</h3>
+<p>
+  Bellman-Ford drops the cleverness: relax <em>every edge</em>, and repeat that sweep <strong>V−1 times</strong>.
+  Why V−1? A shortest path visits no node twice (if weights admit one), so it has at most V−1 edges — and after round
+  k, all shortest paths using ≤ k edges are correct. Cost O(V·E), but no assumptions about signs. The bonus feature:
+  run one <em>extra</em> round, and if any distance still improves, some path can be shortened forever — a
+  <strong>negative cycle</strong> is reachable (this is literally how currency-arbitrage detection works: multiply
+  exchange rates → sum of −log(rate) → arbitrage loop = negative cycle).
+</p>
+<p>
+  The K-limited variant is an interview favorite: cap the rounds at K+1 and relax from a <em>copy</em> of last
+  round's distances, and you get "cheapest path using at most K+1 edges" — exactly Cheapest Flights Within K Stops
+  (worked below).
+</p>
+
+<h3>4. Floyd-Warshall: every pair at once</h3>
+<p>
+  Need the distance between <em>all</em> pairs on a small dense graph? Floyd-Warshall is a three-line DP. The state:
+  <code>dist[i][j]</code> after iteration k = shortest path from i to j using only nodes <code>0..k</code> as
+  intermediate stops. Each new allowed intermediate k offers every pair a bargain:
+  <code>dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])</code> — go direct, or route through k. Three nested
+  loops (<strong>k outermost</strong> — swapping the loops is the classic bug), O(V³) time, O(V²) space. Fine up to a
+  few hundred nodes; also handles negative edges (though not negative cycles — a negative <code>dist[i][i]</code>
+  is how you detect them).
+</p>
+
+<h3>5. DP on DAGs and grids: when movement can't loop</h3>
+<p>
+  If the graph is a DAG — or movement rules make it one, like a grid where you may only step right or down — then
+  there are no cycles, so process nodes in topological order (for a right/down grid: plain row-major order) and each
+  cell's answer is final the moment you compute it:
+  <code>dist[r][c] = grid[r][c] + min(dist[r-1][c], dist[r][c-1])</code>. No queue, no PQ, no visited set — a double
+  loop. This is dynamic programming (pages 18–19), and it's <em>faster and simpler</em> than any general
+  shortest-path algorithm because the structure did the hard work.
+</p>
+<div class="note">
+  <strong>"Is this grid problem DP or BFS?" — resolved.</strong> Both walk a grid for a "minimum", so they blur
+  together; the movement rule is the tiebreaker.
+  <em>Restricted movement</em> (right/down only, as in LC 64 Minimum Path Sum) → the grid is a DAG → row-major DP,
+  because a cell's best answer depends only on cells you've already finished.
+  <em>Free movement</em> (4- or 8-directional, as in LC 1091 Shortest Path in Binary Matrix) → paths can loop back →
+  there is no safe fill order, DP breaks — you need BFS (unweighted) or Dijkstra (weighted).
+  Test to apply in the room: "can a path ever revisit or come back around?" If no → DP. If yes → BFS/Dijkstra.
+</div>
+
+<h3>6. A*: Dijkstra with a sense of direction</h3>
+<p>
+  Dijkstra expands a blind circle around the source; if you know where the target is, that's wasted work. A* orders
+  the PQ by <code>dist(node) + h(node)</code>, where <code>h</code> estimates the remaining cost to the goal
+  (straight-line distance on a map). If <code>h</code> never <em>overestimates</em> (an "admissible" heuristic),
+  A* returns the true shortest path while exploring a narrow ellipse toward the goal instead of a circle. With
+  <code>h = 0</code> it degenerates to exactly Dijkstra. Interviews want the concept and the admissibility condition,
+  not an implementation.
+</p>
+
+<h3>7. Minimum spanning tree: connect everything, cheaply</h3>
+<p>
+  Different goal entirely: not "cheapest route A→B" but "cheapest set of edges that connects <em>all</em> nodes" —
+  laying cable, not planning a trip. The result has exactly V−1 edges and no cycle: a spanning tree of minimum total
+  weight.
+</p>
+<ul>
+  <li><strong>Kruskal:</strong> sort all edges by weight, take each edge whose endpoints aren't yet connected — checked by page 16's union-find in ~O(1). Stop at V−1 accepted edges. O(E log E), dominated by the sort. Worked below.</li>
+  <li><strong>Prim (outline):</strong> grow one tree from any start node; keep a PQ of edges crossing from tree to non-tree, always take the cheapest crossing edge and add its new node. Structurally Dijkstra with the priority being <em>edge weight</em> instead of <em>total distance from source</em>. O(E log V). Prefer it when the graph is dense and building the full edge list is awkward.</li>
+</ul>
+<div class="warn">
+  <strong>MST ≠ shortest paths.</strong> The MST minimizes the <em>sum of all chosen edges</em>, not any particular
+  route: two nodes' path through the MST can be much longer than their direct shortest path (triangle with weights
+  2, 2, 3: the MST keeps the two 2s, so the "3" pair now travels 4). If asked "does the MST contain the shortest path
+  between X and Y?", the answer is: not necessarily — different objective, different tree (Dijkstra's shortest-path
+  tree ≠ MST).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — Dijkstra with lazy deletion (the interview workhorse)</p>
+<pre class="code"><code>// adj.get(u) holds int[]{v, w}: edge u -&gt; v of weight w. Returns dist from src to every node.
+public static int[] dijkstra(int n, List&lt;List&lt;int[]&gt;&gt; adj, int src) {
+    int[] dist = new int[n];
+    Arrays.fill(dist, Integer.MAX_VALUE);        // "unreached" sentinel
+    dist[src] = 0;
+    // Min-heap ordered by tentative distance; entries are int[]{dist, node}.
+    PriorityQueue&lt;int[]&gt; pq = new PriorityQueue&lt;&gt;((a, b) -&gt; a[0] - b[0]);
+    pq.offer(new int[]{0, src});
+    while (!pq.isEmpty()) {
+        int[] cur = pq.poll();
+        int d = cur[0], u = cur[1];
+        if (d &gt; dist[u]) continue;               // LAZY DELETION: stale entry — a better
+                                                 // distance for u was already processed. Skip.
+        for (int[] e : adj.get(u)) {             // u is now settled: relax its edges
+            int v = e[0], nd = d + e[1];
+            if (nd &lt; dist[v]) {                  // found a cheaper way into v
+                dist[v] = nd;
+                pq.offer(new int[]{nd, v});      // don't remove the old entry — just add;
+            }                                    // the guard above will skip it later
+        }
+    }
+    return dist;   // O(E log V) time, O(V + E) space
+}</code></pre>
+
+<p class="code-title">Template 2 — Bellman-Ford with negative-cycle detection</p>
+<pre class="code"><code>// edges: int[]{u, v, w}. Returns dist, or null if a negative cycle is reachable from src.
+public static int[] bellmanFord(int n, int[][] edges, int src) {
+    final int INF = Integer.MAX_VALUE / 2;       // /2 so INF + w can't overflow int
+    int[] dist = new int[n];
+    Arrays.fill(dist, INF);
+    dist[src] = 0;
+    // A shortest path has at most n-1 edges, so n-1 sweeps make every one correct.
+    for (int round = 0; round &lt; n - 1; round++) {
+        boolean changed = false;
+        for (int[] e : edges)
+            if (dist[e[0]] + e[2] &lt; dist[e[1]]) {  // relax u -&gt; v
+                dist[e[1]] = dist[e[0]] + e[2];
+                changed = true;
+            }
+        if (!changed) break;                     // early exit: already stable
+    }
+    // One EXTRA sweep: any further improvement means "shorter forever" = negative cycle.
+    for (int[] e : edges)
+        if (dist[e[0]] + e[2] &lt; dist[e[1]]) return null;
+    return dist;   // O(V * E) time, O(V) space
+}</code></pre>
+
+<p class="code-title">Template 3 — Kruskal's MST (sort edges + union-find from page 16)</p>
+<pre class="code"><code>// edges: int[]{w, u, v}. Returns total MST weight (assumes the graph is connected).
+public static int kruskal(int n, List&lt;int[]&gt; edges) {
+    edges.sort((a, b) -&gt; a[0] - b[0]);           // greedy: cheapest edges first
+    UnionFind uf = new UnionFind(n);             // page 16's class, verbatim
+    int total = 0, used = 0;
+    for (int[] e : edges) {
+        if (uf.union(e[1], e[2])) {              // false would mean: endpoints already
+            total += e[0];                       // connected -&gt; edge would close a cycle -&gt; skip
+            if (++used == n - 1) break;          // a spanning tree has exactly n-1 edges
+        }
+    }
+    return total;  // O(E log E) time for the sort, O(V) space
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Algorithm</th><th>Handles</th><th>Time</th><th>Reach for it when…</th></tr>
+  <tr><td>BFS</td><td>unweighted / uniform weights</td><td>O(V+E)</td><td>"minimum number of steps/moves", grid mazes, word ladders</td></tr>
+  <tr><td>0-1 BFS</td><td>weights ∈ {0, 1}</td><td>O(V+E)</td><td>free moves vs unit-cost moves; beats Dijkstra's log factor</td></tr>
+  <tr><td>Dijkstra</td><td>non-negative weights, single source</td><td>O(E log V)</td><td>the default for weighted graphs; "network delay", "minimum cost path" with free movement</td></tr>
+  <tr><td>Bellman-Ford</td><td>negative edges; detects negative cycles; edge-count limits</td><td>O(V·E)</td><td>any negative weight, "at most K stops", arbitrage-style cycle hunting</td></tr>
+  <tr><td>Floyd-Warshall</td><td>all pairs, negatives ok (no neg. cycles)</td><td>O(V³)</td><td>V ≤ ~400 and you need every pair (or transitive closure)</td></tr>
+  <tr><td>DP on DAG/grid</td><td>acyclic structure only</td><td>O(V+E)</td><td>restricted movement (right/down), dependency chains — simplest when it applies</td></tr>
+  <tr><td>A*</td><td>non-negative + admissible heuristic</td><td>≤ Dijkstra in practice</td><td>spatial search toward a known goal (maps, game pathfinding)</td></tr>
+  <tr><td>Kruskal (MST)</td><td>connect all nodes, min total weight</td><td>O(E log E)</td><td>sparse graph or explicit edge list; pairs naturally with union-find</td></tr>
+  <tr><td>Prim (MST)</td><td>same goal as Kruskal</td><td>O(E log V)</td><td>dense graph, adjacency structure already built</td></tr>
+</table>
+</div>
+
+<p>Decision cues — when the problem says…</p>
+<ul>
+  <li>"fewest moves / steps" with equal-cost moves → <strong>BFS</strong>, don't reach for Dijkstra.</li>
+  <li>"minimum time / cost / effort" with varying positive weights and free movement → <strong>Dijkstra</strong>.</li>
+  <li>"at most K stops / edges", or any weight could be negative → <strong>Bellman-Ford</strong> (K+1 bounded rounds).</li>
+  <li>"distance between every pair", small V → <strong>Floyd-Warshall</strong>.</li>
+  <li>"you can only move right or down" → the grid is a DAG → <strong>plain DP</strong> (page 19).</li>
+  <li>"connect all points with minimum total cost" → <strong>MST</strong>, not a shortest-path algorithm at all.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Google Maps &amp; navigation</h4>
+    <p class="small">Roads become a graph with travel-time weights (updated from live traffic); routing runs A* with
+    spatial heuristics rather than blind Dijkstra, and at planet scale, precomputed <em>contraction hierarchies</em>
+    add shortcut edges so cross-country queries answer in milliseconds. Rerouting after a wrong turn is just a fresh
+    query from the new node.</p>
+  </div>
+  <div class="card">
+    <h4>Internet routing protocols</h4>
+    <p class="small">OSPF — the workhorse inside data centers and ISPs — has every router run literal Dijkstra over
+    the link-state database. Older RIP and the distance-vector family are Bellman-Ford, relaxed by gossip between
+    neighbors ("my distance to X is d" → neighbors try d + link). BGP between ISPs is a policy-laden path-vector
+    cousin of the same relaxation idea.</p>
+  </div>
+  <div class="card">
+    <h4>Currency arbitrage detection</h4>
+    <p class="small">Convert each exchange rate r to a weight of −log(r): multiplying rates around a loop &gt; 1
+    (free money) becomes a cycle with <em>negative sum</em>. Trading systems run Bellman-Ford's extra round over the
+    currency graph to find them — the textbook negative-cycle application, and a real interview question at
+    finance-adjacent companies.</p>
+  </div>
+  <div class="card">
+    <h4>MST: network design &amp; clustering</h4>
+    <p class="small">Minimum-cost cabling/pipeline layouts are MST verbatim (its original 1926 use: electrifying
+    Moravia). In ML, single-linkage clustering = build the MST of pairwise distances, then delete the k−1 heaviest
+    edges to leave k clusters — Kruskal with early stopping.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/shortest-path-in-binary-matrix/">Shortest Path in Binary Matrix</a></span>
+    <span class="hint">8-directional movement can loop → not DP; uniform step cost → BFS, distance = ring number.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/network-delay-time/">Network Delay Time</a></span>
+    <span class="hint">Single source, non-negative weights → Dijkstra; answer is the max settled distance (or −1 if any node unreached).</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/cheapest-flights-within-k-stops/">Cheapest Flights Within K Stops</a></span>
+    <span class="hint">The edge-count cap breaks Dijkstra's settling → Bellman-Ford limited to K+1 rounds, relaxing from a copy.</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/path-with-minimum-effort/">Path With Minimum Effort</a></span>
+    <span class="hint">Minimize the MAX edge on the path: Dijkstra with dist = max(dist[u], |height diff|) — or binary-search the answer + BFS reachability (page 07's search-on-answer).</span>
+  </div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <span class="t"><a href="https://leetcode.com/problems/min-cost-to-connect-all-points/">Min Cost to Connect All Points</a></span>
+    <span class="hint">"Connect ALL points, min total cost" = MST: generate all pairwise Manhattan edges, sort, Kruskal with union-find.</span>
+  </div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <span class="t"><a href="https://leetcode.com/problems/swim-in-rising-water/">Swim in Rising Water</a></span>
+    <span class="hint">Same shape as Minimum Effort: minimize the max cell on the path — Dijkstra on max(), binary search + BFS, or even Kruskal-style union by rising water level.</span>
+  </div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Shortest Path in Binary Matrix (BFS — and why DP is forbidden here)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> in an n×n grid of 0s (open) and 1s (blocked), return the length of the
+    shortest 8-directionally connected path of 0s from the top-left to the bottom-right cell, or −1.</p>
+    <p><strong>Idea:</strong> flowchart, question 2: every move costs 1 → BFS. Note the contrast with Minimum Path Sum
+    (LC 64): there movement is right/down only (a DAG → DP); here you may also move up, left, and diagonally, so paths
+    can curl back — no fill order works, and BFS's expanding rings are the correct tool. Distance = which ring a cell
+    is discovered in; mark visited <em>when enqueuing</em>, never when dequeuing.</p>
+    <p class="code-title">code/17-shortest-paths/ShortestPathBinaryMatrix.java</p>
+<pre class="code"><code>public static int shortestPathBinaryMatrix(int[][] grid) {
+    int n = grid.length;
+    // Path must START and END on an open cell — a classic missed edge case.
+    if (grid[0][0] != 0 || grid[n - 1][n - 1] != 0) return -1;
+
+    int[][] dirs = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};  // 8 ways
+    int[][] dist = new int[n][n];              // 0 doubles as "not visited yet"
+    Deque&lt;int[]&gt; queue = new ArrayDeque&lt;&gt;();
+    queue.offer(new int[]{0, 0});
+    dist[0][0] = 1;                            // path length counts CELLS, so start at 1
+
+    while (!queue.isEmpty()) {
+        int[] cell = queue.poll();
+        int r = cell[0], c = cell[1];
+        if (r == n - 1 &amp;&amp; c == n - 1) return dist[r][c];  // first arrival = shortest (BFS rings)
+        for (int[] d : dirs) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr &gt;= 0 &amp;&amp; nr &lt; n &amp;&amp; nc &gt;= 0 &amp;&amp; nc &lt; n     // stay on the board
+                    &amp;&amp; grid[nr][nc] == 0                   // open cell
+                    &amp;&amp; dist[nr][nc] == 0) {                // not yet reached
+                dist[nr][nc] = dist[r][c] + 1;   // record BEFORE enqueue -&gt; no duplicates
+                queue.offer(new int[]{nr, nc});
+            }
+        }
+    }
+    return -1;                                 // queue drained without reaching the corner
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n²) — each cell enqueued at most once, 8 edges each; space O(n²) for the dist grid and queue.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Network Delay Time (Dijkstra with lazy deletion)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given directed travel times <code>[u, v, w]</code> between n nodes and a
+    start node k, how long until <em>every</em> node has received a signal sent from k (−1 if some never do)?</p>
+    <p><strong>Idea:</strong> "time for the signal to reach every node" = the <em>largest</em> single-source shortest
+    distance. Weights are non-negative and movement is unrestricted → flowchart lands on Dijkstra. This is the
+    lazy-deletion template applied verbatim: settle the closest unsettled node, relax its out-edges, skip stale PQ
+    entries.</p>
+    <p class="code-title">code/17-shortest-paths/NetworkDelayTime.java</p>
+<pre class="code"><code>public static int networkDelayTime(int[][] times, int n, int k) {
+    // Step 1: adjacency list (nodes are 1..n, so size n+1 and ignore index 0).
+    List&lt;List&lt;int[]&gt;&gt; adj = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt;= n; i++) adj.add(new ArrayList&lt;&gt;());
+    for (int[] t : times) adj.get(t[0]).add(new int[]{t[1], t[2]});   // u -&gt; {v, w}
+
+    // Step 2: Dijkstra from k.
+    int[] dist = new int[n + 1];
+    Arrays.fill(dist, Integer.MAX_VALUE);
+    dist[k] = 0;
+    PriorityQueue&lt;int[]&gt; pq = new PriorityQueue&lt;&gt;((a, b) -&gt; a[0] - b[0]);  // {dist, node}
+    pq.offer(new int[]{0, k});
+    while (!pq.isEmpty()) {
+        int[] cur = pq.poll();
+        int d = cur[0], u = cur[1];
+        if (d &gt; dist[u]) continue;             // lazy deletion: stale entry, skip it
+        for (int[] e : adj.get(u)) {           // u settled -&gt; relax each edge u -&gt; v
+            int v = e[0], nd = d + e[1];
+            if (nd &lt; dist[v]) {                // cheaper route into v found
+                dist[v] = nd;
+                pq.offer(new int[]{nd, v});    // add new entry; old one dies at the guard
+            }
+        }
+    }
+
+    // Step 3: the signal has arrived everywhere when the FARTHEST node gets it.
+    int ans = 0;
+    for (int i = 1; i &lt;= n; i++) ans = Math.max(ans, dist[i]);
+    return ans == Integer.MAX_VALUE ? -1 : ans;   // some node unreachable -&gt; -1
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(E log E) ≈ O(E log V) — every relaxation may push one PQ entry; space O(V + E).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Cheapest Flights Within K Stops (Bellman-Ford, bounded rounds)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> cheapest flight route from src to dst using at most K intermediate stops
+    (= at most K+1 flights), or −1.</p>
+    <p><strong>Idea:</strong> why not Dijkstra? Its "settled = final" logic can lock in a cheap-but-long route and then
+    reject a pricier-per-hop route that respects the stop limit — the edge cap breaks greedy settling exactly the way
+    a negative edge does. Bellman-Ford fits perfectly because its rounds <em>are</em> an edge count: after round r,
+    dist holds the cheapest costs using ≤ r flights. Run exactly K+1 rounds. The one subtlety: relax from a
+    <em>copy</em> of last round's array, or several flights could chain within a single round and smuggle in extra
+    stops.</p>
+    <p class="code-title">code/17-shortest-paths/CheapestFlights.java</p>
+<pre class="code"><code>public static int findCheapestPrice(int n, int[][] flights, int src, int dst, int k) {
+    final int INF = Integer.MAX_VALUE / 2;     // /2 so INF + price can't overflow int
+    int[] dist = new int[n];
+    Arrays.fill(dist, INF);
+    dist[src] = 0;
+
+    for (int round = 0; round &lt;= k; round++) { // K stops =&gt; at most K+1 flights = K+1 rounds
+        int[] next = dist.clone();             // relax from LAST round's snapshot only,
+                                               // so each round adds at most ONE flight
+        boolean changed = false;
+        for (int[] f : flights) {              // f = {from, to, price}
+            if (dist[f[0]] + f[2] &lt; next[f[1]]) {   // cheaper way into f[1] via f[0]?
+                next[f[1]] = dist[f[0]] + f[2];
+                changed = true;
+            }
+        }
+        dist = next;                           // this round's results become the snapshot
+        if (!changed) break;                   // stable early -&gt; further rounds are no-ops
+    }
+    return dist[dst] &gt;= INF ? -1 : dist[dst];  // never reached within the flight budget
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(K · E) — K+1 sweeps over the flight list; space O(V) for the two distance arrays.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Min Cost to Connect All Points (Kruskal's MST; Prim outlined)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> connect all 2-D points so any two are linked (directly or indirectly),
+    minimizing total Manhattan-distance cost.</p>
+    <p><strong>Idea:</strong> flowchart, question 1: connect <em>all</em> nodes, no source/target → MST, not shortest
+    path. The graph is complete (any point can link to any other), so materialize all n(n−1)/2 edges, sort by cost,
+    and greedily accept any edge joining two still-separate groups — page 16's union-find makes that check ~O(1) and
+    its boolean <code>union</code> return <em>is</em> the accept/skip decision. Prim's alternative: grow from point 0,
+    PQ of crossing edges, pop cheapest, add its new point — same answer, better when you'd rather not build the full
+    edge list.</p>
+    <p class="code-title">code/17-shortest-paths/MinCostConnectPoints.java</p>
+<pre class="code"><code>public static int minCostConnectPoints(int[][] points) {
+    int n = points.length;
+    // Step 1: complete graph -&gt; all pairwise edges {manhattanCost, i, j}.
+    List&lt;int[]&gt; edges = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; n; i++)
+        for (int j = i + 1; j &lt; n; j++) {
+            int cost = Math.abs(points[i][0] - points[j][0])
+                     + Math.abs(points[i][1] - points[j][1]);
+            edges.add(new int[]{cost, i, j});
+        }
+
+    // Step 2: Kruskal — cheapest edges first…
+    edges.sort((a, b) -&gt; a[0] - b[0]);
+    UnionFind uf = new UnionFind(n);
+    int total = 0, used = 0;
+    for (int[] e : edges) {
+        // …accept only if endpoints are still in different groups
+        // (union returns false when the edge would close a cycle).
+        if (uf.union(e[1], e[2])) {
+            total += e[0];
+            if (++used == n - 1) break;        // spanning tree complete: n-1 edges
+        }
+    }
+    return total;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n² log n) — n² edges dominated by the sort; space O(n²) for the edge list. (Prim with an adjacency-free "best distance to tree" array does it in O(n²) time, O(n) space — worth mentioning as the follow-up.)</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Forgetting the lazy-deletion guard</strong> (<code>if (d &gt; dist[u]) continue;</code>) is the #1 Dijkstra bug in Java — the code still returns correct answers but re-expands nodes and times out on big inputs. Say the line's purpose out loud; it's cheap senior signal.</li>
+  <li><strong>Never run Dijkstra over negative edges</strong> — it fails <em>silently</em> with a plausible wrong answer, the worst failure mode. One negative weight anywhere → Bellman-Ford (and say why: settled-is-final breaks).</li>
+  <li><strong>Infinity arithmetic overflows:</strong> <code>Integer.MAX_VALUE + weight</code> wraps negative and corrupts every comparison. Use <code>Integer.MAX_VALUE / 2</code> as INF, or check <code>dist[u] != INF</code> before relaxing.</li>
+  <li><strong>BFS visited timing still applies:</strong> mark when <em>enqueuing</em>, not dequeuing — otherwise the same cell enters the queue many times (page 15's warning, still the top BFS bug here).</li>
+  <li><strong>Don't confuse the objectives:</strong> MST minimizes total connection cost; Dijkstra minimizes per-destination route cost. If the question says "connect all", shortest-path algorithms are the wrong shelf entirely.</li>
+  <li><strong>Grid "minimum" ≠ automatically DP:</strong> check the movement rule first (the note above). Saying "right/down only makes this a DAG, so DP; free movement would need BFS/Dijkstra" in one breath is exactly the classification this page exists to train.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="16-graphs-advanced.html"><span class="dir">⟵ Prev</span><span class="name">16 · Graphs Advanced</span></a>
+  <a class="next" href="18-dp-1d.html"><span class="dir">Next ⟶</span><span class="name">18 · Dynamic Programming 1D</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('dijAnim', {
+  totalSteps: 7,
+  intervalMs: 3000,
+  captions: [
+    'Setup: dist[A] = 0, everything else ∞. The priority queue (the frontier, amber) holds (0, A). Dijkstra’s promise: always settle the unsettled node with the smallest known distance.',
+    'Poll the minimum: A (dist 0) — A is SETTLED, its distance is final. Relax its edges: B improves to 0+4 = 4, C improves to 0+1 = 1. Both join the frontier.',
+    'Poll the minimum: C (dist 1, beating B’s 4). Relaxing C’s edges improves B: 1+2 = 3 &lt; 4 — we simply offer (3, B) and leave the stale (4, B) entry to be skipped later (lazy deletion). D gets 1+8 = 9.',
+    'Poll the minimum: B (dist 3). Note B settles at 3 via A→C→B, not the direct edge of 4 — the frontier always finds the cheapest way in. Relax B→D: 3+5 = 8 beats 9, so D improves; (8, D) is offered.',
+    'Poll the minimum: D (dist 8). When the stale (9, D) entry surfaces, the guard "9 &gt; dist[D]" discards it. Relax D→E: E gets 8+3 = 11.',
+    'Poll the minimum: E (dist 11) — settled. The queue now holds only stale entries, all of which the guard will skip.',
+    'Done: A=0, C=1, B=3, D=8, E=11. Every settle was final because weights are ≥ 0 — no later path can undercut a settled node. A single negative edge breaks exactly that promise, which is why Dijkstra then fails.'
+  ],
+  apply: function (svg, step) {
+    var S = [
+      { st: {A:'frontier', B:'',         C:'',         D:'',         E:''},         d: {A:'0', B:'∞', C:'∞', D:'∞', E:'∞'},  e: [] },
+      { st: {A:'active',   B:'frontier', C:'frontier', D:'',         E:''},         d: {A:'0', B:'4', C:'1', D:'∞', E:'∞'},  e: ['eAB','eAC'] },
+      { st: {A:'done',     B:'frontier', C:'active',   D:'frontier', E:''},         d: {A:'0', B:'3', C:'1', D:'9', E:'∞'},  e: ['eCB','eCD'] },
+      { st: {A:'done',     B:'active',   C:'done',     D:'frontier', E:''},         d: {A:'0', B:'3', C:'1', D:'8', E:'∞'},  e: ['eBD'] },
+      { st: {A:'done',     B:'done',     C:'done',     D:'active',   E:'frontier'}, d: {A:'0', B:'3', C:'1', D:'8', E:'11'}, e: ['eDE'] },
+      { st: {A:'done',     B:'done',     C:'done',     D:'done',     E:'active'},   d: {A:'0', B:'3', C:'1', D:'8', E:'11'}, e: [] },
+      { st: {A:'done',     B:'done',     C:'done',     D:'done',     E:'done'},     d: {A:'0', B:'3', C:'1', D:'8', E:'11'}, e: [] }
+    ][step];
+    ['A', 'B', 'C', 'D', 'E'].forEach(function (k) {
+      var st = S.st[k];
+      ['active', 'done', 'frontier'].forEach(function (c) {
+        Stepper.setClass(svg, '#dn' + k, c, st === c);
+      });
+      Stepper.setClass(svg, '#dl' + k, 'onfill', st !== '');
+      Stepper.setText(svg, '#dd' + k, S.d[k]);
+    });
+    ['eAB', 'eAC', 'eCB', 'eBD', 'eCD', 'eDE'].forEach(function (id) {
+      Stepper.setClass(svg, '#' + id, 'active', S.e.indexOf(id) >= 0);
+    });
+  }
+});
+</script>
+
+</body>
+</html>

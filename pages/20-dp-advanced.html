@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20 · DP Advanced — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>DP Advanced: State Machines, Intervals, Bitmasks &amp; Trees</h1>
+<p class="subtitle">Four DP families beyond arrays and grids — how to recognize each from the problem statement, and the one worked classic for every family.</p>
+<p>
+  <span class="badge phase">Phase 7 · Weeks 11–12</span>
+  <span class="badge freq">Senior/staff differentiator — where "knows DP" becomes "owns DP"</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Pages 18–19 taught DP where the state is "position in an array" or "cell in a table". Real interview hards go
+  further: the state can be <em>a mode you're in</em> (holding a stock or not), <em>a range</em> (balloons between
+  index l and r), <em>a set</em> (which cities are already visited, packed into an int), or <em>a subtree</em>.
+  The DP <em>recipe</em> never changes — define state, write the recurrence, order the computation — what changes
+  is the shape of the state. This page trains you to recognize the four shapes.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="18-dp-1d.html">18 · DP 1D</a> — the 4-step recipe, memoization vs tabulation</li>
+  <li><a href="19-dp-2d.html">19 · DP 2D</a> — two-dimensional state, knapsack thinking</li>
+  <li><a href="11-trees.html">11 · Trees</a> — the bottom-up "return info to the parent" pattern (for tree DP)</li>
+  <li><a href="22-bit-manipulation.html">22 · Bits</a> — helpful for the bitmask section (read it after, then revisit)</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li>Can you <strong>name the state in words</strong> before writing code? ("dp[l][r] = best score using only the balloons strictly between l and r")</li>
+  <li>Do you recognize the <strong>family from the input</strong>: phases/modes → state machine; ranges → interval; n ≤ 20 subsets → bitmask; tree input → tree DP?</li>
+  <li>Interval DP's signature move: do you think about the <strong>last</strong> operation, not the first?</li>
+  <li>Can you keep <strong>read-before-write discipline</strong> when rolling states (temporaries for yesterday's values)?</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  In 2D grid DP the state was <em>where you are</em>. Here the state becomes <em>what situation you're in</em> —
+  a strictly more powerful idea. Once you can say "my state is (day, holding-or-not)" or "(range l..r)", the
+  recurrences practically write themselves using the exact skills from pages 18–19.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. State-machine DP — when the problem has modes</h3>
+<p>
+  Stock problems are the canonical family. Each day you're in one of a few <strong>states</strong>
+  (holding a share / just sold / free to buy), and each day you take one <strong>transition</strong>
+  (buy, sell, rest). Draw the machine, and each state's recurrence is just "the best way to arrive here":
+</p>
+
+<div class="anim" id="smAnim">
+  <svg viewBox="0 0 640 260">
+    <!-- state nodes -->
+    <circle id="sm-hold" class="box" cx="150" cy="90" r="36"></circle>
+    <circle id="sm-sold" class="box" cx="480" cy="90" r="36"></circle>
+    <circle id="sm-rest" class="box" cx="315" cy="200" r="36"></circle>
+    <text class="lbl" x="150" y="86" text-anchor="middle">HOLD</text>
+    <text id="sm-vhold" class="lbl" x="150" y="104" text-anchor="middle" font-size="12"></text>
+    <text class="lbl" x="480" y="86" text-anchor="middle">SOLD</text>
+    <text id="sm-vsold" class="lbl" x="480" y="104" text-anchor="middle" font-size="12"></text>
+    <text class="lbl" x="315" y="196" text-anchor="middle">REST</text>
+    <text id="sm-vrest" class="lbl" x="315" y="214" text-anchor="middle" font-size="12"></text>
+    <!-- transitions -->
+    <path id="sm-sell" class="edge" d="M186,90 L440,90"></path>
+    <text class="small" x="285" y="80">sell (+price)</text>
+    <path id="sm-cool" class="edge" d="M455,120 L350,180"></path>
+    <text class="small" x="425" y="160">cooldown ends</text>
+    <path id="sm-buy" class="edge" d="M280,180 L178,118"></path>
+    <text class="small" x="150" y="165">buy (−price)</text>
+    <text class="small" x="20" y="30" id="sm-day"></text>
+    <text class="small" x="20" y="48">self-loops (keep holding / keep resting) not drawn</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<p>
+  Why <code>sold</code> exists at all: after selling there's a one-day <strong>cooldown</strong>, so "not holding"
+  splits into two genuinely different situations — <em>just sold</em> (can't buy tomorrow) and <em>rest</em>
+  (free to buy). <strong>When one flag changes what moves are legal, that flag belongs in the state.</strong>
+  That sentence generalizes to every state-machine problem (with-fee, at-most-k-transactions, etc.).
+</p>
+
+<h3>2. Interval DP — when the state is a range</h3>
+<p>
+  Signature: "do operations on a sequence until it's consumed; order changes the score" — burst balloons,
+  matrix-chain multiplication, merging stones. State: <code>dp[l][r]</code> = best result for the sub-range.
+  Solve <strong>short ranges first</strong>, then longer ones built from them.
+</p>
+<div class="note">
+  <strong>The key inversion: pick the LAST operation, not the first.</strong> In Burst Balloons, if you pick the
+  <em>first</em> balloon to pop, the two sides still interact (their neighbors change later) — subproblems aren't
+  independent. Pick the balloon that pops <em>last</em> in range (l, r): at that moment its neighbors are exactly
+  the walls l and r, so the left and right sides are fully independent. Almost every interval-DP problem has this
+  same "condition on the last move" trick.
+</div>
+
+<h3>3. Bitmask DP — when the state is a subset (n ≤ ~20)</h3>
+<p>
+  An <code>int</code> is 32 flags (<a href="22-bit-manipulation.html">page 22</a>): bit i set = "item i already used".
+  So <code>dp[mask]</code> means "best result having used exactly this subset" — 2ⁿ states you can iterate with a
+  plain for-loop. <strong>The giveaway is the constraint: n ≤ 20 with "visit all / assign all / partition all".</strong>
+</p>
+<p class="code-title">The bitmask vocabulary (used in TSP, partition-to-k-subsets, job assignment)</p>
+<pre class="code"><code>int full = (1 &lt;&lt; n) - 1;                 // all n items used
+for (int mask = 0; mask &lt;= full; mask++) // enumerate every subset
+    for (int i = 0; i &lt; n; i++) {
+        if ((mask &amp; (1 &lt;&lt; i)) != 0) continue;  // item i already in the subset
+        int next = mask | (1 &lt;&lt; i);            // subset with item i added
+        // dp[next] = best(dp[next], dp[mask] + cost of adding i)
+    }</code></pre>
+
+<h3>4. Tree DP — when the input is a tree</h3>
+<p>
+  Run the bottom-up pattern from <a href="11-trees.html">page 11</a>: post-order DFS where each node returns a small
+  array of answers for its subtree — one per "state of this node" (robbed / not robbed). The parent combines
+  children's answers in O(1). It's House Robber's rob/skip choice, walked over a tree instead of a row.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">State-machine rolling update — read yesterday, write today</p>
+<pre class="code"><code>// one variable per state; temporaries enforce "all reads see yesterday"
+int newHold = Math.max(hold, rest - price);   // stay, or buy from rest
+int newSold = hold + price;                   // sell what we held
+int newRest = Math.max(rest, sold);           // stay, or cooldown just ended
+hold = newHold; sold = newSold; rest = newRest;</code></pre>
+
+<p class="code-title">Interval DP skeleton — lengths outward, split point inside</p>
+<pre class="code"><code>for (int len = 2; len &lt;= n; len++)            // small ranges first
+    for (int l = 0; l + len &lt;= n; l++) {
+        int r = l + len;
+        for (int k = l + 1; k &lt; r; k++)       // k = the LAST operation's position
+            dp[l][r] = Math.max(dp[l][r], dp[l][k] + dp[k][r] + score(l, k, r));
+    }</code></pre>
+
+<p class="code-title">Tree DP skeleton — post-order, return one answer per node-state</p>
+<pre class="code"><code>int[] dfs(TreeNode node) {                    // returns {bestIfUsed, bestIfSkipped}
+    if (node == null) return new int[]{0, 0};
+    int[] L = dfs(node.left), R = dfs(node.right);   // children first
+    int use  = node.val + L[1] + R[1];        // using node forbids using children
+    int skip = Math.max(L[0], L[1]) + Math.max(R[0], R[1]);
+    return new int[]{use, skip};
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Problem statement says…</th><th>Family</th><th>State</th><th>Cost</th><th>Classic</th></tr>
+  <tr><td>phases/modes: buy–sell, on–off, with cooldowns/fees</td><td>State machine</td><td>(day, mode)</td><td>O(n·modes)</td><td>Stock series</td></tr>
+  <tr><td>operate on a sequence until consumed; order matters</td><td>Interval</td><td>(l, r)</td><td>O(n³) typical</td><td>Burst Balloons, matrix chain</td></tr>
+  <tr><td>n ≤ ~20, "visit/assign/partition ALL items"</td><td>Bitmask</td><td>subset as int (+ extras)</td><td>O(2ⁿ·n)</td><td>TSP, Partition to K Subsets</td></tr>
+  <tr><td>input is a tree; parent/child constraints</td><td>Tree DP</td><td>(node, node-state)</td><td>O(n)</td><td>House Robber III</td></tr>
+  <tr><td>plain sequence, one moving index</td><td>1D DP</td><td>i</td><td>O(n)</td><td><a href="18-dp-1d.html">page 18</a></td></tr>
+  <tr><td>two sequences / grid / capacity</td><td>2D DP</td><td>(i, j)</td><td>O(n·m)</td><td><a href="19-dp-2d.html">page 19</a></td></tr>
+</table>
+</div>
+
+<h3>Decision cues</h3>
+<ul>
+  <li>"…with cooldown / with fee / at most k transactions" → <strong>add a mode to the state</strong>, don't invent a new algorithm.</li>
+  <li>Score of an operation depends on <em>what's still around it</em> → interval DP, <strong>condition on the last move</strong>.</li>
+  <li>n ≤ 20 is a flashing sign: the intended solution is exponential-in-subsets — <strong>bitmask</strong>.</li>
+  <li>Tree + "can't pick adjacent" or "best path/coverage" → <strong>post-order returning per-state answers</strong>.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Database query optimizers</h4>
+    <p class="small">Choosing a join order for k tables is interval/bitmask DP over table subsets — PostgreSQL's
+    planner literally runs DP up to a table-count threshold (then falls back to heuristics). "dp[subset of tables] =
+    cheapest plan producing that subset."</p>
+  </div>
+  <div class="card">
+    <h4>Trading &amp; inventory state machines</h4>
+    <p class="small">Position management (flat/long/short with transaction costs and holding constraints) is the
+    stock-DP state machine at industrial scale — backtesting engines evaluate exactly these transition graphs over
+    price series.</p>
+  </div>
+  <div class="card">
+    <h4>Routing &amp; last-mile delivery</h4>
+    <p class="small">Exact TSP solvers for small stop-counts (a driver's 15-stop run) use Held-Karp bitmask DP —
+    dp[visited-set][current-stop]. Beyond ~20 stops, heuristics take over, but the DP is the correctness baseline.</p>
+  </div>
+  <div class="card">
+    <h4>Compilers &amp; bioinformatics</h4>
+    <p class="small">Optimal expression evaluation and matrix-chain ordering are interval DP; RNA secondary-structure
+    prediction (Nussinov algorithm) is dp[l][r] over a sequence — the same skeleton as Burst Balloons.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/">Best Time to Buy and Sell Stock II</a>
+    <span class="hint">Worked below — two states (hold/free); the gentlest state machine.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/">Best Time to Buy and Sell Stock with Cooldown</a>
+    <span class="hint">Worked below — the cooldown forces a third state; matches the animation above.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/house-robber-iii/">House Robber III</a>
+    <span class="hint">Worked below — tree DP returning {rob, skip} per subtree.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/stone-game/">Stone Game</a>
+    <span class="hint">Interval DP where dp[l][r] = best score DIFFERENCE the current player can force on piles l..r.</span></div>
+  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/partition-to-k-equal-sum-subsets/">Partition to K Equal Sum Subsets</a>
+    <span class="hint">Bitmask: dp[mask] = filled-buckets progress; add items to the current bucket until it hits sum/k.</span></div>
+  <div class="prob"><span class="badge hard">Hard</span> <a class="t" href="https://leetcode.com/problems/burst-balloons/">Burst Balloons</a>
+    <span class="hint">Worked below — THE interval-DP interview problem; last-balloon inversion.</span></div>
+  <div class="prob"><span class="badge hard">Hard</span> <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iv/">Best Time to Buy and Sell Stock IV</a>
+    <span class="hint">Generalize the machine: hold/free per transaction count → dp[k][2] states per day.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: Stock II (two-state machine) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Unlimited buy/sell (one share at a time) — maximize profit.</p>
+    <p><strong>Idea.</strong> Two states after each day: <code>hold</code> (own a share) and <code>free</code> (don't).
+    Each day, each state keeps its best value over "stay" and "transition in".</p>
+<pre class="code"><code>public static int maxProfit(int[] prices) {
+    int hold = -prices[0];                       // day 0: bought at prices[0]
+    int free = 0;                                // day 0: did nothing
+    for (int d = 1; d &lt; prices.length; d++) {
+        int p = prices[d];
+        // Compute both new states from YESTERDAY's values (read before write).
+        int newHold = Math.max(hold, free - p);  // keep holding, or buy today
+        int newFree = Math.max(free, hold + p);  // keep resting, or sell today
+        hold = newHold;
+        free = newFree;
+    }
+    return free;                                 // end without a share — holding one is wasted money
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n) time, O(1) space. (A greedy "sum every up-tick" also solves this one — but the
+    state-machine framing is the one that generalizes to cooldown/fee/k-transactions, which greedy cannot.)</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Stock with Cooldown (three-state machine) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Same as Stock II, but after selling you must skip a day before buying again.</p>
+    <p><strong>Idea.</strong> The cooldown makes "not holding" ambiguous — split it: <code>sold</code> (sold today,
+    tomorrow is a forced cooldown) vs <code>rest</code> (idle, allowed to buy). Then read the transitions off the
+    machine in the animation above.</p>
+<pre class="code"><code>public static int maxProfit(int[] prices) {
+    int hold = -prices[0];                          // day 0: bought
+    int sold = Integer.MIN_VALUE / 2;               // day 0: can't have sold yet ("-infinity", halved to avoid overflow)
+    int rest = 0;                                   // day 0: did nothing
+    for (int d = 1; d &lt; prices.length; d++) {
+        int p = prices[d];
+        // All three reads use YESTERDAY's values, so compute into temporaries first.
+        int newHold = Math.max(hold, rest - p);     // keep holding, or buy (only from rest — not right after a sale!)
+        int newSold = hold + p;                     // sell the share we were holding
+        int newRest = Math.max(rest, sold);         // idle, or yesterday's cooldown just ended
+        hold = newHold; sold = newSold; rest = newRest;
+    }
+    return Math.max(sold, rest);                    // end not holding (ending in `hold` wastes a purchase)
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n) time, O(1) space. Two details interviewers probe: why buy reads
+    <code>rest</code> (not <code>sold</code>) — that IS the cooldown; and why −∞ is halved — a raw
+    <code>MIN_VALUE</code> would overflow when added to a price.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: House Robber III (tree DP) — Medium</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Houses form a binary tree; robbing a node forbids robbing its direct children.
+    Maximize the loot.</p>
+    <p><strong>Idea.</strong> Post-order DFS where every subtree reports two numbers: best-if-robbed and
+    best-if-skipped. The parent combines them in O(1) — the bottom-up pattern from page 11, now carrying DP state.</p>
+<pre class="code"><code>// res[0] = best loot in this subtree if we ROB this node
+// res[1] = best loot in this subtree if we SKIP this node
+public static int rob(TreeNode root) {
+    int[] res = dfs(root);
+    return Math.max(res[0], res[1]);                 // free to rob or skip the root
+}
+
+private static int[] dfs(TreeNode node) {
+    if (node == null) return new int[]{0, 0};        // empty subtree: nothing either way
+    int[] left = dfs(node.left);                     // solve children first (post-order)
+    int[] right = dfs(node.right);
+    // Rob this node -&gt; both children MUST be skipped (adjacency constraint along edges).
+    int robThis = node.val + left[1] + right[1];
+    // Skip this node -&gt; each child is independently free: take its better option.
+    int skipThis = Math.max(left[0], left[1]) + Math.max(right[0], right[1]);
+    return new int[]{robThis, skipThis};
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n) time (each node once), O(h) space for recursion. The common wrong answer —
+    "skip node ⇒ rob both children" — misses that skipping can also beat robbing at a child; taking each child's
+    <em>max</em> fixes it.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Burst Balloons (interval DP) — Hard</summary>
+  <div class="sol-body">
+    <p><strong>Problem.</strong> Bursting balloon i earns <code>nums[left]·nums[i]·nums[right]</code> using its
+    <em>current</em> neighbors; balloons then close ranks. Maximize total coins.</p>
+    <p><strong>Idea.</strong> Condition on the balloon that pops <strong>last</strong> between walls l and r: at that
+    moment its neighbors are exactly l and r, so the two sides are independent subproblems. Pad both ends with
+    virtual 1-balloons so edge products are uniform.</p>
+<pre class="code"><code>public static int maxCoins(int[] nums) {
+    int n = nums.length;
+    int[] b = new int[n + 2];                       // padded array
+    b[0] = 1; b[n + 1] = 1;                         // virtual boundary balloons
+    for (int i = 0; i &lt; n; i++) b[i + 1] = nums[i];
+
+    int[][] dp = new int[n + 2][n + 2];             // defaults to 0: empty ranges score 0
+    for (int len = 2; len &lt;= n + 1; len++) {        // solve small gaps first (range length = r-l)
+        for (int l = 0; l + len &lt;= n + 1; l++) {
+            int r = l + len;
+            for (int k = l + 1; k &lt; r; k++) {       // choose which balloon pops LAST in (l,r)
+                int coins = dp[l][k]                // first clear everything left of k...
+                          + dp[k][r]                // ...then everything right of k...
+                          + b[l] * b[k] * b[r];     // ...then k pops between walls l and r
+                dp[l][r] = Math.max(dp[l][r], coins);
+            }
+        }
+    }
+    return dp[0][n + 1];                            // burst everything between the two virtual walls
+}</code></pre>
+    <p><strong>Complexity.</strong> O(n³) time (ranges × split points), O(n²) space. If you remember one thing:
+    <em>"first balloon" couples the sides; "last balloon" decouples them.</em></p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Rolling-state bug:</strong> updating <code>hold</code> before <code>free</code> reads it silently uses <em>today's</em> value. Always compute all new states into temporaries, then assign.</li>
+  <li><strong>−∞ sentinels overflow.</strong> <code>Integer.MIN_VALUE + price</code> wraps around; use <code>MIN_VALUE / 2</code> or a <code>long</code>.</li>
+  <li><strong>Interval DP loop order matters:</strong> iterate by range <em>length</em>, not by l then r — dp[l][r] needs all shorter sub-ranges already solved.</li>
+  <li><strong>Bitmask off-by-ones:</strong> <code>(1 &lt;&lt; n) - 1</code> is "all used"; test membership with <code>(mask &gt;&gt; i &amp; 1) == 1</code>; never shift by ≥ 32 on an int.</li>
+  <li><strong>Don't force DP where a mode-less greedy works</strong> (Stock II alone is greedy-able) — but SAY the state-machine version too, since it's what generalizes when the follow-up adds a cooldown or fee.</li>
+  <li><strong>Name states out loud before coding.</strong> "hold means best cash while owning a share" — interviewers score the state definition as heavily as the code.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="19-dp-2d.html"><span class="dir">⟵ Previous</span><span class="name">19 · Dynamic Programming 2D</span></a>
+  <a class="next" href="21-greedy-intervals.html"><span class="dir">Next ⟶</span><span class="name">21 · Greedy &amp; Intervals</span></a>
+</nav>
+
+</div>
+
+<script>
+/* Stock-with-cooldown state machine over prices [1,2,3,0,2] */
+(function () {
+  var days = [
+    { day: 'Before day 0', hold: '', sold: '', rest: '', hi: [] },
+    { day: 'Day 0 · price 1', hold: '-1', sold: '-∞', rest: '0', hi: [] },
+    { day: 'Day 1 · price 2', hold: '-1', sold: '1', rest: '0', hi: ['sell'] },
+    { day: 'Day 2 · price 3', hold: '-1', sold: '2', rest: '1', hi: ['sell', 'cool'] },
+    { day: 'Day 3 · price 0', hold: '1', sold: '-1', rest: '2', hi: ['buy', 'cool'] },
+    { day: 'Day 4 · price 2', hold: '1', sold: '3', rest: '2', hi: ['sell'] },
+    { day: 'Done', hold: '1', sold: '3', rest: '2', hi: [] }
+  ];
+  new Stepper('smAnim', {
+    totalSteps: 7,
+    intervalMs: 2000,
+    captions: [
+      'Three states, three transitions. Each state stores ONE number: the best cash achievable while in that state. Prices: [1,2,3,0,2].',
+      'Day 0: buying puts HOLD at −1. SOLD is impossible so far (−∞). REST (do nothing) is 0.',
+      'Day 1 (price 2): selling the held share puts SOLD at −1+2 = 1. HOLD and REST see nothing better than staying put.',
+      'Day 2 (price 3): selling now yields −1+3 = 2. Meanwhile yesterday\'s sale finishes its cooldown, so REST rises to 1.',
+      'Day 3 (price 0): from REST(1) we buy at 0 → HOLD jumps to 1. REST inherits the finished cooldown value 2.',
+      'Day 4 (price 2): sell the share bought at 0: SOLD = 1+2 = 3. That is the profitable ending.',
+      'Answer: max(SOLD, REST) = 3 — buy 1, sell 2, cooldown, buy 0, sell 2. The machine turned a tricky rule into three plain equations.'
+    ],
+    apply: function (svg, step) {
+      var s = days[step];
+      Stepper.setText(svg, '#sm-day', s.day);
+      Stepper.setText(svg, '#sm-vhold', s.hold === '' ? '' : 'best: ' + s.hold);
+      Stepper.setText(svg, '#sm-vsold', s.sold === '' ? '' : 'best: ' + s.sold);
+      Stepper.setText(svg, '#sm-vrest', s.rest === '' ? '' : 'best: ' + s.rest);
+      ['hold', 'sold', 'rest'].forEach(function (n) {
+        Stepper.setClass(svg, '#sm-' + n, 'active', step > 0 && step < 6);
+      });
+      ['sell', 'cool', 'buy'].forEach(function (e) {
+        Stepper.setClass(svg, '#sm-' + e, 'active', s.hi.indexOf(e) >= 0);
+      });
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

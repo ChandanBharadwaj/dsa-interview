@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03 · Sliding Window — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Sliding Window</h1>
+<p class="subtitle">Best/longest/shortest <em>contiguous</em> subarray or substring? Keep a window that slides forward, updating its state in O(1) per move instead of recomputing — the pattern behind a huge share of string questions.</p>
+<p>
+  <span class="badge phase">Phase 1 · Weeks 2–3</span>
+  <span class="badge freq">Asked constantly for strings &amp; subarrays</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  "Longest substring such that…", "shortest subarray with…", "max sum of k consecutive…" — the brute
+  force checks O(n²) ranges, each in O(n): cubic. The fix is to notice that neighboring ranges differ by
+  <em>one element</em>. Maintain a window plus a little bookkeeping (a sum, a count array), pay O(1) per
+  slide, and the whole family collapses to O(n). It's incremental computation — the same instinct as
+  caching a computed value instead of recomputing it per request.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — frequency counting with maps and <code>int[26]</code> is the window's state.</li>
+  <li><a href="02-two-pointers.html">02 · Two Pointers</a> — a window is two pointers moving the <em>same</em> direction; the discard reasoning carries over.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you recognize "contiguous"?</strong> That single word is the trigger; subsequences (non-contiguous) are a different topic (DP, page 18).</li>
+  <li><strong>Can you state the window invariant?</strong> "My window always satisfies P; I expand until P breaks, shrink until it holds" — say it explicitly.</li>
+  <li><strong>O(1) updates:</strong> adding/removing one element must not trigger a recount of the window.</li>
+  <li><strong>The amortized argument:</strong> why a loop-in-a-loop is still O(n) — each pointer only moves forward.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Two pointers converged from opposite ends and needed sorted data. Slide both pointers the <em>same</em>
+  way and sortedness stops mattering — what matters instead is that the window's property is easy to
+  maintain incrementally. The new ingredient over page 02 is <strong>state</strong> carried between moves
+  (a running sum, a count array from page 01), so the window "knows" whether it's valid without
+  re-scanning itself.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Fixed-size window: recompute in O(1), not O(k)</h3>
+<p class="lead">
+  For "max sum of k consecutive elements", the windows at i and i+1 share k−1 elements. So don't re-add
+  k numbers — <strong>subtract the element leaving, add the element entering</strong>:
+  <code>sum += arr[i] − arr[i−k]</code>. Total cost O(n) instead of O(n·k). Any recomputation dearer than
+  O(1) per slide means you're holding the pattern wrong.
+</p>
+
+<h3>2. Variable-size window: the grow/shrink invariant</h3>
+<p>
+  When the window size is what you're optimizing, run two same-direction pointers with a contract:
+</p>
+<ul>
+  <li><code>right</code> expands the window one element per iteration — greedily take more.</li>
+  <li>The moment the window <strong>violates</strong> the constraint (a repeated char, sum too big),
+    advance <code>left</code> just far enough to restore it.</li>
+  <li>Measure the window whenever it's valid (longest) or whenever it's just barely valid (shortest).</li>
+</ul>
+<p>
+  The nested <code>while</code> looks quadratic but isn't: <code>left</code> and <code>right</code> each
+  move only forward, at most n steps apiece — <strong>amortized O(n)</strong>. That argument, said out
+  loud, is worth real points.
+</p>
+
+<div class="anim" id="windowAnim">
+  <svg viewBox="0 0 640 290" role="img" aria-label="Variable window finding the longest substring without repeating characters">
+    <text class="lbl" x="40" y="34">s = "abcbda"</text>
+    <text id="bestTxt" class="lbl" x="440" y="34"></text>
+    <!-- window band (behind cells) -->
+    <rect id="win" x="64" y="92" width="0" height="62" rx="10"
+          style="fill:var(--accent-soft); stroke:var(--accent); stroke-width:2; opacity:0"></rect>
+    <!-- char cells -->
+    <rect id="ch0" class="box" x="70" y="100" width="70" height="46" rx="8"></rect>
+    <rect id="ch1" class="box" x="155" y="100" width="70" height="46" rx="8"></rect>
+    <rect id="ch2" class="box" x="240" y="100" width="70" height="46" rx="8"></rect>
+    <rect id="ch3" class="box" x="325" y="100" width="70" height="46" rx="8"></rect>
+    <rect id="ch4" class="box" x="410" y="100" width="70" height="46" rx="8"></rect>
+    <rect id="ch5" class="box" x="495" y="100" width="70" height="46" rx="8"></rect>
+    <text class="lbl" x="100" y="129">a</text>
+    <text class="lbl" x="185" y="129">b</text>
+    <text class="lbl" x="270" y="129">c</text>
+    <text class="lbl" x="355" y="129">b</text>
+    <text class="lbl" x="440" y="129">d</text>
+    <text class="lbl" x="525" y="129">a</text>
+    <text class="small" x="100" y="164">[0]</text>
+    <text class="small" x="185" y="164">[1]</text>
+    <text class="small" x="270" y="164">[2]</text>
+    <text class="small" x="355" y="164">[3]</text>
+    <text class="small" x="440" y="164">[4]</text>
+    <text class="small" x="525" y="164">[5]</text>
+    <!-- pointers: R above, L below (translated from index-0 origin) -->
+    <polygon id="rp" class="ptr" points="105,94 95,78 115,78"></polygon>
+    <text id="rpl" class="ptrlbl" x="99" y="72">R</text>
+    <polygon id="lp" class="ptr" points="105,186 95,202 115,202"></polygon>
+    <text id="lpl" class="ptrlbl" x="99" y="220">L</text>
+    <!-- window contents readout -->
+    <text id="seenTxt" class="lbl" x="40" y="262"></text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. Window state: what the window "knows" about itself</h3>
+<p>
+  The window must answer "am I valid?" in O(1). Pick the lightest structure that can:
+</p>
+<ul>
+  <li><strong>A number</strong> — running sum/product (max average subarray).</li>
+  <li><strong><code>int[26]</code>/<code>int[128]</code> counts</strong> — anagram/permutation checks, distinct-char limits.</li>
+  <li><strong>HashMap + a counter</strong> — Minimum Window Substring's <code>required</code> trick: one integer summarizes "how many characters am I still missing?", making validity a <code>required == 0</code> check instead of a 52-entry comparison.</li>
+</ul>
+
+<h3>4. Monotonic deque: sliding window <em>maximum</em></h3>
+<p>
+  "Max of each k-window" breaks the plain pattern — when the max leaves the window, what's the new max?
+  The fix is a deque of <em>indexes</em> whose values stay in decreasing order: push a new element after
+  popping all smaller ones from the back (they can never be a future max while a bigger, younger element
+  lives); pop from the front when the front index slides out of range. The front is always the current
+  max, and every index enters/leaves the deque once ⇒ O(n). Full monotonic-structure treatment in
+  <a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a>.
+</p>
+
+<div class="warn">
+  <strong>When the window logic breaks: negative numbers.</strong> "Shrink while sum &gt; target" assumes
+  growing the window can only grow the sum — monotonicity. Negative values kill that assumption (a longer
+  window may sum to less), so "subarray sum equals k with negatives" is <em>not</em> a sliding-window
+  problem: it belongs to prefix sums + HashMap, next page. Recognizing this boundary is a favorite
+  follow-up question.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Template 1 — fixed-size window (size k)</p>
+<pre class="code"><code>long sum = 0;
+for (int i = 0; i &lt; k; i++) sum += arr[i];   // seed the first window
+long best = sum;
+for (int i = k; i &lt; arr.length; i++) {
+    sum += arr[i] - arr[i - k];   // one enters, one leaves: O(1), not O(k)
+    best = Math.max(best, sum);
+}</code></pre>
+
+<p class="code-title">Template 2 — variable window (longest while valid)</p>
+<pre class="code"><code>int left = 0;
+for (int right = 0; right &lt; n; right++) {
+    add(arr[right]);                       // extend window by one element
+    while (windowInvalid()) {              // constraint broken?
+        remove(arr[left]);                 // shrink from the left...
+        left++;                            // ...until it holds again
+    }
+    best = Math.max(best, right - left + 1);   // window valid here
+}
+// Amortized O(n): left and right each advance at most n times total</code></pre>
+
+<p class="code-title">Template 3 — variable window (shortest that satisfies)</p>
+<pre class="code"><code>int left = 0;
+for (int right = 0; right &lt; n; right++) {
+    add(arr[right]);
+    while (windowSatisfies()) {            // valid — try to make it tighter
+        best = Math.min(best, right - left + 1);   // record BEFORE shrinking
+        remove(arr[left]);
+        left++;
+    }
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Technique</th><th>Shape of question</th><th>Time</th><th>Watch out</th></tr>
+  <tr><td>Sliding window</td><td>best <em>contiguous</em> range, property maintainable in O(1)</td><td>O(n)</td><td>needs monotone grow/shrink logic — negatives break it</td></tr>
+  <tr><td>Two pointers (page 02)</td><td>pairs from both ends of <em>sorted</em> data; in-place edits</td><td>O(n)</td><td>opposite-direction motion, no window state</td></tr>
+  <tr><td>Prefix sum (page 04)</td><td>range sums with negatives; "subarray sum equals k"; many queries</td><td>O(n) build, O(1) query</td><td>O(n) extra space</td></tr>
+  <tr><td>Brute force all ranges</td><td>n very small, or property genuinely not incremental</td><td>O(n²)+</td><td>say why the window doesn't apply — that's the credit</td></tr>
+</table>
+</div>
+
+<p>Decision cues:</p>
+<ul>
+  <li>"Longest/shortest <strong>substring/subarray</strong> with condition" → variable window.</li>
+  <li>"Exactly k consecutive" / "every window of size k" → fixed window.</li>
+  <li>"Contains a <strong>permutation/anagram</strong> of t" → fixed window (size |t|) + count compare.</li>
+  <li>"Subarray <strong>sum equals</strong> k" with negatives allowed → prefix sum + HashMap (page 04).</li>
+  <li>"Max/min <strong>of</strong> each window" → monotonic deque (here + page 09).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Rate limiters</h4>
+    <p class="small">"Max 100 requests per 60 seconds" is a sliding window over a timestamp stream. The
+    sliding-window-log limiter keeps a deque of timestamps, evicting those older than now−60s — literally
+    Template 2 with time as the constraint. Redis and Envoy both ship this and the cheaper
+    sliding-window-counter approximation.</p>
+  </div>
+  <div class="card">
+    <h4>Streaming analytics</h4>
+    <p class="small">Rolling averages, "p95 latency over the last N samples", Prometheus <code>rate()</code>
+    over a range: monitoring pipelines maintain window aggregates incrementally, add-one-evict-one, because
+    recomputing per data point would melt the collector.</p>
+  </div>
+  <div class="card">
+    <h4>TCP flow control</h4>
+    <p class="small">TCP's receive and congestion windows are literal sliding windows over the byte stream:
+    the sender may have only the window's worth of unacknowledged bytes in flight; ACKs slide the left
+    edge forward while the congestion algorithm grows and shrinks the right.</p>
+  </div>
+  <div class="card">
+    <h4>Fraud velocity checks</h4>
+    <p class="small">"More than 3 cards tried from one IP in 10 minutes", "5 logins across 4 countries in
+    an hour" — risk engines keep per-key sliding windows with counts (page 01's maps as window state) and
+    flag when a window's stats cross a threshold.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock/">Best Time to Buy and Sell Stock</a>
+    <span class="hint">A degenerate window: track min price so far; best profit = price − minSoFar at each step.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/maximum-average-subarray-i/">Maximum Average Subarray I</a>
+    <span class="hint">Fixed window: seed sum of first k, then <code>sum += a[i] − a[i−k]</code>.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/longest-substring-without-repeating-characters/">Longest Substring Without Repeating Characters</a> ★
+    <span class="hint">Variable window; on a duplicate, jump left past the old occurrence (last-seen index array).</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/permutation-in-string/">Permutation in String</a> ★
+    <span class="hint">Fixed window of size |s1|; compare two <code>int[26]</code> counts as the window slides.</span></div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <a class="t" href="https://leetcode.com/problems/minimum-window-substring/">Minimum Window Substring</a> ★
+    <span class="hint">Shortest-valid template + a <code>required</code> counter so validity is an O(1) check.</span></div>
+  <div class="prob"><span class="badge hard">hard</span>
+    <a class="t" href="https://leetcode.com/problems/sliding-window-maximum/">Sliding Window Maximum</a>
+    <span class="hint">Monotonic deque of indexes, values decreasing; front = current max. Deep-dive in <a href="09-stacks-queues.html">09</a>.</span></div>
+</div>
+
+<details class="sol">
+  <summary>★ Worked solution — Longest Substring Without Repeating Characters (LeetCode 3, medium)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> length of the longest substring of <code>s</code> containing no
+    repeated character.</p>
+    <p><strong>Idea:</strong> keep a window that is always duplicate-free. Remember each character's last
+    position; when the incoming char was last seen <em>inside</em> the window, snap <code>left</code> to just
+    past that old occurrence — one jump instead of a step-by-step shrink. Measure after every extension.</p>
+<pre class="code"><code>public static int lengthOfLongestSubstring(String s) {
+    // last[c] = most recent index where character c appeared; -1 = never.
+    // An int[128] covers ASCII and beats a HashMap on constant factors.
+    int[] last = new int[128];
+    Arrays.fill(last, -1);
+
+    int best = 0;
+    int left = 0;                          // window start
+    for (int right = 0; right &lt; s.length(); right++) {
+        char c = s.charAt(right);
+        // If c was last seen INSIDE the current window, the invariant
+        // would break — jump left just past that old occurrence.
+        // (If last[c] &lt; left, the old copy is already outside: ignore it.)
+        if (last[c] &gt;= left) {
+            left = last[c] + 1;
+        }
+        last[c] = right;                   // record newest position of c
+        // Window [left..right] is now duplicate-free — measure it
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — one pass, <code>left</code> only jumps forward; space O(1) —
+    a fixed 128-slot array. Runnable mirror: <code>code/03-sliding-window/LongestSubstringNoRepeat.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked solution — Permutation in String (LeetCode 567, medium)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> does <code>s2</code> contain any permutation of <code>s1</code>
+    as a contiguous substring?</p>
+    <p><strong>Idea:</strong> a permutation of <code>s1</code> is just some window of length |s1| whose letter
+    counts equal <code>s1</code>'s. So slide a fixed-size window across <code>s2</code>, updating counts by
+    the one char entering and the one leaving, and compare the two 26-slot arrays — an O(26) = O(1) check
+    per slide.</p>
+<pre class="code"><code>public static boolean checkInclusion(String s1, String s2) {
+    int k = s1.length();
+    if (k &gt; s2.length()) return false;     // can't fit — fail fast
+
+    // need = target letter counts; window = counts of current k-slice
+    int[] need = new int[26];
+    int[] window = new int[26];
+    for (char c : s1.toCharArray()) need[c - 'a']++;
+
+    for (int i = 0; i &lt; s2.length(); i++) {
+        // Slide right edge in: count the new character
+        window[s2.charAt(i) - 'a']++;
+        // Once the window exceeds size k, evict the char falling off
+        // the left edge — O(1) update instead of recounting k chars
+        if (i &gt;= k) {
+            window[s2.charAt(i - k) - 'a']--;
+        }
+        // Window is full-size from i == k-1 onward; compare counts.
+        // Arrays.equals over 26 ints is O(26) = O(1).
+        if (i &gt;= k - 1 &amp;&amp; Arrays.equals(window, need)) {
+            return true;
+        }
+    }
+    return false;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n·26) = O(n) for n = |s2|; space O(1) — two fixed arrays.
+    Runnable mirror: <code>code/03-sliding-window/PermutationInString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>★ Worked solution — Minimum Window Substring (LeetCode 76, hard)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> smallest window of <code>s</code> containing every character of
+    <code>t</code> (with multiplicity).</p>
+    <p><strong>Idea:</strong> the shortest-valid template. Expand <code>right</code> until the window covers
+    <code>t</code>, then shrink <code>left</code> while it still does, recording each valid size. The elegant
+    part is the <code>required</code> counter: <code>need[c]</code> goes negative for surplus copies, and
+    <code>required</code> only counts genuinely missing characters — so "is the window valid?" is the O(1)
+    test <code>required == 0</code> rather than a full count comparison.</p>
+<pre class="code"><code>public static String minWindow(String s, String t) {
+    if (t.length() &gt; s.length()) return "";
+
+    // need[c] &gt; 0  =&gt; window still owes that many copies of c.
+    // need[c] &lt; 0  =&gt; window holds surplus copies of c.
+    int[] need = new int[128];
+    for (char c : t.toCharArray()) need[c]++;
+    int required = t.length();      // total characters still missing
+
+    int bestLen = Integer.MAX_VALUE, bestStart = 0;
+    int left = 0;
+    for (int right = 0; right &lt; s.length(); right++) {
+        char in = s.charAt(right);
+        // Taking `in`: it only fills a real gap if we still owed one
+        if (need[in] &gt; 0) required--;
+        need[in]--;                 // may go negative = surplus copy
+
+        // Window covers all of t — shrink from the left while it still does
+        while (required == 0) {
+            // Record the window if it's the smallest so far
+            if (right - left + 1 &lt; bestLen) {
+                bestLen = right - left + 1;
+                bestStart = left;
+            }
+            // Give the leftmost char back before moving left forward
+            char out = s.charAt(left);
+            need[out]++;
+            // If that char is now owed again, the window just broke —
+            // exit the shrink loop and go back to expanding
+            if (need[out] &gt; 0) required++;
+            left++;
+        }
+    }
+    return bestLen == Integer.MAX_VALUE
+            ? ""
+            : s.substring(bestStart, bestStart + bestLen);
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(|s| + |t|) — each pointer sweeps forward once; space O(1) — a
+    fixed 128-slot array. Runnable mirror: <code>code/03-sliding-window/MinimumWindowSubstring.java</code>.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Window length is <code>right − left + 1</code></strong> with inclusive pointers. Off-by-one here is the #1 sliding-window bug — write it once, reuse it everywhere.</li>
+  <li><strong>Order of operations:</strong> add the new element <em>first</em>, then fix validity, then measure. For shortest-window problems, record the answer <em>before</em> shrinking past validity.</li>
+  <li><strong>"Substring" vs "subsequence":</strong> windows only handle contiguous ranges. If characters may be skipped, you're in DP territory (page 18) — clarify with the interviewer before coding.</li>
+  <li><strong>Negatives kill grow/shrink monotonicity</strong> for sum constraints — switch to prefix sum + HashMap (page 04) and say why.</li>
+  <li><strong>Prefer <code>int[128]</code>/<code>int[26]</code> over <code>HashMap&lt;Character,Integer&gt;</code></strong> when the alphabet is fixed: no boxing, no <code>getOrDefault</code> noise, faster — and mention the assumption ("ASCII input") as you make it.</li>
+  <li><strong>Justify the nested loop:</strong> "left never moves backward, so both pointers advance at most n times — amortized O(n)". Interviewers explicitly listen for this sentence.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="02-two-pointers.html"><span class="dir">⟵ Prev</span><span class="name">02 · Two Pointers</span></a>
+  <a class="next" href="04-prefix-sum.html"><span class="dir">Next ⟶</span><span class="name">04 · Prefix Sum</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('windowAnim', {
+  totalSteps: 8,
+  intervalMs: 1700,
+  captions: [
+    'Longest substring without repeating characters, s = "abcbda". The window [L..R] will always hold distinct characters — that\'s the invariant.',
+    'R takes \'a\'. Window "a" is duplicate-free. Seen set {a}. Best length so far: 1.',
+    'R takes \'b\'. Window "ab", still distinct. Seen {a, b}. Best: 2.',
+    'R takes \'c\'. Window "abc". Seen {a, b, c}. Best: 3.',
+    'R takes \'b\' — but \'b\' is already in the window (index 1). Invariant broken: time to shrink from the left.',
+    'L jumps to index 2, one past the old \'b\'. Indexes 0–1 are discarded for good. Window "cb" is valid again. Best stays 3.',
+    'R takes \'d\'. Window "cbd". Seen {c, b, d}. Best: still 3 — one more to go.',
+    'R takes \'a\' — the old \'a\' (index 0) is OUTSIDE the window, so no conflict. Window "cbda", length 4. Answer: 4, in one O(n) pass.'
+  ],
+  apply: function (svg, step) {
+    // window bounds per step (inclusive); step 0 = before start
+    var lIdx = [0, 0, 0, 0, 0, 2, 2, 2];
+    var rIdx = [-1, 0, 1, 2, 3, 3, 4, 5];
+    var seen = ['{ }', '{a}', '{a, b}', '{a, b, c}', '{a, b, c} + b ?!',
+                '{c, b}', '{c, b, d}', '{c, b, d, a}'];
+    var bests = ['best = 0', 'best = 1', 'best = 2', 'best = 3', 'best = 3',
+                 'best = 3', 'best = 3', 'best = 4 ✓'];
+    var li = lIdx[step], ri = rIdx[step];
+    // window band geometry (cell i spans x = 70+85i .. 140+85i)
+    var win = svg.querySelector('#win');
+    if (ri >= li) {
+      win.style.opacity = 1;
+      win.setAttribute('x', 70 + 85 * li - 6);
+      win.setAttribute('width', 85 * (ri - li) + 70 + 12);
+    } else {
+      win.style.opacity = 0;
+    }
+    // pointers (R waits at index 0 before the first take)
+    var rShow = Math.max(ri, 0);
+    Stepper.movePtr(svg, '#lp', li * 85, 0);
+    Stepper.movePtr(svg, '#lpl', li * 85, 0);
+    Stepper.movePtr(svg, '#rp', rShow * 85, 0);
+    Stepper.movePtr(svg, '#rpl', rShow * 85, 0);
+    Stepper.setText(svg, '#seenTxt', 'window chars: ' + seen[step]);
+    Stepper.setText(svg, '#bestTxt', bests[step]);
+    // cell states
+    for (var i = 0; i <= 5; i++) {
+      var inWin = i >= li && i <= ri;
+      Stepper.setClass(svg, '#ch' + i, 'active', inWin && step < 7 && step !== 4);
+      Stepper.setClass(svg, '#ch' + i, 'done', inWin && step === 7);
+      Stepper.setClass(svg, '#ch' + i, 'dim', i < li);               // discarded by shrink
+      // step 4: highlight the clashing pair of b's
+      Stepper.setClass(svg, '#ch' + i, 'frontier', step === 4 && (i === 1 || i === 3));
+    }
+  }
+});
+</script>
+
+</body>
+</html>

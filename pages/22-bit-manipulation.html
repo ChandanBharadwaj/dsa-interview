@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>22 · Bit Manipulation — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Bit Manipulation</h1>
+<p class="subtitle">Two's complement, Java's operators (including <code>&gt;&gt;&gt;</code>), and the small bag of tricks — XOR cancellation, <code>x &amp; (x−1)</code>, masks — that turns "clever" screener questions into 5-minute wins.</p>
+<p>
+  <span class="badge phase">Phase 8 · Week 13</span>
+  <span class="badge freq">Quick screener favorites — know the bag of tricks</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Bit questions aren't deep — they're a vocabulary test. Interviewers use them as fast screeners because each trick is
+  either known (2 minutes) or unknown (unsolvable on the spot; nobody derives XOR cancellation under pressure).
+  The good news: the whole bag fits on one page, every trick has a one-line "why", and as a Java developer you've been
+  sitting on top of this machinery forever — <code>HashMap</code> computes bucket indexes with <code>&amp;</code>,
+  <code>EnumSet</code> is secretly a bitset, and every CIDR block in your VPC config is a mask.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="00-foundations.html">00 · Foundations</a> — int/long sizes and overflow basics.</li>
+  <li><a href="20-dp-advanced.html">20 · DP Advanced</a> — bitmask DP used ints as subsets; this page explains the machinery underneath.</li>
+  <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — you'll compare bit tricks against HashSet solutions.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Do you know the canon?</strong> XOR cancellation, <code>x &amp; (x−1)</code>, masks — recognition, not derivation.</li>
+  <li><strong>Java specifics:</strong> the difference between <code>&gt;&gt;</code> and <code>&gt;&gt;&gt;</code>, and why it matters for negative numbers.</li>
+  <li><strong>Can you trade a HashSet for O(1) space</strong> when the domain is small (≤ 32/64 flags)?</li>
+  <li><strong>Edge-case discipline:</strong> 0, negative inputs, <code>Integer.MIN_VALUE</code> — bits punish sloppiness instantly.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Pages 18–21 were about algorithm <em>design</em> — DP states and greedy proofs. This page is a toolbox instead: tiny,
+  mechanical techniques you either know or don't. It also pays back a debt: the bitmask DP on
+  <a href="20-dp-advanced.html">page 20</a> treated an <code>int</code> as a set of visited items — here you'll see
+  exactly why <code>mask | (1 &lt;&lt; i)</code> "adds" element i and why that representation is so fast.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Two's complement in ninety seconds</h3>
+<p>
+  A Java <code>int</code> is 32 bits. Non-negative numbers are plain binary; a negative number is stored as
+  <strong>two's complement</strong>: <code>-x == ~x + 1</code> (flip all bits, add one). Consequences worth knowing cold:
+  the top bit is the sign bit; the range is asymmetric (−2³¹ … 2³¹−1, so <code>-Integer.MIN_VALUE</code> overflows back
+  to itself!); and arithmetic "just works" without special cases — which is exactly why the
+  <code>x−1</code> and <code>-x</code> tricks below behave so nicely.
+</p>
+
+<h3>2. The operators — and Java's <code>&gt;&gt;&gt;</code></h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Op</th><th>Name</th><th>Effect</th><th>Note</th></tr>
+  <tr><td><code>&amp;</code></td><td>AND</td><td>1 only where both are 1</td><td>masking / testing bits</td></tr>
+  <tr><td><code>|</code></td><td>OR</td><td>1 where either is 1</td><td>setting bits</td></tr>
+  <tr><td><code>^</code></td><td>XOR</td><td>1 where bits differ</td><td>toggling; self-inverse: <code>a^b^b == a</code></td></tr>
+  <tr><td><code>~</code></td><td>NOT</td><td>flips every bit</td><td><code>~x == -x - 1</code></td></tr>
+  <tr><td><code>&lt;&lt;</code></td><td>left shift</td><td>× 2 per step</td><td><code>1 &lt;&lt; i</code> = bit i as a mask</td></tr>
+  <tr><td><code>&gt;&gt;</code></td><td><em>arithmetic</em> right shift</td><td>÷ 2, <strong>copies the sign bit in</strong></td><td>−8 &gt;&gt; 1 = −4; negatives stay negative</td></tr>
+  <tr><td><code>&gt;&gt;&gt;</code></td><td><em>logical</em> right shift (Java-specific!)</td><td><strong>shifts zeros in</strong>, sign ignored</td><td>the loop-over-all-32-bits shift; −1 &gt;&gt;&gt; 28 = 15</td></tr>
+</table>
+</div>
+<div class="warn">
+  <strong>The <code>&gt;&gt;</code> vs <code>&gt;&gt;&gt;</code> trap.</strong> Looping <code>while (n != 0) { …; n &gt;&gt;= 1; }</code>
+  never terminates for negative <code>n</code> — the sign bit keeps refilling the top (−1 stays −1 forever). Use
+  <code>&gt;&gt;&gt;</code> when treating an int as 32 raw bits (Reverse Bits, Number of 1 Bits). C/C++ don't have
+  <code>&gt;&gt;&gt;</code>; it exists in Java precisely because Java lacks unsigned ints.
+</div>
+
+<h3>3. The trick bag — each with its one-line why</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Trick</th><th>What it does</th><th>Why it works</th></tr>
+  <tr><td><code>x &amp; 1</code></td><td>parity: is x odd?</td><td>the last bit <em>is</em> the units place</td></tr>
+  <tr><td><code>x &amp; (x - 1)</code></td><td>clears the <em>lowest</em> set bit</td><td>subtracting 1 flips the lowest 1 and all zeros below it; AND keeps only the untouched higher bits</td></tr>
+  <tr><td><code>x &amp; (-x)</code></td><td>isolates the lowest set bit</td><td><code>-x = ~x + 1</code> agrees with x only at that one bit (Fenwick trees live on this — page 24)</td></tr>
+  <tr><td><code>(x &amp; (x-1)) == 0</code></td><td>power of two (for x &gt; 0)</td><td>a power of two has exactly one set bit — clearing it leaves 0</td></tr>
+  <tr><td><code>a ^ a == 0</code>, <code>a ^ 0 == a</code></td><td>XOR cancellation</td><td>pairs annihilate in any order (commutative) → Single Number, Missing Number</td></tr>
+  <tr><td><code>x | (1 &lt;&lt; i)</code> / <code>x &amp; ~(1 &lt;&lt; i)</code> / <code>(x &gt;&gt; i) &amp; 1</code></td><td>set / clear / test bit i</td><td>build a mask with only bit i on, then OR/AND/read</td></tr>
+  <tr><td>int as a set of ≤ 32 flags</td><td>subset in one register</td><td>add = OR, remove = AND-NOT, membership = AND — the engine of bitmask DP (<a href="20-dp-advanced.html">page 20</a>)</td></tr>
+  <tr><td><code>dp[i] = dp[i &gt;&gt; 1] + (i &amp; 1)</code></td><td>popcount of 0..n in O(n)</td><td>i&gt;&gt;1 is i minus its last bit — a smaller, already-solved subproblem</td></tr>
+</table>
+</div>
+<p>
+  Two honorable mentions: <strong>XOR swap</strong> (<code>a^=b; b^=a; a^=b;</code>) — know it exists, then never use it
+  (unreadable, breaks when a and b alias the same variable); and <strong>add binary / add without +</strong>: a half-adder
+  loop where <code>a ^ b</code> is the digit-wise sum and <code>(a &amp; b) &lt;&lt; 1</code> is the carry, repeated until
+  the carry is 0 — that's Sum of Two Integers below.
+</p>
+
+<p>The single most useful trick deserves a demo. Kernighan's popcount — count 1-bits by deleting one per loop:</p>
+
+<div class="anim" id="kernAnim">
+  <svg viewBox="0 0 640 290" role="img" aria-label="Kernighan popcount clearing the lowest set bit step by step">
+    <!-- bit position ruler -->
+    <text x="218" y="36" class="small">7</text><text x="270" y="36" class="small">6</text>
+    <text x="322" y="36" class="small">5</text><text x="374" y="36" class="small">4</text>
+    <text x="426" y="36" class="small">3</text><text x="478" y="36" class="small">2</text>
+    <text x="530" y="36" class="small">1</text><text x="582" y="36" class="small">0</text>
+    <!-- row: x -->
+    <text x="20" y="68" class="lbl">x</text>
+    <rect id="a0" class="box" x="200" y="46" width="46" height="34" rx="5"></rect><text id="ta0" class="lbl" x="218" y="69"></text>
+    <rect id="a1" class="box" x="252" y="46" width="46" height="34" rx="5"></rect><text id="ta1" class="lbl" x="270" y="69"></text>
+    <rect id="a2" class="box" x="304" y="46" width="46" height="34" rx="5"></rect><text id="ta2" class="lbl" x="322" y="69"></text>
+    <rect id="a3" class="box" x="356" y="46" width="46" height="34" rx="5"></rect><text id="ta3" class="lbl" x="374" y="69"></text>
+    <rect id="a4" class="box" x="408" y="46" width="46" height="34" rx="5"></rect><text id="ta4" class="lbl" x="426" y="69"></text>
+    <rect id="a5" class="box" x="460" y="46" width="46" height="34" rx="5"></rect><text id="ta5" class="lbl" x="478" y="69"></text>
+    <rect id="a6" class="box" x="512" y="46" width="46" height="34" rx="5"></rect><text id="ta6" class="lbl" x="530" y="69"></text>
+    <rect id="a7" class="box" x="564" y="46" width="46" height="34" rx="5"></rect><text id="ta7" class="lbl" x="582" y="69"></text>
+    <!-- row: x - 1 -->
+    <text x="20" y="132" class="lbl">x−1</text>
+    <rect id="b0" class="box" x="200" y="110" width="46" height="34" rx="5"></rect><text id="tb0" class="lbl" x="218" y="133"></text>
+    <rect id="b1" class="box" x="252" y="110" width="46" height="34" rx="5"></rect><text id="tb1" class="lbl" x="270" y="133"></text>
+    <rect id="b2" class="box" x="304" y="110" width="46" height="34" rx="5"></rect><text id="tb2" class="lbl" x="322" y="133"></text>
+    <rect id="b3" class="box" x="356" y="110" width="46" height="34" rx="5"></rect><text id="tb3" class="lbl" x="374" y="133"></text>
+    <rect id="b4" class="box" x="408" y="110" width="46" height="34" rx="5"></rect><text id="tb4" class="lbl" x="426" y="133"></text>
+    <rect id="b5" class="box" x="460" y="110" width="46" height="34" rx="5"></rect><text id="tb5" class="lbl" x="478" y="133"></text>
+    <rect id="b6" class="box" x="512" y="110" width="46" height="34" rx="5"></rect><text id="tb6" class="lbl" x="530" y="133"></text>
+    <rect id="b7" class="box" x="564" y="110" width="46" height="34" rx="5"></rect><text id="tb7" class="lbl" x="582" y="133"></text>
+    <!-- row: x & (x-1) -->
+    <text x="20" y="196" class="lbl">AND</text>
+    <rect id="c0" class="box" x="200" y="174" width="46" height="34" rx="5"></rect><text id="tc0" class="lbl" x="218" y="197"></text>
+    <rect id="c1" class="box" x="252" y="174" width="46" height="34" rx="5"></rect><text id="tc1" class="lbl" x="270" y="197"></text>
+    <rect id="c2" class="box" x="304" y="174" width="46" height="34" rx="5"></rect><text id="tc2" class="lbl" x="322" y="197"></text>
+    <rect id="c3" class="box" x="356" y="174" width="46" height="34" rx="5"></rect><text id="tc3" class="lbl" x="374" y="197"></text>
+    <rect id="c4" class="box" x="408" y="174" width="46" height="34" rx="5"></rect><text id="tc4" class="lbl" x="426" y="197"></text>
+    <rect id="c5" class="box" x="460" y="174" width="46" height="34" rx="5"></rect><text id="tc5" class="lbl" x="478" y="197"></text>
+    <rect id="c6" class="box" x="512" y="174" width="46" height="34" rx="5"></rect><text id="tc6" class="lbl" x="530" y="197"></text>
+    <rect id="c7" class="box" x="564" y="174" width="46" height="34" rx="5"></rect><text id="tc7" class="lbl" x="582" y="197"></text>
+    <!-- running count -->
+    <text id="cnt" class="lbl" x="200" y="250">count = 0</text>
+    <text x="360" y="250" class="small">loop:  count++;  x = x &amp; (x−1);   — one iteration per set bit</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">The mask toolbox — memorize as a unit</p>
+<pre class="code"><code>// --- single-bit operations on position i (0 = least significant) ---
+int setBit    = x |  (1 &lt;&lt; i);        // turn bit i on
+int clearBit  = x &amp; ~(1 &lt;&lt; i);        // turn bit i off  (~ makes the "all except i" mask)
+int toggleBit = x ^  (1 &lt;&lt; i);        // flip bit i
+boolean isSet = ((x &gt;&gt; i) &amp; 1) == 1;  // read bit i
+
+// --- whole-number tricks ---
+boolean isOdd  = (x &amp; 1) == 1;
+boolean isPow2 = x &gt; 0 &amp;&amp; (x &amp; (x - 1)) == 0;  // exactly one set bit
+int lowestBit  = x &amp; (-x);                     // e.g. 10110100 -&gt; 00000100
+
+// --- int as a set (the bitmask-DP engine, page 20) ---
+int add      = mask | (1 &lt;&lt; i);       // set.add(i)
+int remove   = mask &amp; ~(1 &lt;&lt; i);      // set.remove(i)
+boolean has  = (mask &amp; (1 &lt;&lt; i)) != 0;// set.contains(i)  — note != 0, NOT == 1!
+int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in real code)
+// iterate all subsets of n items: for (int m = 0; m &lt; (1 &lt;&lt; n); m++) { ... }</code></pre>
+
+<div class="tip">
+  <strong>In production, reach for the JDK.</strong> <code>Integer.bitCount</code>, <code>Integer.lowestOneBit</code>,
+  <code>Integer.reverse</code>, <code>Long.numberOfTrailingZeros</code> — all compile to single CPU instructions
+  (<code>POPCNT</code> etc.). Interviews want the manual versions <em>once</em> to prove you know why they work; say
+  "in real code I'd call <code>Integer.bitCount</code>" for bonus credit.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Need</th><th>Structure</th><th>Cost</th><th>Notes</th></tr>
+  <tr><td>≤ 32 / ≤ 64 boolean flags</td><td>bits in an <code>int</code> / <code>long</code></td><td>O(1) ops, 4–8 bytes total</td><td>fastest possible; also hashable/comparable as a plain number — perfect DP key</td></tr>
+  <tr><td>flags named by an enum</td><td><code>EnumSet</code></td><td>O(1), one long under the hood</td><td><strong>EnumSet IS a bitset</strong> — type-safe bit tricks for free; prefer it in real Java code</td></tr>
+  <tr><td>millions of bits, dynamic size</td><td><code>java.util.BitSet</code></td><td>O(1) per bit, ~n/8 bytes</td><td>word-array of longs; sieve of Eratosthenes at scale (page 23), doc-ID sets</td></tr>
+  <tr><td>arbitrary / sparse ints, unknown range</td><td><code>HashSet&lt;Integer&gt;</code></td><td>O(1) avg, ~16+ bytes <em>per element</em></td><td>boxing overhead is real — 32 flags cost ~0.5 KB vs 4 bytes as a mask</td></tr>
+</table>
+</div>
+<p>
+  <strong>Decision cue:</strong> if the problem says "at most 20 items" and asks about subsets → int-as-bitset
+  (and probably bitmask DP, <a href="20-dp-advanced.html">page 20</a>). If it says "appears twice except one" or
+  "missing from 0..n" → XOR. If it's genuinely arbitrary data → hashing (<a href="01-arrays-hashing.html">page 01</a>);
+  bit tricks are a memory/speed optimization, not a general replacement for sets.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Permission &amp; feature flags</h4>
+    <p class="small">Unix mode bits (<code>rwxr-xr--</code> = 754) are three octal digits of masks — <code>chmod</code>
+    is OR/AND-NOT. The same pattern powers feature-flag bitfields, protocol header flags (TCP SYN/ACK), and
+    <code>int modifiers</code> in <code>java.lang.reflect.Modifier</code> — <code>isPublic()</code> is just
+    <code>(mod &amp; PUBLIC) != 0</code>.</p>
+  </div>
+  <div class="card">
+    <h4>Bloom filters &amp; bitmap indexes</h4>
+    <p class="small">A Bloom filter (<a href="24-advanced-structures.html">page 24</a>) is k hash functions setting bits
+    in one array — Cassandra/HBase consult it before touching disk. Analytics DBs (Druid, ClickHouse, Lucene) use
+    <strong>Roaring bitmaps</strong> — compressed bitsets — to intersect "users matching filter A AND B" as bitwise ANDs
+    over millions of rows per microsecond.</p>
+  </div>
+  <div class="card">
+    <h4>Networking: CIDR masks</h4>
+    <p class="small"><code>10.0.0.0/16</code> means "the top 16 bits identify the network": a router tests
+    <code>(ip &amp; mask) == network</code> for every packet, billions of times a second. Subnetting, VPC route
+    tables, and firewall rules are all AND-with-a-mask — the same <code>x &amp; ~(1 &lt;&lt; i)</code> algebra from
+    the template above.</p>
+  </div>
+  <div class="card">
+    <h4>Game engines &amp; crypto</h4>
+    <p class="small">Entity-component systems store each entity's components as a bitmask, so "all entities with
+    Physics AND Render" is one AND per entity; collision layers work the same way. And every round of AES/SHA is
+    built from XOR, shifts, and rotates — XOR's self-inverse property (<code>c ^ key = m</code>) is literally why
+    stream ciphers decrypt.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/single-number/">Single Number</a>
+    <span class="hint">XOR everything: pairs cancel (a^a=0), the loner survives. O(1) space.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/number-of-1-bits/">Number of 1 Bits</a>
+    <span class="hint">Kernighan's loop: n &amp;= (n−1) once per set bit. Beware &gt;&gt; vs &gt;&gt;&gt; if you shift instead.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/counting-bits/">Counting Bits</a>
+    <span class="hint">DP: bits(i) = bits(i &gt;&gt; 1) + (i &amp; 1) — each answer reuses a smaller one.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/reverse-bits/">Reverse Bits</a>
+    <span class="hint">Build the result bit by bit: shift result left, OR in (n &amp; 1), shift n with &gt;&gt;&gt; — 32 times.</span></div>
+  <div class="prob"><span class="badge easy">easy</span>
+    <a class="t" href="https://leetcode.com/problems/missing-number/">Missing Number</a>
+    <span class="hint">XOR all indexes 0..n with all values — matched pairs cancel, the missing index remains. (Sum formula works too but can overflow in other languages.)</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/sum-of-two-integers/">Sum of Two Integers</a>
+    <span class="hint">Half-adder loop: sum-without-carry = a ^ b, carry = (a &amp; b) &lt;&lt; 1; repeat until carry is 0.</span></div>
+  <div class="prob"><span class="badge medium">medium</span>
+    <a class="t" href="https://leetcode.com/problems/single-number-ii/">Single Number II</a>
+    <span class="hint">Everyone appears 3× except one: count each bit position mod 3; surviving remainders rebuild the answer.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution — Single Number (XOR cancellation)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> every element appears exactly twice except one — find it in O(n) time, O(1) space.</p>
+    <p><strong>Idea:</strong> the O(1)-space constraint rules out a HashSet, which is the interviewer's way of pointing at
+    XOR. Because XOR is commutative and self-canceling (<code>a^a=0</code>, <code>a^0=a</code>), folding the whole array
+    into one accumulator annihilates every pair regardless of order, leaving exactly the unpaired value.</p>
+    <p class="code-title">code/22-bit-manipulation/SingleNumber.java</p>
+<pre class="code"><code>public static int singleNumber(int[] nums) {
+    int acc = 0;                     // XOR identity: a ^ 0 = a
+    for (int x : nums) {
+        acc ^= x;                    // pairs cancel (a ^ a = 0); the loner survives
+    }
+    return acc;                      // all duplicates vanished — only the single remains
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n), space O(1). Works for negatives too — XOR doesn't care what the bits mean.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Counting Bits (the i &gt;&gt; 1 DP)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> for every i in 0..n, output how many 1-bits i has — in O(n) total, not O(n log n).</p>
+    <p><strong>Idea:</strong> <code>i &gt;&gt; 1</code> is i with its last bit chopped off — a strictly smaller number whose
+    answer is already in the table. Gluing the chopped bit back on adds <code>i &amp; 1</code>. That's a complete DP
+    recurrence in one line, a tiny sibling of the 1-D DPs from <a href="18-dp-1d.html">page 18</a>.</p>
+    <p class="code-title">code/22-bit-manipulation/CountingBits.java</p>
+<pre class="code"><code>public static int[] countBits(int n) {
+    int[] dp = new int[n + 1];               // dp[0] = 0: zero has no set bits (base case)
+    for (int i = 1; i &lt;= n; i++) {
+        // i &gt;&gt; 1 &lt; i, so dp[i &gt;&gt; 1] is already computed when we need it
+        dp[i] = dp[i &gt;&gt; 1] + (i &amp; 1);        // popcount of the prefix + the dropped last bit
+    }
+    return dp;
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n) — constant work per entry; space O(n) for the answer itself.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution — Missing Number (XOR version)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> nums contains n distinct numbers from the range 0..n; return the one that's missing.</p>
+    <p><strong>Idea:</strong> XOR every index 0..n together with every array value. Each present number equals some index,
+    so they pair up and cancel; the missing number is the only range member with no partner. Seeding the accumulator
+    with n covers the index that has no array slot. Same effect as the Gauss sum <code>n(n+1)/2 − sum</code>, but with
+    zero overflow concerns.</p>
+    <p class="code-title">code/22-bit-manipulation/MissingNumber.java</p>
+<pre class="code"><code>public static int missingNumber(int[] nums) {
+    int acc = nums.length;               // seed with n: the index that has no array slot
+    for (int i = 0; i &lt; nums.length; i++) {
+        acc ^= i;                        // fold in the index 0..n-1
+        acc ^= nums[i];                  // fold in the value; value==index pairs cancel out
+    }
+    return acc;                          // every number in 0..n appeared twice except the missing one
+}</code></pre>
+    <p><strong>Complexity:</strong> time O(n), space O(1).</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Precedence bites:</strong> <code>&amp;</code> binds <em>looser</em> than <code>==</code>, so
+    <code>x &amp; 1 == 1</code> parses as <code>x &amp; (1 == 1)</code> — a compile error at best. Always parenthesize:
+    <code>(x &amp; 1) == 1</code>, <code>(mask &amp; bit) != 0</code>.</li>
+  <li><strong>Test with <code>!= 0</code>, not <code>== 1</code>:</strong> <code>mask &amp; (1 &lt;&lt; 5)</code> yields 32,
+    not 1. Comparing to 1 silently fails for every bit except bit 0.</li>
+  <li><strong><code>&gt;&gt;</code> on negatives never reaches 0</strong> — use <code>&gt;&gt;&gt;</code> for
+    "loop over all 32 bits" logic, or Kernighan's loop which sidesteps shifting entirely.</li>
+  <li><strong><code>1 &lt;&lt; 32</code> is 1, not 0:</strong> Java masks shift amounts to 5 bits for int (6 for long),
+    so shifts wrap around. Building a long mask needs <code>1L &lt;&lt; i</code> — <code>1 &lt;&lt; 40</code> is really
+    <code>1 &lt;&lt; 8</code>.</li>
+  <li><strong><code>Integer.MIN_VALUE</code> edge:</strong> <code>-x</code> and <code>Math.abs(x)</code> both overflow for
+    it (they return MIN_VALUE again). Power-of-two checks must exclude non-positives first: <code>x &gt; 0 &amp;&amp; …</code>.</li>
+  <li><strong>Name the trick out loud</strong> ("pairs cancel under XOR", "this clears the lowest set bit") — bit
+    solutions look like magic; one sentence of why turns magic into engineering, which is what's being graded.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="21-greedy-intervals.html"><span class="dir">⟵ Prev</span><span class="name">21 · Greedy &amp; Intervals</span></a>
+  <a class="next" href="23-math-geometry.html"><span class="dir">Next ⟶</span><span class="name">23 · Math &amp; Geometry</span></a>
+</nav>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Kernighan popcount on x = 10110100 (180). Precomputed rows per iteration.
+  var xs   = ['10110100', '10110000', '10100000', '10000000'];
+  var xm1  = ['10110011', '10101111', '10011111', '01111111'];
+  var xand = ['10110000', '10100000', '10000000', '00000000'];
+  var cleared = [5, 3, 2, 0];   // cell index (from left) of the lowest set bit removed
+
+  function setRow(svg, prefix, bits, hiIdx, hiClass) {
+    for (var i = 0; i < 8; i++) {
+      var rect = svg.querySelector('#' + prefix + i);
+      var txt  = svg.querySelector('#t' + prefix + i);
+      var ch = bits ? bits.charAt(i) : '';
+      txt.textContent = ch;
+      var on = ch === '1';
+      rect.classList.toggle('active', on && i !== hiIdx);
+      rect.classList.toggle('frontier', hiClass === 'frontier' && i === hiIdx);
+      rect.classList.toggle('dim', (hiClass === 'dim' && i === hiIdx) || !bits);
+      txt.classList.toggle('onfill', on || (hiClass === 'frontier' && i === hiIdx));
+    }
+  }
+
+  new Stepper('kernAnim', {
+    totalSteps: 6,
+    intervalMs: 2600,
+    captions: [
+      'Count the 1-bits of x = 10110100 (decimal 180). Kernighan\'s insight: x & (x−1) deletes exactly one 1 — the lowest — so the loop runs once per set bit, not once per bit position.',
+      'Iteration 1: subtracting 1 borrows through the trailing zeros — x−1 = 10110011 flips the lowest 1 (amber) and everything below it. ANDing the rows keeps only the untouched higher bits: that lowest 1 is gone. count = 1.',
+      'Iteration 2: x is now 10110000. Same move: its lowest set bit (position 4) vanishes in the AND. count = 2.',
+      'Iteration 3: 10100000 loses the bit at position 5. count = 3.',
+      'Iteration 4: only the top bit remains. 10000000 & 01111111 have no common bits — the AND is all zeros. count = 4.',
+      'x reached 0, so the loop stops after exactly 4 iterations — one per set bit. Cost O(#ones) vs O(32) for shift-and-test. In production, Integer.bitCount() compiles to a single POPCNT instruction.'
+    ],
+    apply: function (svg, step) {
+      if (step === 0) {
+        setRow(svg, 'a', xs[0], -1, null);
+        setRow(svg, 'b', null, -1, null);
+        setRow(svg, 'c', null, -1, null);
+        Stepper.setText(svg, '#cnt', 'count = 0');
+      } else if (step <= 4) {
+        var it = step - 1;
+        setRow(svg, 'a', xs[it], cleared[it], 'frontier');
+        setRow(svg, 'b', xm1[it], -1, null);
+        setRow(svg, 'c', xand[it], cleared[it], 'dim');
+        Stepper.setText(svg, '#cnt', 'count = ' + (it + 1));
+      } else {
+        setRow(svg, 'a', '00000000', -1, null);
+        setRow(svg, 'b', null, -1, null);
+        setRow(svg, 'c', null, -1, null);
+        Stepper.setText(svg, '#cnt', 'count = 4  ✓ (x == 0, loop ends)');
+      }
+    }
+  });
+});
+</script>
+
+</body>
+</html>

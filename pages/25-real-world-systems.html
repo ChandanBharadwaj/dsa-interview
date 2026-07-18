@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>25 · Real-World Systems (Capstone) — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Real-World Systems: Where All of It Lives</h1>
+<p class="subtitle">Seven systems you use every day, decomposed into the exact structures and algorithms from pages 00–24. This is the retention page: every pattern gets a face.</p>
+<p>
+  <span class="badge phase">Phase 9 · Week 14</span>
+  <span class="badge freq">The payoff page — retention through stories</span>
+</p>
+
+<div class="why">
+  <strong>You now know every tool; here's how real systems compose them.</strong>
+  Nothing on this page is new — that's the point. A recommendation feed is hashing + graphs + heaps.
+  Navigation is Dijkstra with a heuristic. Git is a hash-addressed DAG plus LCS. When a system-design
+  interviewer asks "how would you build X?", they are asking which pages 01–24 you'd bolt together and why.
+  Each section below gives the architecture, the exact DSA inventory (with page links), and honest notes on
+  what production adds beyond the interview version.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="reco">1. Recommendation systems (flagship deep-dive)</h2>
+<p class="lead">
+  Netflix's "Because you watched…", YouTube's Up Next, Amazon's "Customers also bought" — all are the same
+  four-stage funnel. You cannot score 10 million items per user per request, so the pipeline's whole job is
+  shrinking the candidate set cheaply before spending money on precision.
+</p>
+
+<div class="card">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Recommendation pipeline funnel">
+    <rect x="10"  y="40" width="110" height="46" rx="9" class="box dim"></rect>
+    <text x="65"  y="60" text-anchor="middle" class="lbl" style="font-size:12px">catalog</text>
+    <text x="65"  y="76" text-anchor="middle" class="lbl" style="font-size:12px">~10⁷ items</text>
+    <rect x="150" y="40" width="120" height="46" rx="9" class="box active"></rect>
+    <text x="210" y="60" text-anchor="middle" class="lbl onfill" style="font-size:12px">candidate</text>
+    <text x="210" y="76" text-anchor="middle" class="lbl onfill" style="font-size:12px">generation</text>
+    <rect x="300" y="40" width="100" height="46" rx="9" class="box frontier"></rect>
+    <text x="350" y="68" text-anchor="middle" class="lbl" style="font-size:12px">filtering</text>
+    <rect x="430" y="40" width="100" height="46" rx="9" class="box active"></rect>
+    <text x="480" y="68" text-anchor="middle" class="lbl onfill" style="font-size:12px">ranking</text>
+    <rect x="560" y="40" width="72" height="46" rx="9" class="box done"></rect>
+    <text x="596" y="60" text-anchor="middle" class="lbl onfill" style="font-size:12px">re-rank</text>
+    <text x="596" y="76" text-anchor="middle" class="lbl onfill" style="font-size:12px">→ ~25</text>
+    <line x1="120" y1="63" x2="150" y2="63" class="edge"></line>
+    <line x1="270" y1="63" x2="300" y2="63" class="edge"></line>
+    <line x1="400" y1="63" x2="430" y2="63" class="edge"></line>
+    <line x1="530" y1="63" x2="560" y2="63" class="edge"></line>
+    <text x="210" y="110" text-anchor="middle" class="small">→ ~1000s (cheap recall)</text>
+    <text x="350" y="110" text-anchor="middle" class="small">drop seen/blocked</text>
+    <text x="480" y="110" text-anchor="middle" class="small">score precisely, top-K</text>
+    <text x="320" y="135" text-anchor="middle" class="small">each stage cuts the set by orders of magnitude so the next, more expensive stage can afford to run</text>
+  </svg>
+</div>
+
+<h3>Stage by stage, in your vocabulary</h3>
+<p>
+  <strong>Candidate generation</strong> starts from the <em>user-item bipartite graph</em>: users on one side,
+  items on the other, an edge per watch (page 15). "Users who watched X also watched Y" is a two-hop neighbor
+  traversal — from X to its watchers, from them to everything else they watched — with a HashMap counting how
+  often each Y appears (frequency counting, page 01). Those <em>co-visitation counts</em> feed item-item
+  collaborative filtering: two items are similar when their watcher sets overlap a lot, measured with Jaccard
+  (|A∩B| / |A∪B|) or cosine similarity — both computed from the same hash-set machinery. Other candidate
+  sources run in parallel: sliding-window trending counts over the last N hours (page 03), and the search box's
+  trie-powered typeahead with per-node cached top-K completions (page 13).
+</p>
+<p>
+  <strong>Filtering</strong> removes what must never surface: already-watched titles (a bloom filter per user
+  makes this check nearly free — false positives just hide a rewatch, an acceptable error; page 24), region
+  blocks, age ratings. <strong>Ranking</strong> scores the surviving ~1000 candidates with an ML model, then a
+  size-K min-heap keeps the best K in O(m log k) (page 12). <strong>Re-ranking</strong> applies business rules —
+  diversity, freshness, "no three sequels in a row" — small heap- and rule-based shuffles over ~100 items.
+</p>
+<p>
+  <strong>Scale honesty:</strong> counting exact co-visitation over all pairs is quadratic and infeasible at
+  catalog scale. Production embeds items as vectors and uses approximate nearest-neighbor search; MinHash and
+  locality-sensitive hashing make "similar sets collide in the same bucket" — literally a hash function
+  <em>designed</em> to collide (the honest extension of page 01), and modern ANN indexes (HNSW) are graphs
+  navigated greedily (page 15).
+</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Pipeline stage</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>"also watched" co-visitation</td><td>bipartite graph traversal + HashMap counting</td><td><a href="15-graphs-basics.html">15</a> / <a href="01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>item-item similarity</td><td>Jaccard/cosine over hash sets; MinHash/LSH at scale</td><td><a href="01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>trending candidates</td><td>sliding-window counters</td><td><a href="03-sliding-window.html">03</a></td></tr>
+  <tr><td>search typeahead</td><td>trie with per-node top-K</td><td><a href="13-tries.html">13</a></td></tr>
+  <tr><td>"already watched" filter</td><td>bloom filter</td><td><a href="24-advanced-structures.html">24</a></td></tr>
+  <tr><td>top-K ranking / re-ranking</td><td>size-K min-heap</td><td><a href="12-heaps.html">12</a></td></tr>
+</table>
+</div>
+
+<h3>A working miniature</h3>
+<p>
+  The whole skeleton — co-visitation counting, seen-filtering, heap top-K — fits in one small class.
+  This runs (see <code>code/25-real-world-systems/MiniRecommender.java</code>) and recommends sensibly on a toy
+  watch log:
+</p>
+<pre class="code"><code>public class MiniRecommender {
+
+    // Co-visitation matrix: item -&gt; (other item -&gt; number of users who watched both).
+    // This IS the "users who watched X also watched Y" signal, stored as nested hashing (page 01).
+    private final Map&lt;String, Map&lt;String, Integer&gt;&gt; coVis = new HashMap&lt;&gt;();
+    // Watch history: user -&gt; items already seen. Doubles as our "don't re-recommend"
+    // filter — production uses a bloom filter (page 24) for exactly this role.
+    private final Map&lt;String, Set&lt;String&gt;&gt; watched = new HashMap&lt;&gt;();
+
+    public void recordWatch(String user, String item) {
+        Set&lt;String&gt; items = watched.computeIfAbsent(user, u -&gt; new LinkedHashSet&lt;&gt;());
+        if (!items.add(item)) return;             // duplicate event, nothing new to learn
+        for (String other : items) {              // pair the new item with the user's history:
+            if (other.equals(item)) continue;     // one hop through the user-item bipartite
+            bump(item, other);                    // graph (page 15), counted with a HashMap
+            bump(other, item);                    // co-visitation is symmetric
+        }
+    }
+
+    private void bump(String a, String b) {
+        coVis.computeIfAbsent(a, k -&gt; new HashMap&lt;&gt;()).merge(b, 1, Integer::sum);
+    }
+
+    public List&lt;String&gt; recommend(String user, int k) {
+        Set&lt;String&gt; seen = watched.getOrDefault(user, Set.of());
+        // Candidate generation + scoring: aggregate co-visitation counts over
+        // everything the user has watched (frequency counting, page 01).
+        Map&lt;String, Integer&gt; score = new HashMap&lt;&gt;();
+        for (String item : seen)
+            for (Map.Entry&lt;String, Integer&gt; e : coVis.getOrDefault(item, Map.of()).entrySet())
+                if (!seen.contains(e.getKey()))   // filtering stage: drop already-watched
+                    score.merge(e.getKey(), e.getValue(), Integer::sum);
+        // Ranking stage: top-K with a size-K MIN-heap (page 12). The worst of the
+        // current best K sits on top and is evicted when something better arrives:
+        // O(m log k) over m candidates instead of sorting everything at O(m log m).
+        PriorityQueue&lt;Map.Entry&lt;String, Integer&gt;&gt; heap = new PriorityQueue&lt;&gt;(
+            (a, b) -&gt; a.getValue().equals(b.getValue())
+                ? b.getKey().compareTo(a.getKey())            // tie-break so results are stable
+                : Integer.compare(a.getValue(), b.getValue()));
+        for (Map.Entry&lt;String, Integer&gt; e : score.entrySet()) {
+            heap.offer(e);
+            if (heap.size() &gt; k) heap.poll();     // drop the current worst candidate
+        }
+        LinkedList&lt;String&gt; out = new LinkedList&lt;&gt;();
+        while (!heap.isEmpty()) out.addFirst(heap.poll().getKey());  // reverse: best first
+        return out;
+    }
+}</code></pre>
+<div class="note">
+  <strong>What production adds:</strong> learned embeddings instead of raw counts, ANN indexes instead of exact
+  scoring, feature stores and A/B-tested ranking models, and freshness/decay so last year's binge doesn't
+  dominate. But the request path is still recognizably: graph hop → hash count → filter → heap.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="maps">2. Google Maps &amp; navigation</h2>
+<p>
+  Roads become a weighted directed graph: intersections are nodes, road segments are edges, and the weight is
+  <em>expected travel time</em>, continuously re-estimated from live traffic — ETA quality is a weight-estimation
+  problem sitting on top of a shortest-path problem (page 17). Plain Dijkstra explores in every direction;
+  A* adds an admissible heuristic (straight-line time to the destination) so the search leans toward the goal.
+  Continent-scale routing precomputes shortcuts — contraction hierarchies — so a query touches thousands of
+  nodes, not millions: the classic precompute-vs-query trade.
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 120" role="img" aria-label="Roads to graph to route pipeline">
+    <rect x="15" y="35" width="130" height="46" rx="9" class="box"></rect>
+    <text x="80" y="63" text-anchor="middle" class="lbl" style="font-size:12px">road network</text>
+    <rect x="185" y="35" width="150" height="46" rx="9" class="box active"></rect>
+    <text x="260" y="55" text-anchor="middle" class="lbl onfill" style="font-size:12px">weighted graph</text>
+    <text x="260" y="71" text-anchor="middle" class="lbl onfill" style="font-size:12px">w = live ETA</text>
+    <rect x="375" y="35" width="140" height="46" rx="9" class="box frontier"></rect>
+    <text x="445" y="55" text-anchor="middle" class="lbl" style="font-size:12px">A* search</text>
+    <text x="445" y="71" text-anchor="middle" class="lbl" style="font-size:12px">(+ hierarchies)</text>
+    <rect x="550" y="35" width="80" height="46" rx="9" class="box done"></rect>
+    <text x="590" y="63" text-anchor="middle" class="lbl onfill" style="font-size:12px">route</text>
+    <line x1="145" y1="58" x2="185" y2="58" class="edge"></line>
+    <line x1="335" y1="58" x2="375" y2="58" class="edge"></line>
+    <line x1="515" y1="58" x2="550" y2="58" class="edge"></line>
+    <text x="320" y="108" text-anchor="middle" class="small">traffic ingestion updates edge weights; the algorithm never changes, only the numbers on the edges</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Stage</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>road model</td><td>weighted directed graph, adjacency lists</td><td><a href="15-graphs-basics.html">15</a></td></tr>
+  <tr><td>route search</td><td>Dijkstra → A* with heuristic</td><td><a href="17-shortest-paths.html">17</a></td></tr>
+  <tr><td>"next closest" frontier</td><td>priority queue</td><td><a href="12-heaps.html">12</a></td></tr>
+  <tr><td>continent scale</td><td>contraction hierarchies (precomputed shortcuts)</td><td><a href="17-shortest-paths.html">17</a></td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: turn penalties and lane restrictions encoded in the graph, live re-routing, and per-time-of-day weight profiles. The interview version — Dijkstra with a PQ — is the genuine core.</p>
+
+<!-- ============================================================ -->
+<h2 id="git">3. Git</h2>
+<p>
+  Git is a <em>content-addressed</em> object store: every blob, tree and commit is named by the hash of its
+  bytes (page 01 — the ultimate "group by canonical key": identical content dedupes itself). Commits form a
+  DAG — each commit points at its parent(s) (pages 15/16); <code>git log</code> walks it in reverse
+  topological order. <code>git diff</code> is the LCS problem from page 19: keep the longest common subsequence
+  of lines, print the rest as +/−. A merge finds the two branches' nearest common ancestor commit — the LCA
+  idea from page 11 lifted onto a DAG — and three-way-merges both sides' changes against that base.
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 120" role="img" aria-label="Git commit DAG with a merge">
+    <circle cx="60"  cy="60" r="17" class="box"></circle><text x="60" y="65" text-anchor="middle" class="lbl" style="font-size:11px">c1</text>
+    <circle cx="150" cy="60" r="17" class="box"></circle><text x="150" y="65" text-anchor="middle" class="lbl" style="font-size:11px">c2</text>
+    <circle cx="250" cy="30" r="17" class="box active"></circle><text x="250" y="35" text-anchor="middle" class="lbl onfill" style="font-size:11px">c3</text>
+    <circle cx="250" cy="90" r="17" class="box frontier"></circle><text x="250" y="95" text-anchor="middle" class="lbl" style="font-size:11px">c4</text>
+    <circle cx="360" cy="60" r="17" class="box done"></circle><text x="360" y="65" text-anchor="middle" class="lbl onfill" style="font-size:11px">M</text>
+    <line x1="133" y1="60" x2="77"  y2="60" class="edge"></line>
+    <line x1="235" y1="38" x2="164" y2="53" class="edge"></line>
+    <line x1="235" y1="82" x2="164" y2="67" class="edge"></line>
+    <line x1="346" y1="52" x2="266" y2="36" class="edge"></line>
+    <line x1="346" y1="68" x2="266" y2="84" class="edge"></line>
+    <text x="480" y="40" class="small">arrows point to parents;</text>
+    <text x="480" y="56" class="small">merge M has two parents,</text>
+    <text x="480" y="72" class="small">c2 is the merge base (LCA)</text>
+    <text x="320" y="112" text-anchor="middle" class="small">main: c1←c2←c3 · branch: c2←c4 · merge base of c3 and c4 = c2</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Feature</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>object store, dedup</td><td>content hashing (SHA-1/SHA-256 addressed)</td><td><a href="01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>history</td><td>commit DAG; log = reverse topological walk</td><td><a href="15-graphs-basics.html">15</a> / <a href="16-graphs-advanced.html">16</a></td></tr>
+  <tr><td>diff</td><td>LCS over file lines</td><td><a href="19-dp-2d.html">19</a></td></tr>
+  <tr><td>merge base</td><td>lowest common ancestor on the DAG</td><td><a href="11-trees.html">11</a></td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: packfiles with delta compression, the Myers diff algorithm (an optimized LCS relative), and rename detection via content-similarity hashing.</p>
+
+<!-- ============================================================ -->
+<h2 id="db">4. Databases &amp; search engines</h2>
+<p>
+  A B-tree index is a fat, shallow BST tuned for disk pages: O(log n) point lookups <em>and</em> ordered range
+  scans (pages 07/11), while a hash index is O(1) but can only answer equality — the HashMap-vs-TreeMap
+  trade at terabyte scale (page 24). Write-heavy stores (Cassandra, RocksDB, LevelDB) use LSM trees instead:
+  writes land in a sorted in-memory memtable, get flushed to immutable sorted files, and background
+  compaction k-way-merges those files exactly like merge sort's merge step driven by a heap (pages 06/12).
+  Each SSTable carries a bloom filter so reads skip files that definitely lack the key (page 24). Search
+  engines invert the data: term → sorted posting list of document ids; a multi-term AND intersects sorted
+  lists with two pointers (page 02). The query planner even chooses join orders with DP over subsets (page 20).
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 130" role="img" aria-label="LSM tree write path">
+    <rect x="15" y="25" width="90" height="40" rx="8" class="box"></rect>
+    <text x="60" y="50" text-anchor="middle" class="lbl" style="font-size:12px">writes</text>
+    <rect x="140" y="25" width="120" height="40" rx="8" class="box active"></rect>
+    <text x="200" y="50" text-anchor="middle" class="lbl onfill" style="font-size:12px">memtable</text>
+    <rect x="295" y="10" width="130" height="30" rx="8" class="box done"></rect>
+    <text x="360" y="30" text-anchor="middle" class="lbl onfill" style="font-size:11px">SSTable + bloom</text>
+    <rect x="295" y="48" width="130" height="30" rx="8" class="box done"></rect>
+    <text x="360" y="68" text-anchor="middle" class="lbl onfill" style="font-size:11px">SSTable + bloom</text>
+    <rect x="295" y="86" width="130" height="30" rx="8" class="box done"></rect>
+    <text x="360" y="106" text-anchor="middle" class="lbl onfill" style="font-size:11px">SSTable + bloom</text>
+    <rect x="470" y="40" width="155" height="46" rx="8" class="box frontier"></rect>
+    <text x="547" y="60" text-anchor="middle" class="lbl" style="font-size:12px">compaction =</text>
+    <text x="547" y="75" text-anchor="middle" class="lbl" style="font-size:12px">k-way heap merge</text>
+    <line x1="105" y1="45" x2="140" y2="45" class="edge"></line>
+    <line x1="260" y1="45" x2="295" y2="30" class="edge"></line>
+    <line x1="425" y1="63" x2="470" y2="63" class="edge"></line>
+    <text x="200" y="122" text-anchor="middle" class="small">sorted in RAM, flushed sorted to disk</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Component</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>primary/secondary index</td><td>B-tree (ordered) vs hash index (equality only)</td><td><a href="07-binary-search.html">07</a> / <a href="11-trees.html">11</a> / <a href="24-advanced-structures.html">24</a></td></tr>
+  <tr><td>write path</td><td>LSM tree; compaction = k-way merge via heap</td><td><a href="06-sorting.html">06</a> / <a href="12-heaps.html">12</a></td></tr>
+  <tr><td>read short-circuit</td><td>per-SSTable bloom filters</td><td><a href="24-advanced-structures.html">24</a></td></tr>
+  <tr><td>full-text search</td><td>inverted index; posting-list intersection = two pointers</td><td><a href="02-two-pointers.html">02</a></td></tr>
+  <tr><td>query planning</td><td>join-order DP (interval/bitmask)</td><td><a href="20-dp-advanced.html">20</a></td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: write-ahead logs, MVCC, tiered/leveled compaction strategies, and cost models feeding the planner's DP — but every one of those sits on the structures above.</p>
+
+<!-- ============================================================ -->
+<h2 id="infra">5. Web-scale infrastructure</h2>
+<p>
+  Sharding asks "which server owns key k?" — naive <code>hash(k) % n</code> reshuffles nearly everything when
+  n changes. <strong>Consistent hashing</strong> places servers and keys on a ring; a key belongs to the first
+  server clockwise from it. In Java, that lookup is literally
+  <code>ring.ceilingEntry(hash)</code> on a TreeMap, wrapping to <code>firstEntry()</code> — the page-24
+  pattern verbatim. Adding a node moves only its slice. In front: API gateways run token-bucket rate limiters
+  per client (pages 03/24); load balancers pick the least-loaded backend from a heap (page 12); failed calls
+  retry with exponential backoff — doubling, the page-07 halving intuition run backwards.
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Consistent hashing ring">
+    <circle cx="140" cy="75" r="58" class="edge" style="fill:none"></circle>
+    <circle cx="140" cy="17" r="13" class="box active"></circle><text x="140" y="22" text-anchor="middle" class="lbl onfill" style="font-size:10px">S1</text>
+    <circle cx="196" cy="95" r="13" class="box active"></circle><text x="196" y="100" text-anchor="middle" class="lbl onfill" style="font-size:10px">S2</text>
+    <circle cx="88"  cy="115" r="13" class="box active"></circle><text x="88" y="120" text-anchor="middle" class="lbl onfill" style="font-size:10px">S3</text>
+    <circle cx="193" cy="45" r="8" class="box frontier"></circle>
+    <text x="215" y="35" class="lbl" style="font-size:11px">key k</text>
+    <line x1="197" y1="53" x2="197" y2="80" class="edge active"></line>
+    <text x="330" y="45" class="small">key k hashes onto the ring and walks clockwise</text>
+    <text x="330" y="63" class="small">to the next server: TreeMap.ceilingEntry(h(k)),</text>
+    <text x="330" y="81" class="small">wrap to firstEntry() past 12 o'clock.</text>
+    <text x="330" y="99" class="small">Adding S4 moves only the arc it takes over —</text>
+    <text x="330" y="117" class="small">the rest of the cache stays warm.</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Component</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>sharding / CDN routing</td><td>consistent-hash ring = TreeMap.ceilingKey</td><td><a href="24-advanced-structures.html">24</a> / <a href="01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>rate limiting</td><td>token bucket / sliding-window log</td><td><a href="03-sliding-window.html">03</a> / <a href="24-advanced-structures.html">24</a></td></tr>
+  <tr><td>load balancing</td><td>least-loaded selection via heap</td><td><a href="12-heaps.html">12</a></td></tr>
+  <tr><td>retries</td><td>exponential backoff (+ jitter)</td><td><a href="07-binary-search.html">07</a> intuition</td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: virtual nodes (each server appears ~100–200 times on the ring for smoothness), health checks feeding the balancer, and distributed rate-limit state in Redis.</p>
+
+<!-- ============================================================ -->
+<h2 id="social">6. Social networks</h2>
+<p>
+  The friend graph is an adjacency list keyed by user id. "People you may know" is a BFS bounded to 2–3 hops:
+  friends-of-friends who aren't already friends, ranked by mutual-friend count — a HashMap tally over the
+  frontier (pages 15/01). Degrees of separation is plain BFS depth. Community detection and fraud-ring
+  discovery lean on union-find: accounts sharing devices, cards or addresses union into components, and a
+  suspiciously large component is a signal (page 16). The feed itself is ranking: merge candidate posts and
+  keep top-K by score with a heap (page 12), while "Trending" is a sliding window of hashtag counts over the
+  last hours (page 03).
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 130" role="img" aria-label="BFS rings around a user">
+    <circle cx="110" cy="65" r="18" class="box active"></circle><text x="110" y="70" text-anchor="middle" class="lbl onfill" style="font-size:11px">you</text>
+    <circle cx="110" cy="65" r="45" class="edge" style="fill:none; opacity:.7"></circle>
+    <circle cx="110" cy="65" r="78" class="edge" style="fill:none; opacity:.4"></circle>
+    <circle cx="152" cy="48" r="9" class="box done"></circle>
+    <circle cx="80"  cy="30" r="9" class="box done"></circle>
+    <circle cx="95"  cy="105" r="9" class="box done"></circle>
+    <circle cx="183" cy="90" r="9" class="box frontier"></circle>
+    <circle cx="45"  cy="110" r="9" class="box frontier"></circle>
+    <circle cx="35"  cy="45" r="9" class="box frontier"></circle>
+    <text x="250" y="45" class="small">green ring = friends (1 hop)</text>
+    <text x="250" y="63" class="small">amber ring = friends-of-friends (2 hops)</text>
+    <text x="250" y="81" class="small">suggestions = 2-hop nodes ranked by mutual count</text>
+    <text x="250" y="99" class="small">(BFS layers, page 15 + HashMap tally, page 01)</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Feature</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>friend suggestions</td><td>2–3 hop BFS + mutual-count hashing</td><td><a href="15-graphs-basics.html">15</a> / <a href="01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>communities / fraud rings</td><td>union-find over shared attributes</td><td><a href="16-graphs-advanced.html">16</a></td></tr>
+  <tr><td>feed ranking</td><td>top-K heap over candidate posts</td><td><a href="12-heaps.html">12</a></td></tr>
+  <tr><td>trending</td><td>sliding-window counters</td><td><a href="03-sliding-window.html">03</a></td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: the graph is sharded (TAO-style caches at Meta), suggestion candidates are precomputed offline, and ranking is a learned model — but its candidates still arrive via BFS-shaped jobs.</p>
+
+<!-- ============================================================ -->
+<h2 id="sched">7. Schedulers &amp; streaming</h2>
+<p>
+  Everything that decides "what runs next" is a priority queue: OS run queues, Kubernetes pod scheduling
+  (priority classes), thread-pool task queues (page 12). Timer systems — cron daemons, Netty's timeouts —
+  keep the nearest deadline on top of a min-heap or in a timer wheel (a ring of buckets, page 09's circular
+  queue with a clock hand). Kafka is at heart a set of giant per-partition FIFO queues with consumer offsets
+  (page 09); keys are hashed to partitions (page 01), preserving order only within a partition. Stream
+  processors (Flink/Spark) compute rolling aggregates with sliding windows (page 03) and cumulative metrics
+  with prefix-sum-style running totals (page 04).
+</p>
+<div class="card">
+  <svg viewBox="0 0 640 120" role="img" aria-label="Scheduler heap and Kafka partitions">
+    <rect x="20" y="20" width="180" height="80" rx="9" class="box dim"></rect>
+    <text x="110" y="40" text-anchor="middle" class="lbl" style="font-size:12px">scheduler</text>
+    <circle cx="110" cy="62" r="12" class="box active"></circle><text x="110" y="66" text-anchor="middle" class="lbl onfill" style="font-size:10px">t₁</text>
+    <circle cx="80"  cy="88" r="11" class="box"></circle><text x="80" y="92" text-anchor="middle" class="lbl" style="font-size:10px">t₃</text>
+    <circle cx="140" cy="88" r="11" class="box"></circle><text x="140" y="92" text-anchor="middle" class="lbl" style="font-size:10px">t₈</text>
+    <line x1="103" y1="72" x2="87" y2="80" class="edge"></line>
+    <line x1="117" y1="72" x2="133" y2="80" class="edge"></line>
+    <text x="110" y="115" text-anchor="middle" class="small">min-heap: nearest deadline on top</text>
+    <rect x="280" y="25" width="330" height="22" rx="6" class="box done"></rect>
+    <text x="445" y="40" text-anchor="middle" class="lbl onfill" style="font-size:11px">partition 0 → → → consumer offset ▮</text>
+    <rect x="280" y="55" width="330" height="22" rx="6" class="box done"></rect>
+    <text x="445" y="70" text-anchor="middle" class="lbl onfill" style="font-size:11px">partition 1 → → → consumer offset ▮</text>
+    <text x="445" y="100" text-anchor="middle" class="small">Kafka: hash(key) picks the partition; each partition is a strict FIFO</text>
+  </svg>
+</div>
+<div class="tablewrap">
+<table>
+  <tr><th>Component</th><th>Structure / algorithm</th><th>Page</th></tr>
+  <tr><td>what runs next</td><td>priority queue / min-heap of deadlines</td><td><a href="12-heaps.html">12</a></td></tr>
+  <tr><td>timers</td><td>timer wheel = circular bucket queue</td><td><a href="09-stacks-queues.html">09</a></td></tr>
+  <tr><td>Kafka partitions</td><td>hashed keys → per-partition FIFO</td><td><a href="01-arrays-hashing.html">01</a> / <a href="09-stacks-queues.html">09</a></td></tr>
+  <tr><td>stream rollups</td><td>sliding windows + running totals</td><td><a href="03-sliding-window.html">03</a> / <a href="04-prefix-sum.html">04</a></td></tr>
+</table>
+</div>
+<p class="small muted">Production adds: fairness and preemption policies on top of the heap, hierarchical timer wheels for millions of timers, and exactly-once bookkeeping in stream processors.</p>
+
+<!-- ============================================================ -->
+<h2 id="exercises">Exercises: map the system yourself</h2>
+<p>No LeetCode here — the capstone skill is decomposition. Sketch your answer before opening each solution.</p>
+
+<div class="problems card">
+  <div class="prob"><span class="badge medium">sketch</span> <span class="t">1. Which structures power Uber-style driver matching?</span></div>
+  <div class="prob"><span class="badge medium">sketch</span> <span class="t">2. Design the data path for Twitter/X "Trending in your country".</span></div>
+  <div class="prob"><span class="badge medium">sketch</span> <span class="t">3. Map Spotify's Discover Weekly onto the recommendation funnel.</span></div>
+  <div class="prob"><span class="badge medium">sketch</span> <span class="t">4. What makes Dropbox sync only the changed parts of a big file?</span></div>
+  <div class="prob"><span class="badge medium">sketch</span> <span class="t">5. Which structures run a Ticketmaster-style seat-booking flow?</span></div>
+</div>
+
+<details class="sol">
+  <summary>Answer sketches</summary>
+  <div class="sol-body">
+    <ol>
+      <li><strong>Driver matching:</strong> hash the map into geo-cells (grid = implicit graph, pages 01/05); candidate drivers from the rider's cell and neighbors; rank by ETA with a min-heap (12), where ETA is a shortest-path estimate on the road graph (17); surge pricing reads sliding-window demand counters (03).</li>
+      <li><strong>Trending:</strong> stream of hashtag events, hashed and counted per sliding window (01/03 — count-min sketches when exact maps don't fit); a size-K min-heap per region keeps the top K (12); re-rank with rules exactly like a recommender's last stage.</li>
+      <li><strong>Discover Weekly:</strong> candidate generation from co-listening similarity (01/15) plus audio-embedding ANN neighbors (LSH, extended 01); filter out tracks you already play with a seen-filter (24); rank with a model and take top ~30 via heap (12) — the funnel from section 1 verbatim.</li>
+      <li><strong>Dropbox sync:</strong> rsync-style content-defined chunking with a rolling hash (14) finds chunk boundaries that survive insertions; chunks are content-addressed by hash so unchanged chunks dedupe (01, same trick as Git); the folder tree is walked like any tree (11) and change notifications queue up FIFO (09).</li>
+      <li><strong>Seat booking:</strong> seat holds are intervals with expiry — a TreeMap per event for free/held ranges (24/21); expiring holds sit in a min-heap by deadline (12); the purchase queue under load is a FIFO with backpressure (09); per-user request caps are token buckets (24).</li>
+    </ol>
+  </div>
+</details>
+
+<div class="tip">
+  <strong>The closing move.</strong> Any system-design question you'll ever face maps onto these seven
+  skeletons: a funnel (recommendations), a weighted graph search (maps), a hash-addressed DAG (git), an
+  indexed store (databases), a hash ring with guards (infra), a social graph (BFS + union-find), or a
+  scheduler (heaps + queues). Name the skeleton, then name the structure per stage — that's the whole game.
+  Keep the <a href="../index.html#cheatsheet">master cheat-sheet</a> open while you practice mocks.
+</div>
+
+<nav class="pager">
+  <a class="prev" href="24-advanced-structures.html"><span class="dir">⟵ Prev</span><span class="name">24 · Advanced Structures &amp; Design</span></a>
+  <a class="next" href="../index.html#cheatsheet"><span class="dir">Next ⟶</span><span class="name">Master cheat-sheet</span></a>
+</nav>
+
+</div>
+
+</body>
+</html>

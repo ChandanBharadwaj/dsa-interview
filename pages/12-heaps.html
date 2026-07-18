@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12 · Heaps &amp; Priority Queues — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Heaps &amp; Priority Queues</h1>
+<p class="subtitle">The structure that always knows its smallest element: how a tree hides inside an array, why <code>PriorityQueue</code> is a min-heap, and the size-K inversion trick behind every top-K question.</p>
+<p>
+  <span class="badge phase">Phase 4 · Weeks 6–7</span>
+  <span class="badge freq">Top-K questions are everywhere — from phone screens to system design</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  A whole family of problems reduces to one sentence: <em>"repeatedly give me the smallest (or largest) thing I'm
+  currently tracking."</em> Sorting answers it once for static data; a heap answers it forever, while items keep
+  arriving, at O(log n) per operation. That's why "top K", "K-th largest", "merge K streams" and "running median"
+  are all heap questions — and why schedulers, Dijkstra, and ranking pipelines all carry a priority queue at
+  their core.
+</div>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="11-trees.html">11 · Trees &amp; BSTs</a> — a heap <em>is</em> a binary tree (a very disciplined one); parent/child vocabulary carries over.</li>
+  <li><a href="06-sorting.html">06 · Sorting</a> — we'll constantly compare "heap it" vs "sort it" vs quickselect.</li>
+  <li><a href="00-foundations.html">00 · Foundations</a> — <code>PriorityQueue</code> row of the collections table.</li>
+</ul>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>The inversion trick:</strong> do you know that the k <em>largest</em> elements are kept with a <em>min</em>-heap of size k? Explaining <em>why</em> is the real test.</li>
+  <li><strong>Cost fluency:</strong> offer/poll O(log n), peek O(1), building a heap from n items O(n) — and top-K is O(n log k), not O(n log n).</li>
+  <li><strong>Java specifics:</strong> <code>PriorityQueue</code> is a min-heap; can you flip it with a <code>Comparator</code> without fumbling? Do you know its iterator is <em>not</em> sorted?</li>
+  <li><strong>Pattern matching:</strong> spotting that "merge K sorted anything" or "always process the cheapest next" means heap before you've read the constraints twice.</li>
+</ul>
+
+<h3>How this builds on the previous topic</h3>
+<p>
+  Page 11 gave you trees with an <em>ordering</em> invariant (BST: left &lt; node &lt; right). A heap keeps the tree but
+  swaps in a much weaker invariant — parent ≤ children, nothing about siblings. Weaker means cheaper: no rotations, no
+  node objects, no pointers at all. The tree is so perfectly shaped (complete, filled left to right) that it lives in a
+  plain array with index arithmetic. You give up search (finding an arbitrary element is O(n)); you gain a permanently
+  available minimum. That trade — less order, more speed — is the whole design.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. The heap property, and a tree with no nodes</h3>
+<p class="lead">
+  A <strong>binary min-heap</strong> is a complete binary tree where every parent ≤ its children. That single rule puts
+  the global minimum at the root — <strong>and says nothing else</strong>. Left vs right child order? Unspecified.
+  Where's the second-smallest? Somewhere in the top two levels. Heaps answer exactly one question fast, on purpose.
+</p>
+<p>
+  Because the tree is complete (every level full, last level packed left), it maps onto an array with zero waste and
+  zero pointers — this is the detail interviewers love to probe:
+</p>
+<pre class="code"><code>// The tree lives in the array. For the node at index i:
+//   left child   2*i + 1
+//   right child  2*i + 2
+//   parent       (i - 1) / 2      (integer division)
+// Example min-heap:            2
+//   array: [2, 5, 3, 8, 7]    / \
+//   index:  0  1  2  3  4    5   3
+//                           / \
+//                          8   7</code></pre>
+<div class="note">
+  <strong>No node objects</strong> means contiguous memory, cache-friendly walks, and allocation-free swaps — one
+  concrete reason heaps outperform pointer-based trees for pure priority work, and why <code>PriorityQueue</code> is
+  backed by an <code>Object[]</code>, not a node class.
+</div>
+
+<h3>2. sift-up, sift-down: how order is repaired</h3>
+<ul>
+  <li><strong>offer(x):</strong> append x at the end (keeps the tree complete), then <strong>sift up</strong> — swap
+  with the parent while smaller. Path length ≤ tree height → <strong>O(log n)</strong>.</li>
+  <li><strong>poll():</strong> the answer is the root. Fill the hole with the <em>last</em> element (completeness again),
+  then <strong>sift down</strong> — swap with the <em>smaller</em> child while bigger than either. <strong>O(log n)</strong>.</li>
+  <li><strong>peek():</strong> read the root. <strong>O(1)</strong>.</li>
+</ul>
+
+<div class="anim" id="heapOps">
+  <svg viewBox="0 0 640 320" role="img" aria-label="offer then poll on a min-heap, showing sift-up and sift-down">
+    <!-- tree edges -->
+    <line class="edge" x1="320" y1="58"  x2="200" y2="128"></line>
+    <line class="edge" x1="320" y1="58"  x2="440" y2="128"></line>
+    <line class="edge" x1="200" y1="128" x2="130" y2="198"></line>
+    <line class="edge" x1="200" y1="128" x2="270" y2="198"></line>
+    <line id="e25" class="edge" x1="440" y1="128" x2="380" y2="198" style="opacity:0"></line>
+    <!-- tree nodes: position index = heap array index -->
+    <circle id="n0" class="box" cx="320" cy="58"  r="21"></circle>
+    <text id="v0" class="lbl" x="320" y="63"  text-anchor="middle">2</text>
+    <circle id="n1" class="box" cx="200" cy="128" r="21"></circle>
+    <text id="v1" class="lbl" x="200" y="133" text-anchor="middle">5</text>
+    <circle id="n2" class="box" cx="440" cy="128" r="21"></circle>
+    <text id="v2" class="lbl" x="440" y="133" text-anchor="middle">3</text>
+    <circle id="n3" class="box" cx="130" cy="198" r="21"></circle>
+    <text id="v3" class="lbl" x="130" y="203" text-anchor="middle">8</text>
+    <circle id="n4" class="box" cx="270" cy="198" r="21"></circle>
+    <text id="v4" class="lbl" x="270" y="203" text-anchor="middle">7</text>
+    <circle id="n5" class="box" cx="380" cy="198" r="21" style="opacity:0"></circle>
+    <text id="v5" class="lbl" x="380" y="203" text-anchor="middle" style="opacity:0"></text>
+    <!-- index hints on tree -->
+    <text class="small" x="345" y="50">i=0</text>
+    <text class="small" x="163" y="122">i=1</text>
+    <text class="small" x="465" y="122">i=2</text>
+    <text class="small" x="93"  y="192">i=3</text>
+    <text class="small" x="295" y="192">i=4</text>
+    <text class="small" x="405" y="192">i=5</text>
+    <!-- the same heap as an array -->
+    <g id="arr">
+      <rect id="a0" class="box" x="170" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av0" class="lbl" x="195" y="262" text-anchor="middle">2</text>
+      <rect id="a1" class="box" x="220" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av1" class="lbl" x="245" y="262" text-anchor="middle">5</text>
+      <rect id="a2" class="box" x="270" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av2" class="lbl" x="295" y="262" text-anchor="middle">3</text>
+      <rect id="a3" class="box" x="320" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av3" class="lbl" x="345" y="262" text-anchor="middle">8</text>
+      <rect id="a4" class="box" x="370" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av4" class="lbl" x="395" y="262" text-anchor="middle">7</text>
+      <rect id="a5" class="box" x="420" y="242" width="50" height="30" rx="6"></rect>
+      <text id="av5" class="lbl" x="445" y="262" text-anchor="middle"></text>
+      <text class="small" x="193" y="288">0</text><text class="small" x="243" y="288">1</text>
+      <text class="small" x="293" y="288">2</text><text class="small" x="343" y="288">3</text>
+      <text class="small" x="393" y="288">4</text><text class="small" x="443" y="288">5</text>
+      <text class="small" x="60" y="262">array:</text>
+    </g>
+    <text class="small" x="16" y="312">Same heap, two views — tree for thinking, array (children at 2i+1, 2i+2) for what the JVM actually stores.</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<h3>3. heapify: n items in O(n), not O(n log n)</h3>
+<p>
+  Building a heap by n offers costs O(n log n). But <code>new PriorityQueue&lt;&gt;(collection)</code> does better:
+  place everything in the array as-is, then sift <em>down</em> from the last parent back to the root —
+  <strong>O(n) total</strong>. The intuition: half the nodes are leaves (sift distance 0), a quarter sift at most 1, an
+  eighth at most 2… the sum Σ n/2^h · h converges to ~2n. One sentence of "why" here is worth a lot in an interview.
+</p>
+
+<h3>4. Java's <code>PriorityQueue</code>: a MIN-heap (and how to flip it)</h3>
+<pre class="code"><code>PriorityQueue&lt;Integer&gt; min = new PriorityQueue&lt;&gt;();                    // smallest on top
+PriorityQueue&lt;Integer&gt; max = new PriorityQueue&lt;&gt;(Comparator.reverseOrder()); // largest on top
+
+// For your own shapes, compare on the priority field:
+PriorityQueue&lt;int[]&gt; byCost = new PriorityQueue&lt;&gt;((a, b) -&gt; Integer.compare(a[0], b[0]));
+
+// Negation also works for ints (offer -x, negate on poll) but a Comparator
+// says what you MEAN — prefer it. Two more facts worth stating out loud:
+//   * pq.iterator() / toString() are NOT in priority order — only poll() is.
+//   * remove(Object) is O(n): the heap can't FIND things, only rank them.</code></pre>
+
+<h3>5. The pattern gallery</h3>
+<p><strong>Top-K — the inversion trick, slowly.</strong> To keep the K <em>largest</em> items of a stream, use a
+<em>min</em>-heap capped at size K. Feels backwards, so walk it through: the heap is your top-K club, and its root is
+the <em>weakest current member</em>. A newcomer only needs to be compared against that weakest member — beat it and it's
+evicted (poll), lose and the newcomer is discarded. Every element pays O(log k), never O(log n):
+<strong>O(n log k)</strong> total, O(k) memory, and it works on infinite streams because you never store more than K
+items. Symmetrically: K smallest → max-heap of size K. <em>K-th largest in a stream</em> (LC 703) is this exact
+structure, peeking the root.</p>
+<p><strong>Two heaps — running median.</strong> Keep the smaller half in a max-heap and the larger half in a min-heap,
+sizes within one; the median is always a root away. Worked fully below.</p>
+<p><strong>K-way merge.</strong> The smallest unmerged element across K sorted lists must be one of the K current heads
+— keep exactly those in a min-heap, poll one, push its successor. Worked fully below; the same shape merges LSM-tree
+runs and external-sort chunks.</p>
+<p><strong>"Process cheapest next".</strong> Schedulers popping the highest-priority task, event loops popping the
+nearest timer, and Dijkstra popping the closest unsettled node (page <a href="17-shortest-paths.html">17</a>) are all
+one loop: <code>while (!pq.isEmpty()) process(pq.poll())</code>, occasionally offering new work. Recognize the loop and
+you've recognized the structure.</p>
+
+<!-- ============================================================ -->
+<h2 id="templates">Pattern templates (Java)</h2>
+
+<p class="code-title">Top-K skeleton — memorize this five-liner</p>
+<pre class="code"><code>// K LARGEST elements of anything: min-heap capped at size k.
+PriorityQueue&lt;Integer&gt; club = new PriorityQueue&lt;&gt;();   // root = weakest member
+for (int x : stream) {
+    club.offer(x);                    // candidate joins provisionally, O(log k)
+    if (club.size() &gt; k) club.poll(); // evict the weakest of the k+1
+}
+// club now holds the k largest; club.peek() is the K-TH largest.
+// (K smallest: same code with Comparator.reverseOrder().)</code></pre>
+
+<p class="code-title">Process-cheapest-next skeleton (scheduling, Dijkstra's shape)</p>
+<pre class="code"><code>PriorityQueue&lt;Task&gt; pq = new PriorityQueue&lt;&gt;(Comparator.comparingLong(t -&gt; t.priority));
+pq.addAll(initialTasks);              // heapify: O(n)
+while (!pq.isEmpty()) {
+    Task t = pq.poll();               // ALWAYS the cheapest remaining, O(log n)
+    for (Task next : t.spawns())      // work may create more work...
+        pq.offer(next);               // ...which slots in by priority
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Approach for top-K</th><th>Time</th><th>Space</th><th>Streaming?</th><th>Verdict</th></tr>
+  <tr><td>Sort everything, take K</td><td>O(n log n)</td><td>O(n)</td><td>no</td><td>simplest; fine when n is small or you need all of it sorted anyway</td></tr>
+  <tr><td>Min-heap of size K</td><td><strong>O(n log k)</strong></td><td><strong>O(k)</strong></td><td><strong>yes</strong></td><td>the default: k ≪ n or data arrives over time</td></tr>
+  <tr><td>Quickselect (page 06)</td><td>O(n) average</td><td>O(1)</td><td>no</td><td>fastest one-shot "K-th element" on an in-memory array; O(n²) worst case, mutates input</td></tr>
+</table>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th></th><th>Heap / <code>PriorityQueue</code></th><th><code>TreeMap</code> / <code>TreeSet</code></th></tr>
+  <tr><td>min / max</td><td>peek O(1), poll <strong>O(log n)</strong></td><td>firstKey O(log n)</td></tr>
+  <tr><td>insert</td><td>O(log n), low constants, no nodes</td><td>O(log n), node allocation + rebalancing</td></tr>
+  <tr><td>delete <em>arbitrary</em> element</td><td>O(n) — it can't find it</td><td><strong>O(log n)</strong></td></tr>
+  <tr><td>floor / ceiling / range queries</td><td>no</td><td><strong>yes</strong> — its whole point</td></tr>
+</table>
+</div>
+<ul>
+  <li>Cue: <strong>"K largest / smallest / most frequent / closest"</strong> → size-K heap. <strong>"K-th" once on an array</strong> → mention quickselect too.</li>
+  <li>Cue: <strong>"always handle the cheapest/earliest next"</strong> → heap-driven loop.</li>
+  <li>Cue: need to <strong>remove or look up arbitrary elements</strong>, or ask floor/ceiling questions → <code>TreeMap</code>, not a heap. (Sliding-window median needs exactly this upgrade.)</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>OS &amp; cluster schedulers</h4>
+    <p class="small">Linux's CFS keeps runnable tasks ordered by virtual runtime (red-black tree playing the heap role);
+    Kubernetes' scheduler pops the highest-priority pending pod. "Ready work, ordered by priority, popped one at a
+    time" is the process-cheapest-next loop verbatim.</p>
+  </div>
+  <div class="card">
+    <h4>Navigation: Dijkstra's frontier</h4>
+    <p class="small">Route engines keep the frontier of partially-explored roads in a min-heap keyed by distance-so-far
+    — poll the closest, relax its edges, repeat. Page <a href="17-shortest-paths.html">17</a> builds this in full; the
+    heap is the reason it's O(E log V) instead of O(V²).</p>
+  </div>
+  <div class="card">
+    <h4>Ranking &amp; trending feeds</h4>
+    <p class="small">"Top 10 trending" over millions of counted items is the size-K min-heap — O(n log 10), constant
+    memory, stream-friendly. Recommendation re-rankers (page <a href="25-real-world-systems.html">25</a>) do the same:
+    score candidates, keep the K best, never sort the world.</p>
+  </div>
+  <div class="card">
+    <h4>LSM compaction, external sort &amp; timers</h4>
+    <p class="small">RocksDB/Cassandra compaction and external sort merge K sorted runs with a K-way heap merge —
+    exactly LeetCode 23 at terabyte scale. Event loops (Netty, Node) and cron keep pending timers in a min-heap by
+    deadline; Kafka's delayed-operation purgatory does the same for timeouts.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Curated problems (easy → hard)</h2>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/kth-largest-element-in-a-stream/">Kth Largest Element in a Stream</a></span>
+    <span class="hint">The top-K template as a class: size-k min-heap, add() offers + trims, answer is peek().</span></div>
+  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/last-stone-weight/">Last Stone Weight</a></span>
+    <span class="hint">Max-heap simulation: poll two heaviest, offer the difference if nonzero. Pure operations practice.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/k-closest-points-to-origin/">K Closest Points to Origin</a></span>
+    <span class="hint">K smallest by distance → MAX-heap of size k evicting the farthest; squared distance avoids sqrt.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/top-k-frequent-elements/">Top K Frequent Elements</a></span>
+    <span class="hint">HashMap count (page 01), then size-k min-heap over frequencies: O(n log k). Bucket sort is the O(n) flex.</span></div>
+  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/task-scheduler/">Task Scheduler</a></span>
+    <span class="hint">Greedy: always run the most-frequent available task — max-heap + a cooldown queue of (task, ready-time).</span></div>
+  <div class="prob"><span class="badge hard">hard</span> <span class="t"><a href="https://leetcode.com/problems/merge-k-sorted-lists/">Merge k Sorted Lists</a></span>
+    <span class="hint">Min-heap of the k current heads; poll the global min, push its successor. O(n log k).</span></div>
+  <div class="prob"><span class="badge hard">hard</span> <span class="t"><a href="https://leetcode.com/problems/find-median-from-data-stream/">Find Median from Data Stream</a></span>
+    <span class="hint">Two heaps facing each other — max-heap lower half, min-heap upper half, rebalance to within one.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Worked solution: K Closest Points to Origin (LeetCode 973)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> given points on a plane, return the k nearest to (0,0).</p>
+    <p><strong>Idea:</strong> "k closest" = "k smallest by distance", so the inversion trick uses a <em>max</em>-heap:
+    its root is the farthest point currently kept — the only one a new point must beat. Compare on squared distance
+    (monotonic with real distance) to stay in integer land, with <code>long</code> math to dodge overflow.</p>
+<p class="code-title">code/12-heaps/KClosestPoints.java</p>
+<pre class="code"><code>// LeetCode 973. Return the k points closest to the origin (any order).
+public static int[][] kClosest(int[][] points, int k) {
+    // THE INVERSION TRICK: to keep the k CLOSEST points, use a MAX-heap
+    // ordered by distance. Its root is the WORST point we're keeping —
+    // exactly the one to evict when someone better shows up.
+    // (Squared distance avoids sqrt AND floating point entirely.)
+    PriorityQueue&lt;int[]&gt; worstFirst = new PriorityQueue&lt;&gt;(
+            (a, b) -&gt; Long.compare(dist(b), dist(a)));  // reversed = max-heap
+
+    for (int[] p : points) {
+        worstFirst.offer(p);              // O(log k)
+        if (worstFirst.size() &gt; k) {
+            worstFirst.poll();            // evict the farthest of the k+1
+        }
+    }
+    // Whatever survived is the answer. Heap order is NOT sorted order —
+    // we just drain it; the problem allows any order.
+    int[][] result = new int[k][];
+    for (int i = 0; i &lt; k; i++) result[i] = worstFirst.poll();
+    return result;
+}
+
+// Squared Euclidean distance from the origin, as long to dodge overflow.
+private static long dist(int[] p) {
+    return (long) p[0] * p[0] + (long) p[1] * p[1];
+}</code></pre>
+    <p><strong>Complexity:</strong> <strong>time O(n log k)</strong>, <strong>space O(k)</strong>. Mention quickselect
+    for O(n) average if all points fit in memory and mutation is allowed.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Top K Frequent Elements (LeetCode 347)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> return the k values that occur most often in an array.</p>
+    <p><strong>Idea:</strong> two pages of this runbook composed: a frequency <code>HashMap</code>
+    (page <a href="01-arrays-hashing.html">01</a>) followed by the top-K min-heap over the (value, count) pairs. The heap
+    is capped at k, so we pay log k — not log n — per map entry.</p>
+<p class="code-title">code/12-heaps/TopKFrequent.java</p>
+<pre class="code"><code>// LeetCode 347. Return the k most frequent elements (heap version).
+public static int[] topKFrequent(int[] nums, int k) {
+    // Step 1: frequency map — value -&gt; how many times it appears (page 01).
+    Map&lt;Integer, Integer&gt; count = new HashMap&lt;&gt;();
+    for (int x : nums) count.merge(x, 1, Integer::sum);
+
+    // Step 2: keep a size-k MIN-heap of (value, freq), ordered by freq.
+    // Counter-intuitive but key: for the k LARGEST frequencies we use a
+    // MIN-heap, because its root is the weakest member of our top-k club —
+    // the only one a newcomer ever needs to beat.
+    PriorityQueue&lt;int[]&gt; minFreqFirst =
+            new PriorityQueue&lt;&gt;((a, b) -&gt; Integer.compare(a[1], b[1]));
+
+    for (Map.Entry&lt;Integer, Integer&gt; e : count.entrySet()) {
+        minFreqFirst.offer(new int[]{e.getKey(), e.getValue()}); // O(log k)
+        if (minFreqFirst.size() &gt; k) {
+            minFreqFirst.poll();  // evict the least frequent of the k+1
+        }
+    }
+    // The heap never grows past k+1: n entries * O(log k) = O(n log k),
+    // beating the O(n log n) full sort when k is small.
+    int[] result = new int[k];
+    for (int i = 0; i &lt; k; i++) result[i] = minFreqFirst.poll()[0];
+    return result;
+}</code></pre>
+    <p><strong>Complexity:</strong> <strong>time O(n log k)</strong>, <strong>space O(n)</strong> for the map (heap is
+    only O(k)). Follow-up worth volunteering: bucket-by-frequency achieves O(n).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Merge k Sorted Lists (LeetCode 23)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> merge k already-sorted linked lists into one sorted list.</p>
+    <p><strong>Idea:</strong> at any moment, the globally smallest unmerged node must be the head of one of the k lists
+    — every list's later nodes are ≥ its head. So keep exactly those k heads in a min-heap: poll the winner onto the
+    output tail, then offer that list's next node as its new representative. A dummy head (page
+    <a href="08-linked-lists.html">08</a>) removes the empty-result special case.</p>
+<p class="code-title">code/12-heaps/MergeKSortedLists.java</p>
+<pre class="code"><code>// LeetCode 23. Merge k sorted linked lists into one sorted list.
+public static ListNode mergeKLists(ListNode[] lists) {
+    // A min-heap holds ONE candidate per list: its current head.
+    // The global smallest remaining element is always one of these k heads
+    // (each list is sorted!), so poll() hands us the next output node.
+    PriorityQueue&lt;ListNode&gt; heap =
+            new PriorityQueue&lt;&gt;((a, b) -&gt; Integer.compare(a.val, b.val));
+    for (ListNode head : lists) {
+        if (head != null) heap.offer(head);   // skip empty lists
+    }
+
+    ListNode dummy = new ListNode(0);   // dummy head: no "first node" special case
+    ListNode tail = dummy;
+    while (!heap.isEmpty()) {
+        ListNode smallest = heap.poll();      // global minimum, O(log k)
+        tail.next = smallest;                 // append to the merged result
+        tail = smallest;
+        if (smallest.next != null) {
+            heap.offer(smallest.next);        // that list's next head replaces it
+        }
+    }
+    return dummy.next;  // total: n nodes each pushed+popped once -&gt; O(n log k)
+}</code></pre>
+    <p><strong>Complexity:</strong> <strong>time O(n log k)</strong> for n total nodes, <strong>space O(k)</strong> for
+    the heap (output reuses existing nodes). This is the merge loop inside every LSM-tree compaction.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary>Worked solution: Find Median from Data Stream (LeetCode 295)</summary>
+  <div class="sol-body">
+    <p><strong>Problem in one line:</strong> design a class that accepts numbers one at a time and can report the median
+    of everything seen so far.</p>
+    <p><strong>Idea:</strong> a median splits the data into two halves — so store the halves. A max-heap <code>lo</code>
+    holds the smaller half (root = its largest), a min-heap <code>hi</code> holds the larger half (root = its smallest).
+    Keep sizes within one of each other and the median is read off the roots in O(1). Each insert routes by comparing
+    with <code>lo</code>'s root, then one rebalancing move at most restores the size invariant.</p>
+<p class="code-title">code/12-heaps/MedianFinder.java</p>
+<pre class="code"><code>// LeetCode 295. Support addNum(int) and findMedian() on a growing stream.
+//
+// TWO-HEAP IDEA: split the numbers into halves around the median.
+//   lo = a MAX-heap of the smaller half (its root = biggest small number)
+//   hi = a MIN-heap of the larger half  (its root = smallest big number)
+// The median only ever involves the two roots — both O(1) peeks.
+private final PriorityQueue&lt;Integer&gt; lo =
+        new PriorityQueue&lt;&gt;(Comparator.reverseOrder()); // max-heap
+private final PriorityQueue&lt;Integer&gt; hi =
+        new PriorityQueue&lt;&gt;();                          // min-heap (default)
+
+public void addNum(int num) {
+    // Route: anything &lt;= biggest-of-the-small-half belongs in lo.
+    if (lo.isEmpty() || num &lt;= lo.peek()) lo.offer(num);
+    else hi.offer(num);
+    // Rebalance so sizes differ by at most 1 (lo may hold the extra).
+    // Moving one root across the boundary keeps both halves valid.
+    if (lo.size() &gt; hi.size() + 1) hi.offer(lo.poll());
+    else if (hi.size() &gt; lo.size()) lo.offer(hi.poll());
+}
+
+public double findMedian() {
+    // Odd count: the extra element sits on top of lo.
+    if (lo.size() &gt; hi.size()) return lo.peek();
+    // Even count: median = average of the two middle values (the roots).
+    return (lo.peek() + hi.peek()) / 2.0;
+}</code></pre>
+    <p><strong>Complexity:</strong> <strong>addNum O(log n)</strong>, <strong>findMedian O(1)</strong>, space O(n).
+    Follow-up ("sliding-window median") needs arbitrary deletions → swap the heaps for two <code>TreeMap</code>
+    multisets, exactly the trade from the comparison table.</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Blurting "max-heap!" for k-largest.</strong> A max-heap of all n works but is O(n log n) time and O(n) space; the size-k <em>min</em>-heap is the expected answer. Practice saying the club-and-weakest-member explanation until it's fluid.</li>
+  <li><strong><code>PriorityQueue</code> iteration is not sorted.</strong> <code>for (int x : pq)</code> and <code>toString()</code> walk the backing array, not priority order. Only repeated <code>poll()</code> drains in order.</li>
+  <li><strong>Comparator overflow:</strong> <code>(a, b) -&gt; a - b</code> breaks on values near <code>Integer.MIN_VALUE</code>. Use <code>Integer.compare</code> / <code>Long.compare</code> — free correctness points.</li>
+  <li><strong>Don't mutate keys inside the heap.</strong> Changing an element's priority after offering silently corrupts ordering — there's no decrease-key in Java. The idiom is offer-a-fresh-entry and lazily skip stale ones when polled (Dijkstra, page 17).</li>
+  <li><strong>Heap ≠ search structure.</strong> <code>remove(Object)</code> and <code>contains</code> are O(n). The moment a problem needs arbitrary deletion or floor/ceiling, upgrade to <code>TreeMap</code> and say why.</li>
+  <li><strong>Know the numbers cold:</strong> peek O(1), offer/poll O(log n), heapify O(n), top-K O(n log k). And "heapsort = heapify + n polls = O(n log n), in place but not stable" ties page <a href="06-sorting.html">06</a> in nicely.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="11-trees.html"><span class="dir">⟵ Prev</span><span class="name">11 · Trees &amp; BSTs</span></a>
+  <a class="next" href="13-tries.html"><span class="dir">Next ⟶</span><span class="name">13 · Tries</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('heapOps', {
+  totalSteps: 8,
+  intervalMs: 2100,
+  captions: [
+    'A min-heap: every parent ≤ its children — so the minimum, 2, sits at the root. Below the tree: the SAME heap as the array [2,5,3,8,7], children of index i at 2i+1 and 2i+2.',
+    'offer(1): the new element is appended at the next free slot — index 5, child of index 2 — keeping the tree complete. But 1 under 3 breaks the heap property.',
+    'Sift-up, hop 1: compare 1 with its parent 3 (parent index (5−1)/2 = 2). Child is smaller → swap. In the array, positions 2 and 5 exchange values.',
+    'Sift-up, hop 2: compare 1 with its new parent 2 at the root. Still smaller → swap again. 1 has bubbled to the top.',
+    'The heap property holds everywhere again. offer() walked one root-to-leaf path — at most height ≈ log₂ n hops, so O(log n).',
+    'poll(): the answer is the root, 1. To fill the hole without breaking completeness, the LAST element (3, index 5) is moved to the root — almost certainly too big up there.',
+    'Sift-down: compare 3 with its children 5 and 2, and swap with the SMALLER child, 2 (swapping with 5 would put 5 above 2 — wrong). 3 settles at index 2.',
+    'Both children ≥ 3, so sifting stops: heap valid, back to [2,5,3,8,7]. poll() also walked one path — O(log n). That pair of repairs is the entire engine behind PriorityQueue.'
+  ],
+  apply: function (svg, step) {
+    // full value state per step for positions 0..5 ('' = slot unused)
+    var vals = [
+      ['2', '5', '3', '8', '7', ''],
+      ['2', '5', '3', '8', '7', '1'],
+      ['2', '5', '1', '8', '7', '3'],
+      ['1', '5', '2', '8', '7', '3'],
+      ['1', '5', '2', '8', '7', '3'],
+      ['3', '5', '2', '8', '7', ''],
+      ['2', '5', '3', '8', '7', ''],
+      ['2', '5', '3', '8', '7', '']
+    ][step];
+    // which positions are highlighted (active) / settled (done) per step
+    var active = [[], [5], [2, 5], [0, 2], [], [0], [0, 2], []][step];
+    var done = [[], [], [], [], [0, 2, 5], [], [], [0, 1, 2, 3, 4]][step];
+    var slot5on = step >= 1 && step <= 4;
+    for (var i = 0; i <= 5; i++) {
+      var vis = i < 5 || slot5on;
+      svg.querySelector('#n' + i).style.opacity = vis ? 1 : 0;
+      svg.querySelector('#v' + i).style.opacity = vis ? 1 : 0;
+      Stepper.setText(svg, '#v' + i, vals[i]);
+      Stepper.setText(svg, '#av' + i, vals[i]);
+      var isActive = active.indexOf(i) !== -1;
+      var isDone = done.indexOf(i) !== -1;
+      Stepper.setClass(svg, '#n' + i, 'active', isActive);
+      Stepper.setClass(svg, '#n' + i, 'done', isDone);
+      Stepper.setClass(svg, '#a' + i, 'active', isActive);
+      Stepper.setClass(svg, '#a' + i, 'done', isDone);
+      Stepper.setClass(svg, '#v' + i, 'onfill', isActive || isDone);
+      Stepper.setClass(svg, '#av' + i, 'onfill', isActive || isDone);
+    }
+    svg.querySelector('#e25').style.opacity = slot5on ? 1 : 0;
+  }
+});
+</script>
+
+</body>
+</html>
