@@ -351,6 +351,7 @@ details.sol .sol-body { padding: 4px 18px 16px; }
 
 @media (max-width: 640px) {
   body { font-size: 15.5px; }
+  .badge { white-space: normal; text-align: left; }
   .wrap { padding: 0 13px 60px; }
   h1 { font-size: 1.55rem; margin-top: 24px; }
   h2 { font-size: 1.25rem; margin-top: 36px; }

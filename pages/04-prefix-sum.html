@@ -47,13 +47,7 @@
   <li><a href="03-sliding-window.html">03 · Sliding Window</a> — you need to know the window invariant to appreciate exactly when it breaks.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you notice "many range queries" as a signal?</strong> Recomputing a sum inside a loop is the O(n²) trap they're watching for.</li>
-  <li><strong>Can you handle negative numbers correctly?</strong> Reaching for a sliding window on "subarray sum equals k" with negatives present is the classic wrong turn — they want to see you recognize why it fails.</li>
-  <li><strong>Off-by-one discipline.</strong> The <code>prefix[i+1] - prefix[i]</code> indexing is a tiny fence-post minefield; clean handling reads as experience.</li>
-  <li><strong>Can you invert the idea?</strong> Difference arrays (prefix sums run backwards) show you understand the concept, not just the recipe.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the quiet workhorse behind many medium problems — especially the prefix-sum + HashMap combination.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -257,37 +251,49 @@ for (int i = 0; i &lt; n; i++) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/running-sum-of-1d-array/">Running Sum of 1d Array</a>
-    <span class="hint">The build step in isolation — write the loop until it's muscle memory.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/range-sum-query-immutable/">Range Sum Query — Immutable</a>
-    <span class="hint">Precompute in the constructor; every query is one subtraction. Worked below. ★</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/subarray-sum-equals-k/">Subarray Sum Equals K</a>
-    <span class="hint">Negatives kill the window — count earlier prefixes equal to running − k. Worked below. ★</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/contiguous-array/">Contiguous Array</a>
-    <span class="hint">Map 0 → −1 and it becomes "longest subarray with prefix-sum repeat" — store first index seen per prefix value.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/product-of-array-except-self/">Product of Array Except Self</a>
-    <span class="hint">Prefix <em>products</em> from the left times suffix products from the right — same precompute idea, different operator (worked on <a href="01-arrays-hashing.html">page 01</a>).</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/car-pooling/">Car Pooling</a>
-    <span class="hint">+passengers at pickup, −passengers at drop-off, prefix-sum the road: difference array. Worked below. ★</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>Worked solution — Range Sum Query, Immutable (LC 303)</summary>
+  <summary><span class="badge easy">easy</span> Running Sum of 1d Array — LeetCode 1480</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given a fixed array, answer many <code>sumRange(left, right)</code> queries fast.</p>
-    <p><strong>Idea:</strong> the constructor pays O(n) once to build the cumulative array with a leading zero; after
-    that every query is <code>prefix[right+1] − prefix[left]</code>. This is the pattern in its purest form — if you
-    internalize the +1 offset here, you'll never fight it again. (LeetCode names the class <code>NumArray</code>.)</p>
-<p class="code-title">RangeSumQueryImmutable.java</p>
+    <p><strong>The problem.</strong> Return the array of running sums:
+    <code>result[i] = nums[0] + nums[1] + … + nums[i]</code>.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,4]</code> → <code>[1,3,6,10]</code>.
+    <code>[3,1,2,10,1]</code> → <code>[3,4,6,16,17]</code>.</p>
+    <p class="code-title">The build loop — the atom every other problem on this page reuses · O(n)</p>
+<pre class="code"><code>public int[] runningSum(int[] nums) {
+    int[] sum = new int[nums.length];
+    sum[0] = nums[0];
+    for (int i = 1; i &lt; nums.length; i++)
+        sum[i] = sum[i - 1] + nums[i];   // each entry = previous total + one element
+    return sum;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Deliberately trivial — it exists to make the build step automatic.
+    Notice the recurrence "current = previous + increment": that shape is also the simplest possible
+    dynamic program (<a href="18-dp-1d.html">page 18</a>).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Range Sum Query, Immutable — LeetCode 303</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Design a class over a fixed array answering many
+    <code>sumRange(left, right)</code> queries (sum of the inclusive range). The array never changes;
+    queries are frequent.</p>
+    <p><strong>Example.</strong> For <code>nums=[-2,0,3,-5,2,-1]</code>: <code>sumRange(0,2)</code> → 1,
+    <code>sumRange(2,5)</code> → −1, <code>sumRange(0,5)</code> → −3.</p>
+
+    <p class="code-title">Variation 1 — loop per query · O(n) per query (too slow for many queries)</p>
+<pre class="code"><code>public int sumRangeLoop(int[] nums, int left, int right) {
+    int sum = 0;
+    for (int i = left; i &lt;= right; i++) sum += nums[i];  // re-adds the range every time
+    return sum;
+}</code></pre>
+    <p>10⁴ queries × 10⁴ elements = 10⁸ adds. The array is immutable — precompute once instead:</p>
+
+    <p class="code-title">Variation 2 — prefix array (optimal) · O(n) build, O(1) per query</p>
 <pre class="code"><code>public class RangeSumQueryImmutable {
 
     // prefix[i] = sum of the first i elements: nums[0] + ... + nums[i-1].
@@ -307,21 +313,40 @@ for (int i = 0; i &lt; n; i++) {
         return (int) (prefix[right + 1] - prefix[left]);
     }
 }</code></pre>
-    <p><strong>Complexity:</strong> O(n) construction, O(1) per query, O(n) extra space.</p>
+    <p><strong>Takeaway.</strong> The +1 offset (leading zero) is what removes the "range starts at 0"
+    special case — internalize it here and it never bites again. If the array could <em>change</em> between
+    queries, a prefix array breaks (every update invalidates the tail) — that's when a Fenwick tree /
+    segment tree takes over (<a href="24-advanced-structures.html">page 24</a>).
+    Mirror: <code>code/04-prefix-sum/RangeSumQueryImmutable.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Subarray Sum Equals K (LC 560)</summary>
+  <summary><span class="badge medium">medium</span> Subarray Sum Equals K — LeetCode 560</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> count how many contiguous subarrays sum to exactly <code>k</code>; values may be negative.</p>
-    <p><strong>Idea:</strong> a subarray <code>(i..j]</code> sums to <code>k</code> exactly when
-    <code>prefix[j] − prefix[i] = k</code>, i.e. some <em>earlier</em> prefix equals <code>running − k</code>. So scan
-    once, and let a HashMap remember how many times each prefix value has occurred — every earlier occurrence of
-    <code>running − k</code> is a distinct valid start index. Seeding the map with <code>{0 → 1}</code> represents the
-    empty prefix, so subarrays starting at index 0 are counted too.</p>
-<p class="code-title">SubarraySumEqualsK.java</p>
-<pre class="code"><code>public static int subarraySum(int[] nums, int k) {
+    <p><strong>The problem.</strong> Count how many contiguous subarrays sum to exactly <code>k</code>.
+    Values may be <strong>negative</strong> — which is exactly what breaks a sliding window here.</p>
+    <p><strong>Example.</strong> <code>nums=[1,1,1], k=2</code> → <code>2</code> ([1,1] twice).
+    <code>nums=[1,2,3], k=3</code> → <code>2</code> ([1,2] and [3]).
+    <code>nums=[1,-1,0], k=0</code> → <code>3</code> ([1,−1], [0], and [1,−1,0]).</p>
+
+    <p class="code-title">Variation 1 — brute force over all ranges · O(n²)</p>
+<pre class="code"><code>public int subarraySumBrute(int[] nums, int k) {
+    int count = 0;
+    for (int start = 0; start &lt; nums.length; start++) {
+        long sum = 0;
+        for (int end = start; end &lt; nums.length; end++) {
+            sum += nums[end];             // running sum of nums[start..end]
+            if (sum == k) count++;        // don't break — negatives can bring it back
+        }
+    }
+    return count;
+}</code></pre>
+    <p>Note why there's no early exit: with negatives, the sum can hit k, leave, and return.
+    The same reason forbids a grow/shrink window — growth doesn't monotonically raise the sum.</p>
+
+    <p class="code-title">Variation 2 — prefix sum + HashMap (optimal) · O(n)</p>
+<pre class="code"><code>public int subarraySum(int[] nums, int k) {
     // How many times have we seen each prefix sum so far?
     // Seed: the empty prefix (sum 0) has been seen once — it lets a
     // subarray that starts at index 0 be counted.
@@ -341,22 +366,103 @@ for (int i = 0; i &lt; n; i++) {
     }
     return count;
 }</code></pre>
-    <p><strong>Complexity:</strong> O(n) time, O(n) space for the map. Compare: the brute force checks all
-    O(n²) ranges; the sliding window is simply <em>incorrect</em> here once negatives appear.</p>
+    <p><strong>Takeaway.</strong> The identity <code>sum(i..j] = prefix[j] − prefix[i]</code> turns "find a
+    subarray summing to k" into "find an earlier prefix equal to running − k" — a complement lookup, i.e.
+    Two Sum (<a href="01-arrays-hashing.html">page 01</a>) played on prefix sums. This combination is the
+    single most useful medium-problem trick in the array world.
+    Mirror: <code>code/04-prefix-sum/SubarraySumEqualsK.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Car Pooling (LC 1094, difference array)</summary>
+  <summary><span class="badge medium">medium</span> Contiguous Array — LeetCode 525</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given trips <code>[passengers, from, to]</code> along a one-way road and a
-    seat capacity, decide whether the car ever overflows.</p>
-    <p><strong>Idea:</strong> we don't need per-trip simulation — we need the passenger count at every kilometer.
-    Record each trip as two markers (+passengers at pickup, −passengers at drop-off), then one prefix-sum sweep down
-    the road reconstructs the onboard count everywhere. If it ever exceeds capacity, fail. Note the drop-off index is
-    <em>exclusive</em>: a passenger leaving at km 5 frees their seat for someone boarding at km 5.</p>
-<p class="code-title">CarPooling.java</p>
-<pre class="code"><code>public static boolean carPooling(int[][] trips, int capacity) {
+    <p><strong>The problem.</strong> Given a binary array (only 0s and 1s), find the length of the longest
+    contiguous subarray containing an <em>equal number</em> of 0s and 1s.</p>
+    <p><strong>Example.</strong> <code>[0,1]</code> → <code>2</code>. <code>[0,1,0]</code> → <code>2</code>
+    ([0,1] or [1,0]). <code>[0,0,1,0,1,1]</code> → <code>6</code> (three of each).</p>
+    <p><strong>The insight.</strong> Re-read every 0 as −1. Then "equal 0s and 1s" becomes "subarray summing
+    to zero" — and a subarray sums to zero exactly when the prefix sum <em>repeats</em>:
+    <code>prefix[j] = prefix[i]</code> means everything between i and j cancelled out.</p>
+
+    <p class="code-title">Variation 1 — brute force with running counts · O(n²)</p>
+<pre class="code"><code>public int findMaxLengthBrute(int[] nums) {
+    int best = 0;
+    for (int start = 0; start &lt; nums.length; start++) {
+        int balance = 0;                       // (#1s) - (#0s) in nums[start..end]
+        for (int end = start; end &lt; nums.length; end++) {
+            balance += nums[end] == 1 ? 1 : -1;
+            if (balance == 0)                  // equal counts
+                best = Math.max(best, end - start + 1);
+        }
+    }
+    return best;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — first-seen prefix map (optimal) · O(n)</p>
+<pre class="code"><code>public int findMaxLength(int[] nums) {
+    // firstSeen.get(b) = earliest index where the running balance was b.
+    // Balance b repeating at j means nums[(first index)+1 .. j] is balanced.
+    Map&lt;Integer, Integer&gt; firstSeen = new HashMap&lt;&gt;();
+    firstSeen.put(0, -1);              // balance 0 "before the array starts"
+
+    int balance = 0, best = 0;
+    for (int i = 0; i &lt; nums.length; i++) {
+        balance += nums[i] == 1 ? 1 : -1;   // 0 counts as -1
+        if (firstSeen.containsKey(balance)) {
+            // Same balance seen before -&gt; the stretch between is perfectly mixed.
+            // Use the EARLIEST occurrence for the longest stretch.
+            best = Math.max(best, i - firstSeen.get(balance));
+        } else {
+            firstSeen.put(balance, i);      // record only the first time
+        }
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two differences from Subarray Sum Equals K: the map stores the
+    <em>first index</em> (longest span) instead of a <em>count</em> (number of subarrays), and the 0→−1
+    re-encoding converts a "balance" condition into a "sum equals zero" condition. Re-encoding values so a
+    prefix trick applies is a move worth remembering.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Product of Array Except Self — LeetCode 238</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> <code>answer[i]</code> = product of every element except
+    <code>nums[i]</code>, in O(n), without division.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,4]</code> → <code>[24,12,8,6]</code>.</p>
+    <p>This is prefix sums with × instead of + : prefix products from the left, suffix products from the
+    right, answer = left[i] × right[i]. Both variations (two arrays, then the O(1)-extra-space squeeze) are
+    fully worked on <a href="01-arrays-hashing.html#problems">page 01</a> — revisit it now with prefix-sum
+    eyes and the solution reads as one line: <em>"prefix × suffix"</em>.
+    Mirror: <code>code/01-arrays-hashing/ProductExceptSelf.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Car Pooling — LeetCode 1094</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A car drives one way down a road. Each trip is
+    <code>[passengers, from, to]</code>: that many passengers board at kilometer <code>from</code> and leave
+    at kilometer <code>to</code>. With seat capacity <code>capacity</code>, can the car complete all trips
+    without ever being overfull?</p>
+    <p><strong>Example.</strong> <code>trips=[[2,1,5],[3,3,7]], capacity=4</code> → <code>false</code>
+    (between km 3 and 5 the car holds 2+3 = 5 &gt; 4). Same trips with <code>capacity=5</code> →
+    <code>true</code>.</p>
+
+    <p class="code-title">Variation 1 — paint each trip onto the road · O(t · R)</p>
+<pre class="code"><code>public boolean carPoolingPaint(int[][] trips, int capacity) {
+    int[] onboard = new int[1001];            // road positions 0..1000
+    for (int[] t : trips)
+        for (int km = t[1]; km &lt; t[2]; km++)  // mark EVERY km of the trip
+            if ((onboard[km] += t[0]) &gt; capacity) return false;
+    return true;
+}</code></pre>
+    <p>Each trip touches every kilometer it spans. The difference array reduces that to two touches:</p>
+
+    <p class="code-title">Variation 2 — difference array (optimal) · O(t + R)</p>
+<pre class="code"><code>public boolean carPooling(int[][] trips, int capacity) {
     // diff[p] = net change in passengers at kilometer p.
     // Positions are bounded (0..1000 in the constraints), so a plain
     // array beats a TreeMap of events here.
@@ -374,14 +480,16 @@ for (int i = 0; i &lt; n; i++) {
     }
     return true;
 }</code></pre>
-    <p><strong>Complexity:</strong> O(t + R) time for t trips over road length R, O(R) space. This
-    "+1 at start, −1 past end, integrate once" shape is the standard tool for every interval-overlap counting
-    problem — it returns with Meeting Rooms II on <a href="21-greedy-intervals.html">page 21</a>.</p>
+    <p><strong>Takeaway.</strong> "+x at start, −x just past the end, integrate once" is the difference-array
+    shape for every interval-overlap counting problem — the same sweep counts simultaneous meetings in
+    Meeting Rooms II (<a href="21-greedy-intervals.html">page 21</a>). The exclusive drop-off index is the
+    detail to be careful with: a passenger leaving at km 5 frees the seat for someone boarding at km 5.
+    Mirror: <code>code/04-prefix-sum/CarPooling.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Size the prefix array n+1, not n.</strong> The leading zero eliminates the "range starts at 0" special
     case. If you find yourself writing <code>if (left == 0)</code>, you built it one slot short.</li>
