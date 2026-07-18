@@ -47,13 +47,7 @@
   <li><a href="10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a> — the DFS variant of topo sort is a post-order recursion.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you recognize "dependency order" as topological sort?</strong> The words "prerequisites", "build before", "must come first" should trigger it instantly.</li>
-  <li><strong>Can you detect a cycle</strong> — and do you know that directed and undirected graphs need <em>different</em> techniques?</li>
-  <li><strong>Can you write union-find from memory</strong> (parent array, path compression, union by size) in under 5 minutes? It's short but easy to fumble under pressure.</li>
-  <li><strong>Do you pick UF vs DFS deliberately?</strong> "Edges arrive incrementally, so union-find" is a senior-level sentence.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> Course Schedule and Accounts Merge are staples; topological sort and union-find are the two tools under test.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -329,47 +323,39 @@ static boolean dfs(int u, List&lt;List&lt;Integer&gt;&gt; adj, int[] state, Dequ
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/number-of-provinces/">Number of Provinces</a></span>
-    <span class="hint">Adjacency matrix in, component count out — union every connected pair, return the number of roots.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/course-schedule/">Course Schedule</a></span>
-    <span class="hint">"Can you finish all courses?" = "is the prerequisite graph a DAG?" — Kahn's, then check processed == n.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/course-schedule-ii/">Course Schedule II</a></span>
-    <span class="hint">Same Kahn's loop, but collect the poll order — that list IS the answer (empty if a cycle blocks it).</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/redundant-connection/">Redundant Connection</a></span>
-    <span class="hint">Feed edges to union-find in order; the first edge whose endpoints already share a root is the answer.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/accounts-merge/">Accounts Merge</a></span>
-    <span class="hint">Union account indices that share an email, then group emails by find(root) and sort each group.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/is-graph-bipartite/">Is Graph Bipartite?</a></span>
-    <span class="hint">BFS 2-coloring per component; fail on any same-color edge (an odd cycle).</span>
-  </div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <span class="t"><a href="https://leetcode.com/problems/alien-dictionary/">Alien Dictionary</a></span>
-    <span class="hint">Compare adjacent words to extract letter-order edges (first differing char), then topo-sort the letters; watch the "prefix after longer word" invalid case.</span>
-  </div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough. <code>UnionFind</code> refers to the implementation built in the concepts
+section above.</p>
 
 <details class="sol">
-  <summary>Worked solution: Number of Provinces (union-find)</summary>
+  <summary><span class="badge medium">medium</span> Number of Provinces — LeetCode 547</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given an n×n matrix where <code>isConnected[i][j] == 1</code> means cities i and j are directly connected, count the groups of (transitively) connected cities.</p>
-    <p><strong>Idea:</strong> this is "count connected components", and union-find counts them without any traversal:
-    start with n singleton sets, union every directly-connected pair, and the number of surviving roots is the answer.
-    The matrix's upper triangle is enough — it's symmetric.</p>
-    <p class="code-title">code/16-graphs-advanced/NumberOfProvinces.java</p>
+    <p><strong>The problem.</strong> An n×n symmetric matrix where <code>isConnected[i][j] == 1</code> means
+    cities i and j are directly connected. Count the provinces — groups of directly or transitively connected
+    cities.</p>
+    <p><strong>Example.</strong> <code>[[1,1,0],[1,1,0],[0,0,1]]</code> → <code>2</code> (cities 0+1, city
+    2). <code>[[1,0,0],[0,1,0],[0,0,1]]</code> → <code>3</code>.</p>
+
+    <p class="code-title">Variation 1 — DFS over components (page 15's method) · O(n²)</p>
+<pre class="code"><code>public static int findCircleNumDFS(int[][] isConnected) {
+    int n = isConnected.length;
+    boolean[] seen = new boolean[n];
+    int provinces = 0;
+    for (int i = 0; i &lt; n; i++)
+        if (!seen[i]) {                       // a new, uncounted province
+            provinces++;
+            dfs(isConnected, seen, i);        // absorb everything reachable
+        }
+    return provinces;
+}
+private static void dfs(int[][] m, boolean[] seen, int i) {
+    seen[i] = true;
+    for (int j = 0; j &lt; m.length; j++)
+        if (m[i][j] == 1 &amp;&amp; !seen[j]) dfs(m, seen, j);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — union-find (no traversal at all) · O(n² · α(n))</p>
 <pre class="code"><code>public static int findCircleNum(int[][] isConnected) {
     int n = isConnected.length;
     UnionFind uf = new UnionFind(n);         // n cities start as n separate provinces
@@ -379,18 +365,21 @@ static boolean dfs(int u, List&lt;List&lt;Integer&gt;&gt; adj, int[] state, Dequ
                 uf.union(i, j);              // direct link -&gt; same province; count-- inside
     return uf.count;                         // survivors = number of disjoint sets
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n² · α(n)) — the n² is just reading the matrix; space O(n) for the parent/size arrays.</p>
+    <p><strong>Takeaway.</strong> Both are fine here; the decision rule generalizes: one-shot static graph →
+    DFS is simplest; edges arriving <em>over time</em> with connectivity queries in between → union-find,
+    because it absorbs each edge in near-O(1) without ever re-traversing.
+    Mirror: <code>code/16-graphs-advanced/NumberOfProvinces.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Course Schedule (Kahn's algorithm)</summary>
+  <summary><span class="badge medium">medium</span> Course Schedule — LeetCode 207</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given <code>numCourses</code> and pairs <code>[a, b]</code> meaning "take b before a", can every course be finished?</p>
-    <p><strong>Idea:</strong> the courses form a directed graph; an answer exists iff that graph has no cycle. Run
-    Kahn's: repeatedly "take" any course whose prerequisites are all satisfied and release its dependents. If some
-    course is never taken, its indegree never reached zero — it waits on a cycle forever.</p>
-    <p class="code-title">code/16-graphs-advanced/CourseSchedule.java</p>
+    <p><strong>The problem.</strong> <code>numCourses</code> courses; each prerequisite pair
+    <code>[a, b]</code> means you must take b before a. Can every course be finished?</p>
+    <p><strong>Example.</strong> 2 courses, <code>[[1,0]]</code> → true (0 then 1).
+    2 courses, <code>[[1,0],[0,1]]</code> → false (each requires the other — a cycle).</p>
+    <p class="code-title">Kahn's algorithm: peel zero-indegree nodes · O(V+E)</p>
 <pre class="code"><code>public static boolean canFinish(int numCourses, int[][] prerequisites) {
     // Step 1: adjacency list + indegree. Pair [a, b] means edge b -&gt; a (b unlocks a).
     List&lt;List&lt;Integer&gt;&gt; adj = new ArrayList&lt;&gt;();
@@ -420,19 +409,60 @@ static boolean dfs(int u, List&lt;List&lt;Integer&gt;&gt; adj, int[] state, Dequ
     // (or behind) a directed cycle, so no valid order exists.
     return taken == numCourses;
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(V+E) — each course enters the queue at most once and each edge is relaxed once; space O(V+E) for the adjacency list.</p>
+    <p><strong>Takeaway.</strong> Topological sort's existence test and cycle detection are the same thing:
+    everything gets taken ⇔ no cycle. Kahn's is iterative (no stack-depth worries) and the count check makes
+    cycle detection free. The DFS variant (white/gray/black coloring) proves the same result post-order.
+    Mirror: <code>code/16-graphs-advanced/CourseSchedule.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Redundant Connection (union-find cycle detection)</summary>
+  <summary><span class="badge medium">medium</span> Course Schedule II — LeetCode 210</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> a tree plus exactly one extra edge; return the edge (latest in input order) that can be removed to restore a tree.</p>
-    <p><strong>Idea:</strong> a tree on n nodes has exactly n−1 edges and no cycle. Feed edges into union-find in input
-    order: while endpoints are in different sets, the edge is tree-like — merge. The first edge whose endpoints
-    <em>already</em> share a root would close the cycle, and because it's the latest such edge encountered, it's exactly
-    the one to remove.</p>
-    <p class="code-title">code/16-graphs-advanced/RedundantConnection.java</p>
+    <p><strong>The problem.</strong> Same setup — but return an actual valid ordering of the courses
+    (any one), or an empty array if impossible.</p>
+    <p><strong>Example.</strong> 4 courses, <code>[[1,0],[2,0],[3,1],[3,2]]</code> →
+    <code>[0,1,2,3]</code> or <code>[0,2,1,3]</code>.</p>
+    <p class="code-title">Kahn's, recording the take-order · O(V+E)</p>
+<pre class="code"><code>public static int[] findOrder(int numCourses, int[][] prerequisites) {
+    List&lt;List&lt;Integer&gt;&gt; adj = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; numCourses; i++) adj.add(new ArrayList&lt;&gt;());
+    int[] indegree = new int[numCourses];
+    for (int[] p : prerequisites) {
+        adj.get(p[1]).add(p[0]);
+        indegree[p[0]]++;
+    }
+
+    Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+    for (int i = 0; i &lt; numCourses; i++)
+        if (indegree[i] == 0) queue.offer(i);
+
+    int[] order = new int[numCourses];
+    int taken = 0;
+    while (!queue.isEmpty()) {
+        int course = queue.poll();
+        order[taken++] = course;           // THE only change from LC 207:
+        for (int next : adj.get(course))   // record the order courses are taken
+            if (--indegree[next] == 0)
+                queue.offer(next);
+    }
+    return taken == numCourses ? order : new int[0];   // cycle -&gt; no valid order
+}</code></pre>
+    <p><strong>Takeaway.</strong> One added line turns the yes/no answer into the schedule itself — the
+    take-order <em>is</em> a topological order. This is exactly how build systems (Maven, Gradle, make)
+    and dependency installers decide execution order.
+    Mirror: <code>code/16-graphs-advanced/CourseScheduleII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Redundant Connection — LeetCode 684</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A tree on nodes 1..n plus exactly one extra edge. Return the edge whose
+    removal restores a tree; if several qualify, the one latest in the input.</p>
+    <p><strong>Example.</strong> <code>[[1,2],[1,3],[2,3]]</code> → <code>[2,3]</code>.
+    <code>[[1,2],[2,3],[3,4],[1,4],[1,5]]</code> → <code>[1,4]</code>.</p>
+    <p class="code-title">Union-find: the first edge that closes a cycle · O(n·α(n))</p>
 <pre class="code"><code>public static int[] findRedundantConnection(int[][] edges) {
     UnionFind uf = new UnionFind(edges.length + 1);  // nodes are labeled 1..n; index 0 unused
     for (int[] e : edges) {
@@ -442,19 +472,168 @@ static boolean dfs(int u, List&lt;List&lt;Integer&gt;&gt; adj, int[] state, Dequ
     }
     return new int[0];                               // unreachable for valid input
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n · α(n)) ≈ O(n); space O(n). Compare: re-running DFS per edge would be O(n²) — this is the "incremental edges → union-find" cue in action.</p>
+    <p><strong>Takeaway.</strong> Union-find's boolean <code>union</code> IS an undirected cycle detector:
+    "endpoints already connected" means this edge is extra. Processing in input order automatically satisfies
+    the return-the-latest rule. Re-running DFS per edge would be O(n²); this is the "incremental edges →
+    union-find" cue in its clearest form. Mirror:
+    <code>code/16-graphs-advanced/RedundantConnection.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Accounts Merge — LeetCode 721</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Each account is [name, email, email, …]. Two accounts belong to the same
+    person if they share <em>any</em> email (names can repeat across different people). Merge each person's
+    accounts; output [name, sorted unique emails…] per person.</p>
+    <p><strong>Example.</strong> John{a,b}, John{c}, John{b,d} → merged John{a,b,d} + separate John{c}
+    (the shared email b links accounts 0 and 2).</p>
+    <p class="code-title">Union accounts through shared emails, then group · O(total emails · α)</p>
+<pre class="code"><code>public static List&lt;List&lt;String&gt;&gt; accountsMerge(List&lt;List&lt;String&gt;&gt; accounts) {
+    int n = accounts.size();
+    UnionFind uf = new UnionFind(n);            // one set per ACCOUNT index
+    Map&lt;String, Integer&gt; emailOwner = new HashMap&lt;&gt;();  // email -&gt; first account seen
+
+    // Pass 1: an email seen in two accounts unions those accounts.
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 1; j &lt; accounts.get(i).size(); j++) {
+            String email = accounts.get(i).get(j);
+            Integer owner = emailOwner.putIfAbsent(email, i);
+            if (owner != null) uf.union(owner, i);   // same email, same person
+        }
+
+    // Pass 2: bucket every email under its account's ROOT.
+    Map&lt;Integer, TreeSet&lt;String&gt;&gt; groups = new HashMap&lt;&gt;();  // TreeSet: sorted + deduped
+    for (int i = 0; i &lt; n; i++) {
+        int root = uf.find(i);
+        groups.computeIfAbsent(root, k -&gt; new TreeSet&lt;&gt;())
+              .addAll(accounts.get(i).subList(1, accounts.get(i).size()));
+    }
+
+    // Pass 3: emit [name, emails...] per group (name from any member account).
+    List&lt;List&lt;String&gt;&gt; res = new ArrayList&lt;&gt;();
+    for (Map.Entry&lt;Integer, TreeSet&lt;String&gt;&gt; e : groups.entrySet()) {
+        List&lt;String&gt; row = new ArrayList&lt;&gt;();
+        row.add(accounts.get(e.getKey()).get(0));   // the person's name
+        row.addAll(e.getValue());
+        res.add(row);
+    }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The identity-resolution pattern: entities (accounts) union through shared
+    attributes (emails), then a group-by-root pass collects each set. This is literally how fraud systems
+    link accounts sharing a device or card, and how CRMs deduplicate customers
+    (<a href="25-real-world-systems.html">capstone</a>).
+    Mirror: <code>code/16-graphs-advanced/AccountsMerge.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Is Graph Bipartite? — LeetCode 785</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Can the graph's nodes be split into two groups so every edge crosses
+    between the groups (no edge inside a group)?</p>
+    <p><strong>Example.</strong> <code>[[1,3],[0,2],[1,3],[0,2]]</code> (a 4-cycle) → true (groups {0,2} and
+    {1,3}). <code>[[1,2,3],[0,2],[0,1,3],[0,2]]</code> (contains a triangle) → false.</p>
+    <p class="code-title">2-coloring by BFS · O(V+E)</p>
+<pre class="code"><code>public static boolean isBipartite(int[][] graph) {
+    int n = graph.length;
+    int[] color = new int[n];               // 0 = uncolored, 1 / -1 = the two groups
+    Deque&lt;Integer&gt; queue = new ArrayDeque&lt;&gt;();
+
+    for (int start = 0; start &lt; n; start++) {   // graph may be disconnected
+        if (color[start] != 0) continue;
+        color[start] = 1;                   // arbitrary first color
+        queue.offer(start);
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            for (int v : graph[u]) {
+                if (color[v] == 0) {
+                    color[v] = -color[u];   // neighbor takes the OPPOSITE color
+                    queue.offer(v);
+                } else if (color[v] == color[u]) {
+                    return false;           // same-colored neighbors: odd cycle
+                }
+            }
+        }
+    }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Bipartite ⇔ 2-colorable ⇔ no odd-length cycle — the BFS proves it
+    constructively by propagating alternating colors and failing exactly when an edge joins same-colored
+    nodes. Watch the disconnected-graph loop: single-component code passes examples and fails hidden tests.
+    Real use: two-sided matching problems (jobs↔candidates) start with a bipartite check.
+    Mirror: <code>code/16-graphs-advanced/IsBipartite.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Alien Dictionary — LeetCode 269</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Words sorted by an <em>unknown</em> alphabet. Recover a valid letter
+    ordering, or "" if the input is contradictory. (Premium on LeetCode; a canonical topological-sort hard.)</p>
+    <p><strong>Example.</strong> <code>["wrt","wrf","er","ett","rftt"]</code> → <code>"wertf"</code>:
+    wrt&lt;wrf gives t&lt;f; wrf&lt;er gives w&lt;e; er&lt;ett gives r&lt;t; ett&lt;rftt gives e&lt;r.
+    <code>["abc","ab"]</code> → "" (a word before its own prefix is impossible).</p>
+    <p class="code-title">Extract pairwise constraints, then topo-sort the letters · O(total chars)</p>
+<pre class="code"><code>public static String alienOrder(String[] words) {
+    // Graph over the letters that actually appear.
+    Map&lt;Character, Set&lt;Character&gt;&gt; adj = new HashMap&lt;&gt;();
+    Map&lt;Character, Integer&gt; indegree = new HashMap&lt;&gt;();
+    for (String w : words)
+        for (char c : w.toCharArray()) {
+            adj.putIfAbsent(c, new HashSet&lt;&gt;());
+            indegree.putIfAbsent(c, 0);
+        }
+
+    // Each ADJACENT word pair contributes at most ONE edge: the first
+    // position where they differ says thisChar &lt; thatChar.
+    for (int i = 0; i + 1 &lt; words.length; i++) {
+        String a = words[i], b = words[i + 1];
+        // Contradiction: "abc" before "ab" can't happen in any alphabet.
+        if (a.length() &gt; b.length() &amp;&amp; a.startsWith(b)) return "";
+        for (int k = 0; k &lt; Math.min(a.length(), b.length()); k++) {
+            char x = a.charAt(k), y = b.charAt(k);
+            if (x != y) {
+                if (adj.get(x).add(y))          // dedupe repeated constraints
+                    indegree.merge(y, 1, Integer::sum);
+                break;                          // ONLY the first difference matters
+            }
+        }
+    }
+
+    // Standard Kahn's over the letter graph.
+    Deque&lt;Character&gt; queue = new ArrayDeque&lt;&gt;();
+    for (var e : indegree.entrySet())
+        if (e.getValue() == 0) queue.offer(e.getKey());
+    StringBuilder order = new StringBuilder();
+    while (!queue.isEmpty()) {
+        char c = queue.poll();
+        order.append(c);
+        for (char next : adj.get(c))
+            if (indegree.merge(next, -1, Integer::sum) == 0)
+                queue.offer(next);
+    }
+    // Letters left un-taken sit on a cycle: contradictory input.
+    return order.length() == indegree.size() ? order.toString() : "";
+}</code></pre>
+    <p><strong>Takeaway.</strong> The graph isn't given — it's <em>extracted</em>: each adjacent word pair
+    yields one "x before y" edge at the first differing position, then Kahn's does the rest. The two traps
+    are both in extraction: the prefix contradiction check, and breaking after the first difference (later
+    positions say nothing). Modeling-then-standard-algorithm is the anatomy of most graph hards.
+    Mirror: <code>code/16-graphs-advanced/AlienDictionary.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
-  <li><strong>Read the edge direction in Course Schedule.</strong> <code>[a, b]</code> means b comes first (edge b→a). Building the adjacency list backwards passes the easy tests and fails the rest — say the direction out loud before coding.</li>
+  <li><strong>Read the edge direction in Course Schedule.</strong> <code>[a, b]</code> means b comes first (edge b→a). Building the adjacency list backwards passes the easy tests and fails the rest — fix the direction before coding.</li>
   <li><strong>Don't use a plain visited-set for directed cycle detection.</strong> A node can be safely revisited via a different path (a "diamond" A→B→D, A→C→D has no cycle). You need the gray/black distinction — or just use Kahn's count.</li>
   <li><strong>Union roots, not the nodes themselves.</strong> <code>parent[b] = a</code> instead of <code>parent[find(b)] = find(a)</code> corrupts the structure. Always find first.</li>
   <li><strong>Watch 1-indexed nodes.</strong> LeetCode graph problems often label nodes 1..n — size the parent array n+1 (as in Redundant Connection) or subtract 1 everywhere, consistently.</li>
-  <li><strong>Path compression alone is enough in interviews.</strong> If you blank on union by size, say so: "compression alone is near-O(log n) amortized; adding union by size gets α(n)". Honesty + the right vocabulary beats fumbling.</li>
-  <li><strong>Recursive DFS depth:</strong> 10⁵ nodes in a chain overflows the Java call stack. Mention the iterative alternative (or that Kahn's is iterative already) — interviewers at scale-focused companies listen for this.</li>
+  <li><strong>Path compression alone is enough in interviews.</strong> Compression alone is near-O(log n) amortized; adding union by size gets α(n).</li>
+  <li><strong>Recursive DFS depth:</strong> 10⁵ nodes in a chain overflows the Java call stack. Mention the iterative alternative (or that Kahn's is iterative already).</li>
 </ul>
 
 <nav class="pager">
