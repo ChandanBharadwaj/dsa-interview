@@ -47,13 +47,7 @@
   <li><a href="12-heaps.html">12 · Heaps &amp; Priority Queues</a> — Dijkstra is "process cheapest next" powered by a <code>PriorityQueue</code>.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Classification:</strong> can you look at the constraints (weights? negatives? K-stop limit? grid movement rules?) and name the right algorithm <em>before</em> coding?</li>
-  <li><strong>The Dijkstra idiom:</strong> PQ of <code>(dist, node)</code>, and the lazy-deletion skip — the line most candidates get wrong.</li>
-  <li><strong>Boundary knowledge:</strong> you know <em>why</em> Dijkstra fails on negative edges and that MST ≠ shortest paths — the two classic trick follow-ups.</li>
-  <li><strong>Complexity fluency:</strong> O(V+E) vs O(E log V) vs O(VE) vs O(V³), and which graph sizes each can survive.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the decision-guide page — choosing BFS vs Dijkstra vs Bellman-Ford vs grid-DP correctly is the entire test.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -424,13 +418,9 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/shortest-path-in-binary-matrix/">Shortest Path in Binary Matrix</a></span>
-    <span class="hint">8-directional movement can loop → not DP; uniform step cost → BFS, distance = ring number.</span>
-  </div>
   <div class="prob"><span class="badge medium">medium</span>
     <span class="t"><a href="https://leetcode.com/problems/network-delay-time/">Network Delay Time</a></span>
     <span class="hint">Single source, non-negative weights → Dijkstra; answer is the max settled distance (or −1 if any node unreached).</span>
@@ -454,10 +444,11 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
 </div>
 
 <details class="sol">
-  <summary>Worked solution: Shortest Path in Binary Matrix (BFS — and why DP is forbidden here)</summary>
+  <summary><span class="badge medium">medium</span> Shortest Path in Binary Matrix — LeetCode 1091 (BFS, and why DP is forbidden)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> in an n×n grid of 0s (open) and 1s (blocked), return the length of the
     shortest 8-directionally connected path of 0s from the top-left to the bottom-right cell, or −1.</p>
+    <p><strong>Example.</strong> <code>[[0,1],[1,0]]</code> → 2 (one diagonal step). <code>[[0,0,0],[1,1,0],[1,1,0]]</code> → 4. Blocked start or end → −1.</p>
     <p><strong>Idea:</strong> flowchart, question 2: every move costs 1 → BFS. Note the contrast with Minimum Path Sum
     (LC 64): there movement is right/down only (a DAG → DP); here you may also move up, left, and diagonally, so paths
     can curl back — no fill order works, and BFS's expanding rings are the correct tool. Distance = which ring a cell
@@ -495,10 +486,11 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Network Delay Time (Dijkstra with lazy deletion)</summary>
+  <summary><span class="badge medium">medium</span> Network Delay Time — LeetCode 743 (Dijkstra with lazy deletion)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> given directed travel times <code>[u, v, w]</code> between n nodes and a
     start node k, how long until <em>every</em> node has received a signal sent from k (−1 if some never do)?</p>
+    <p><strong>Example.</strong> <code>times=[[2,1,1],[2,3,1],[3,4,1]], n=4, k=2</code> → <code>2</code> (node 4 hears it last, at t=2).</p>
     <p><strong>Idea:</strong> "time for the signal to reach every node" = the <em>largest</em> single-source shortest
     distance. Weights are non-negative and movement is unrestricted → flowchart lands on Dijkstra. This is the
     lazy-deletion template applied verbatim: settle the closest unsettled node, relax its out-edges, skip stale PQ
@@ -539,10 +531,11 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Cheapest Flights Within K Stops (Bellman-Ford, bounded rounds)</summary>
+  <summary><span class="badge medium">medium</span> Cheapest Flights Within K Stops — LeetCode 787 (Bellman-Ford, bounded rounds)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> cheapest flight route from src to dst using at most K intermediate stops
     (= at most K+1 flights), or −1.</p>
+    <p><strong>Example.</strong> 4 cities, flights <code>[[0,1,100],[1,2,100],[2,0,100],[1,3,600],[2,3,200]]</code>, src 0, dst 3, k=1 → <code>700</code> (0→1→3; the cheaper 0→1→2→3 uses two stops).</p>
     <p><strong>Idea:</strong> why not Dijkstra? Its "settled = final" logic can lock in a cheap-but-long route and then
     reject a pricier-per-hop route that respects the stop limit — the edge cap breaks greedy settling exactly the way
     a negative edge does. Bellman-Ford fits perfectly because its rounds <em>are</em> an edge count: after round r,
@@ -576,10 +569,11 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Min Cost to Connect All Points (Kruskal's MST; Prim outlined)</summary>
+  <summary><span class="badge medium">medium</span> Min Cost to Connect All Points — LeetCode 1584 (Kruskal's MST)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> connect all 2-D points so any two are linked (directly or indirectly),
     minimizing total Manhattan-distance cost.</p>
+    <p><strong>Example.</strong> <code>[[0,0],[2,2],[3,10],[5,2],[7,0]]</code> → <code>20</code>. <code>[[3,12],[-2,5],[-4,1]]</code> → <code>18</code>.</p>
     <p><strong>Idea:</strong> flowchart, question 1: connect <em>all</em> nodes, no source/target → MST, not shortest
     path. The graph is complete (any point can link to any other), so materialize all n(n−1)/2 edges, sort by cost,
     and greedily accept any edge joining two still-separate groups — page 16's union-find makes that check ~O(1) and
@@ -616,15 +610,106 @@ public static int kruskal(int n, List&lt;int[]&gt; edges) {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Path With Minimum Effort — LeetCode 1631</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Hike from the top-left to the bottom-right of a heights grid (4
+    directions). A route's <em>effort</em> is the largest absolute height difference along any single step of
+    it. Minimize that effort.</p>
+    <p><strong>Example.</strong> <code>[[1,2,2],[3,8,2],[5,3,5]]</code> → <code>2</code>: route
+    1→3→5→3→5 never steps more than 2, while the route through 8 costs 7.</p>
+
+    <p class="code-title">Variation 1 — Dijkstra with a modified cost (optimal here) · O(mn log mn)</p>
+<pre class="code"><code>public static int minimumEffortPath(int[][] heights) {
+    int m = heights.length, n = heights[0].length;
+    int[][] effort = new int[m][n];
+    for (int[] row : effort) Arrays.fill(row, Integer.MAX_VALUE);
+    effort[0][0] = 0;
+    // Same skeleton as Network Delay Time — only the relaxation changes:
+    // a path's cost is the MAX step seen, not the SUM of steps.
+    PriorityQueue&lt;int[]&gt; pq = new PriorityQueue&lt;&gt;((a, b) -&gt; a[0] - b[0]); // {effort, r, c}
+    pq.offer(new int[]{0, 0, 0});
+    int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
+    while (!pq.isEmpty()) {
+        int[] cur = pq.poll();
+        int e = cur[0], r = cur[1], c = cur[2];
+        if (r == m - 1 &amp;&amp; c == n - 1) return e;   // settled the target: done
+        if (e &gt; effort[r][c]) continue;            // lazy deletion (stale entry)
+        for (int[] d : dirs) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr &lt; 0 || nr &gt;= m || nc &lt; 0 || nc &gt;= n) continue;
+            // New route's effort: the worse of (route so far, this step)
+            int ne = Math.max(e, Math.abs(heights[nr][nc] - heights[r][c]));
+            if (ne &lt; effort[nr][nc]) {
+                effort[nr][nc] = ne;
+                pq.offer(new int[]{ne, nr, nc});
+            }
+        }
+    }
+    return -1;                                     // unreachable (never for valid grids)
+}</code></pre>
+
+    <p class="code-title">Variation 2 — binary search on the answer + BFS checker · O(mn log maxH)</p>
+<pre class="code"><code>// Feasibility is monotonic: if effort E suffices, so does E+1. So binary
+// search E in [0, maxDiff]; the checker is a plain BFS that only crosses
+// edges with |height difference| &lt;= E. Pages 07 + 15 composed.
+// (Union-find on edges sorted by difference is a third valid route.)</code></pre>
+    <p><strong>Takeaway.</strong> Dijkstra's greedy settling works for any path-cost that never improves as
+    you extend a path — <code>max(...)</code> qualifies just like <code>sum</code>. Swapping one relaxation
+    line retargets the whole algorithm; recognizing that is the point of this problem.
+    Mirror: <code>code/17-shortest-paths/PathMinEffort.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Swim in Rising Water — LeetCode 778</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> <code>grid[r][c]</code> is the elevation of each cell; at time t you can
+    occupy any cell with elevation ≤ t (water has risen that high) and move in 4 directions. Find the
+    earliest time you can travel from (0,0) to (n−1,n−1).</p>
+    <p><strong>Example.</strong> <code>[[0,2],[1,3]]</code> → <code>3</code> (you must wait for the 3).
+    The classic 5×5 example → <code>16</code>.</p>
+    <p class="code-title">Dijkstra where a path costs its highest cell · O(n² log n)</p>
+<pre class="code"><code>public static int swimInWater(int[][] grid) {
+    int n = grid.length;
+    boolean[][] settled = new boolean[n][n];
+    // The "distance" of a path is the MAXIMUM elevation on it — the time
+    // the water needs to cover every cell you cross. Minimize that max:
+    // structurally identical to Path With Minimum Effort.
+    PriorityQueue&lt;int[]&gt; pq = new PriorityQueue&lt;&gt;((a, b) -&gt; a[0] - b[0]); // {time, r, c}
+    pq.offer(new int[]{grid[0][0], 0, 0});         // you start swimming at t = grid[0][0]
+    int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
+    while (true) {
+        int[] cur = pq.poll();
+        int t = cur[0], r = cur[1], c = cur[2];
+        if (settled[r][c]) continue;               // stale duplicate
+        settled[r][c] = true;                      // cheapest way in is final (Dijkstra)
+        if (r == n - 1 &amp;&amp; c == n - 1) return t;    // reached the goal at the earliest time
+        for (int[] d : dirs) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr &lt; 0 || nr &gt;= n || nc &lt; 0 || nc &gt;= n || settled[nr][nc]) continue;
+            // Entering (nr,nc) needs the water at max(current time, its elevation)
+            pq.offer(new int[]{Math.max(t, grid[nr][nc]), nr, nc});
+        }
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Same minimize-the-maximum family as Minimum Effort — the "weight" of a
+    step is the elevation you must wait for, and Dijkstra's frontier always expands the cell reachable
+    soonest. Binary-search-the-time + BFS and union-find-by-rising-elevation are equally valid; naming all
+    three shows the decision guide has sunk in. Mirror:
+    <code>code/17-shortest-paths/SwimRisingWater.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
-  <li><strong>Forgetting the lazy-deletion guard</strong> (<code>if (d &gt; dist[u]) continue;</code>) is the #1 Dijkstra bug in Java — the code still returns correct answers but re-expands nodes and times out on big inputs. Say the line's purpose out loud; it's cheap senior signal.</li>
-  <li><strong>Never run Dijkstra over negative edges</strong> — it fails <em>silently</em> with a plausible wrong answer, the worst failure mode. One negative weight anywhere → Bellman-Ford (and say why: settled-is-final breaks).</li>
+  <li><strong>Forgetting the lazy-deletion guard</strong> (<code>if (d &gt; dist[u]) continue;</code>) is the #1 Dijkstra bug in Java — the code still returns correct answers but re-expands nodes and times out on big inputs.</li>
+  <li><strong>Never run Dijkstra over negative edges</strong> — it fails <em>silently</em> with a plausible wrong answer, the worst failure mode. One negative weight anywhere → Bellman-Ford (because greedy settled-is-final breaks).</li>
   <li><strong>Infinity arithmetic overflows:</strong> <code>Integer.MAX_VALUE + weight</code> wraps negative and corrupts every comparison. Use <code>Integer.MAX_VALUE / 2</code> as INF, or check <code>dist[u] != INF</code> before relaxing.</li>
   <li><strong>BFS visited timing still applies:</strong> mark when <em>enqueuing</em>, not dequeuing — otherwise the same cell enters the queue many times (page 15's warning, still the top BFS bug here).</li>
   <li><strong>Don't confuse the objectives:</strong> MST minimizes total connection cost; Dijkstra minimizes per-destination route cost. If the question says "connect all", shortest-path algorithms are the wrong shelf entirely.</li>
-  <li><strong>Grid "minimum" ≠ automatically DP:</strong> check the movement rule first (the note above). Saying "right/down only makes this a DAG, so DP; free movement would need BFS/Dijkstra" in one breath is exactly the classification this page exists to train.</li>
+  <li><strong>Grid "minimum" ≠ automatically DP:</strong> check the movement rule first (the note above). "Right/down only makes this a DAG, so DP; free movement needs BFS/Dijkstra" is the classification this page exists to train.</li>
 </ul>
 
 <nav class="pager">
