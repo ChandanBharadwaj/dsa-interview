@@ -120,8 +120,15 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="03-sliding-window.html#lc121">Best Time to Buy and Sell Stock</a></td><td>121</td><td><span class="badge easy">easy</span></td><td>Min-so-far scan = a window whose left edge only jumps at a new low.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc643">Maximum Average Subarray I</a></td><td>643</td><td><span class="badge easy">easy</span></td><td>Fixed window: add the entering element, subtract the leaving one.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc485">Max Consecutive Ones</a></td><td>485</td><td><span class="badge easy">easy</span></td><td>The degenerate window: grow on 1s, hard-reset on a 0.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc3">Longest Substring Without Repeating Characters</a></td><td>3</td><td><span class="badge medium">medium</span></td><td>Variable window + last-seen map; jump the left edge past repeats.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc567">Permutation in String</a></td><td>567</td><td><span class="badge medium">medium</span></td><td>Fixed-size window comparing 26-letter histograms.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc1456">Maximum Number of Vowels in a Substring of Given Length</a></td><td>1456</td><td><span class="badge medium">medium</span></td><td>Fixed window, one counter — update only what enters and leaves.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc209">Minimum Size Subarray Sum</a></td><td>209</td><td><span class="badge medium">medium</span></td><td>Shrink while it still qualifies — positivity makes the sum monotonic.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc904">Fruit Into Baskets</a></td><td>904</td><td><span class="badge medium">medium</span></td><td>“At most 2 distinct types” = count-map window that shrinks on a third.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc424">Longest Repeating Character Replacement</a></td><td>424</td><td><span class="badge medium">medium</span></td><td>Legal while size − maxFreq ≤ k; the stale maxFreq is provably safe.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc1004">Max Consecutive Ones III</a></td><td>1004</td><td><span class="badge medium">medium</span></td><td>“Flip ≤ k zeros” reframed: window may contain at most k zeros.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc438">Find All Anagrams in a String</a></td><td>438</td><td><span class="badge medium">medium</span></td><td>Histogram window + an agreement counter for O(1) slides.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc76">Minimum Window Substring</a></td><td>76</td><td><span class="badge hard">hard</span></td><td>Expand to cover, shrink to minimal — the canonical variable window.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc239">Sliding Window Maximum</a></td><td>239</td><td><span class="badge hard">hard</span></td><td>Monotonic deque keeps the window maximum at the front.</td></tr>
 </table>

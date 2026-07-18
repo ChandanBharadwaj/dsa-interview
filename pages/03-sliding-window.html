@@ -314,6 +314,28 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc485">
+  <summary><span class="badge easy">easy</span> Max Consecutive Ones — LeetCode 485</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Longest run of consecutive 1s in a binary array.</p>
+    <p><strong>Example.</strong> <code>[1,1,0,1,1,1]</code> → 3.</p>
+    <p class="code-title">A run counter — the degenerate window · O(n)</p>
+<pre class="code"><code>public static int findMaxConsecutiveOnes(int[] nums) {
+    int best = 0, run = 0;
+    for (int x : nums) {
+        run = (x == 1) ? run + 1 : 0;   // extend the streak or start over
+        best = Math.max(best, run);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The simplest window of all: it grows on 1s and <em>resets</em> on a
+    0, because a single 0 invalidates everything behind it. Compare with Max Consecutive Ones III
+    (below), where a flip budget k turns the hard reset into a gradual left-edge shrink — a perfect
+    before/after pair for seeing what the "shrink" step buys you.
+    Mirror: <code>code/03-sliding-window/MaxConsecutiveOnes.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc3">
   <summary><span class="badge medium">medium</span> Longest Substring Without Repeating Characters — LeetCode 3</summary>
   <div class="sol-body">
@@ -436,6 +458,192 @@ private boolean allUnique(String s, int i, int j) {
     a frequency-count problem (<a href="01-arrays-hashing.html">page 01</a>) wearing a window. The identical
     skeleton solves Find All Anagrams in a String (LC 438); only the return type changes.
     Mirror: <code>code/03-sliding-window/PermutationInString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1456">
+  <summary><span class="badge medium">medium</span> Maximum Number of Vowels in a Substring of Given Length — LeetCode 1456</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Max vowels in any substring of length exactly k.</p>
+    <p><strong>Example.</strong> "abciiidef", k=3 → 3 ("iii"). "leetcode", k=3 → 2.</p>
+    <p class="code-title">Fixed window, one counter · O(n)</p>
+<pre class="code"><code>public static int maxVowels(String s, int k) {
+    int count = 0;
+    for (int i = 0; i &lt; k; i++)             // first window
+        if (isVowel(s.charAt(i))) count++;
+    int best = count;
+    for (int i = k; i &lt; s.length(); i++) {
+        if (isVowel(s.charAt(i))) count++;          // entering char
+        if (isVowel(s.charAt(i - k))) count--;      // leaving char
+        best = Math.max(best, count);
+    }
+    return best;
+}
+
+private static boolean isVowel(char c) {
+    return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';
+}</code></pre>
+    <p><strong>Takeaway.</strong> Fixed-window bookkeeping in its cleanest form: the window's state is
+    one integer, and each slide touches exactly two characters. Whenever a problem fixes the window
+    size, resist the urge to re-scan — ask "what enters, what leaves?" and update only that.
+    Mirror: <code>code/03-sliding-window/MaxVowels.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc209">
+  <summary><span class="badge medium">medium</span> Minimum Size Subarray Sum — LeetCode 209</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Shortest contiguous subarray of positive integers with sum
+    ≥ target (0 if none).</p>
+    <p><strong>Example.</strong> <code>target=7, [2,3,1,2,4,3]</code> → 2 (the subarray [4,3]).</p>
+    <p class="code-title">Expand to qualify, shrink to minimize · O(n)</p>
+<pre class="code"><code>public static int minSubArrayLen(int target, int[] nums) {
+    int best = Integer.MAX_VALUE;
+    int sum = 0, left = 0;
+    for (int right = 0; right &lt; nums.length; right++) {
+        sum += nums[right];                    // expand
+        while (sum &gt;= target) {                // qualifies -&gt; record &amp; shrink
+            best = Math.min(best, right - left + 1);
+            sum -= nums[left++];               // pull the left edge in
+        }
+    }
+    return best == Integer.MAX_VALUE ? 0 : best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The mirror image of "longest window that stays legal": here the
+    window <em>wants</em> to be small, so you shrink while it still qualifies. The positivity of the
+    elements is load-bearing — it makes the sum monotonic in window width, which is what justifies
+    never re-expanding left. With negatives allowed, this breaks and you need prefix sums + a
+    monotonic deque (LC 862, a page-04/09 hybrid).
+    Mirror: <code>code/03-sliding-window/MinSizeSubarraySum.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc904">
+  <summary><span class="badge medium">medium</span> Fruit Into Baskets — LeetCode 904</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Trees in a row, each with one fruit type; you have two baskets,
+    each holding one type only, and must pick from consecutive trees. Maximize fruits picked —
+    i.e. <em>longest window containing at most 2 distinct values</em>.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,2,2]</code> → 4 ([2,3,2,2]). <code>[0,1,2,2]</code> → 3.</p>
+    <p class="code-title">Count map + shrink when a third type appears · O(n)</p>
+<pre class="code"><code>public static int totalFruit(int[] fruits) {
+    Map&lt;Integer, Integer&gt; count = new HashMap&lt;&gt;();
+    int best = 0, left = 0;
+    for (int right = 0; right &lt; fruits.length; right++) {
+        count.merge(fruits[right], 1, Integer::sum);       // take the fruit
+        while (count.size() &gt; 2) {                         // third type -&gt; illegal
+            int f = fruits[left++];
+            if (count.merge(f, -1, Integer::sum) == 0)     // drop from the left
+                count.remove(f);                           // type fully gone
+        }
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Half the battle is de-storying the problem into "longest substring
+    with at most K distinct" (here K=2) — the same template answers the general K, asked frequently as
+    a follow-up. The <code>remove</code>-when-zero step matters: <code>count.size()</code> is the
+    number of types <em>currently present</em>, so zombie zero-count keys would break the check.
+    Mirror: <code>code/03-sliding-window/FruitIntoBaskets.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc424">
+  <summary><span class="badge medium">medium</span> Longest Repeating Character Replacement — LeetCode 424</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Uppercase string, k replacements allowed: longest substring you
+    can turn into a single repeated character.</p>
+    <p><strong>Example.</strong> "ABAB", k=2 → 4 (replace both A's or both B's).
+    "AABABBA", k=1 → 4.</p>
+    <p class="code-title">Window legal while size − maxFreq ≤ k · O(n)</p>
+<pre class="code"><code>public static int characterReplacement(String s, int k) {
+    int[] count = new int[26];
+    int best = 0, left = 0, maxFreq = 0;
+    for (int right = 0; right &lt; s.length(); right++) {
+        maxFreq = Math.max(maxFreq, ++count[s.charAt(right) - 'A']);
+        // Replacements needed = window size − most frequent letter's count.
+        // Over budget? Slide the window (shrink by one), don't collapse it.
+        if (right - left + 1 - maxFreq &gt; k)
+            count[s.charAt(left++) - 'A']--;
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The famous subtlety: <code>maxFreq</code> is never recomputed when
+    the window shrinks, so it can go stale — and that's <em>fine</em>. A stale (too-high) maxFreq only
+    lets the window stay larger than strictly legal, but the answer it reports was already achieved
+    when maxFreq was genuinely that high; the window never grows on false pretenses, so the maximum is
+    still correct. Explaining <em>why</em> the stale bound is safe is exactly the discussion strong
+    candidates have. Mirror: <code>code/03-sliding-window/CharacterReplacement.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1004">
+  <summary><span class="badge medium">medium</span> Max Consecutive Ones III — LeetCode 1004</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Binary array, flip at most k zeros to ones: longest run of 1s
+    achievable — i.e. longest window containing at most k zeros.</p>
+    <p><strong>Example.</strong> <code>[1,1,1,0,0,0,1,1,1,1,0], k=2</code> → 6.</p>
+    <p class="code-title">Track only the zero count · O(n)</p>
+<pre class="code"><code>public static int longestOnes(int[] nums, int k) {
+    int best = 0, left = 0, zeros = 0;
+    for (int right = 0; right &lt; nums.length; right++) {
+        if (nums[right] == 0) zeros++;         // window absorbs a zero
+        while (zeros &gt; k)                      // budget blown -&gt; shrink
+            if (nums[left++] == 0) zeros--;
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Reframing is everything: "flip at most k zeros" becomes "window may
+    <em>contain</em> at most k zeros" — no flipping ever happens in the code. Same skeleton as
+    Character Replacement with the budget made explicit. This shape ("longest window with at most k
+    violations") covers a whole family of scheduling/tolerance problems.
+    Mirror: <code>code/03-sliding-window/MaxConsecutiveOnesIII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc438">
+  <summary><span class="badge medium">medium</span> Find All Anagrams in a String — LeetCode 438</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> All start indices where an anagram of p begins in s.</p>
+    <p><strong>Example.</strong> s="cbaebabacd", p="abc" → <code>[0,6]</code> ("cba", "bac").
+    s="abab", p="ab" → <code>[0,1,2]</code>.</p>
+    <p class="code-title">Fixed window + a matches counter for O(1) slides · O(n)</p>
+<pre class="code"><code>public static List&lt;Integer&gt; findAnagrams(String s, String p) {
+    List&lt;Integer&gt; res = new ArrayList&lt;&gt;();
+    if (p.length() &gt; s.length()) return res;
+
+    int[] need = new int[26], have = new int[26];
+    for (int i = 0; i &lt; p.length(); i++) {
+        need[p.charAt(i) - 'a']++;
+        have[s.charAt(i) - 'a']++;
+    }
+    int matches = 0;                          // how many of the 26 letters agree
+    for (int c = 0; c &lt; 26; c++)
+        if (need[c] == have[c]) matches++;
+
+    for (int i = p.length(); ; i++) {
+        if (matches == 26) res.add(i - p.length());   // full agreement = anagram
+        if (i == s.length()) break;
+
+        int in = s.charAt(i) - 'a';                   // letter entering
+        if (have[in] == need[in]) matches--;          // its agreement changes
+        have[in]++;
+        if (have[in] == need[in]) matches++;
+
+        int out = s.charAt(i - p.length()) - 'a';     // letter leaving
+        if (have[out] == need[out]) matches--;
+        have[out]--;
+        if (have[out] == need[out]) matches++;
+    }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Permutation in String (above) asks "does one window match?"; this
+    asks for <em>every</em> match — same histogram window, plus the <code>matches</code> trick that
+    replaces a 26-way comparison per slide with two constant-time adjustments. That incremental
+    "agreement counter" also powers Minimum Window Substring's <code>have/need</code> logic.
+    Mirror: <code>code/03-sliding-window/FindAllAnagrams.java</code>.</p>
   </div>
 </details>
 
