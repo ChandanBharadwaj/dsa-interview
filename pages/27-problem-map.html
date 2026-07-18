@@ -160,11 +160,16 @@
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="05-matrix.html#lc867">Transpose Matrix</a></td><td>867</td><td><span class="badge easy">easy</span></td><td>Pure index gymnastics: out[c][r] = in[r][c].</td></tr>
+  <tr><td><a href="05-matrix.html#lc566">Reshape the Matrix</a></td><td>566</td><td><span class="badge easy">easy</span></td><td>One linear index k ↔ (k/cols, k%cols) bridges both shapes.</td></tr>
+  <tr><td><a href="05-matrix.html#lc766">Toeplitz Matrix</a></td><td>766</td><td><span class="badge easy">easy</span></td><td>Whole-diagonal constancy collapses to “equal up-left neighbor”.</td></tr>
   <tr><td><a href="05-matrix.html#lc54">Spiral Matrix</a></td><td>54</td><td><span class="badge medium">medium</span></td><td>Four shrinking boundaries walk the spiral layer by layer.</td></tr>
   <tr><td><a href="05-matrix.html#lc48">Rotate Image</a></td><td>48</td><td><span class="badge medium">medium</span></td><td>Transpose + reverse each row = 90° rotation in place.</td></tr>
   <tr><td><a href="05-matrix.html#lc73">Set Matrix Zeroes</a></td><td>73</td><td><span class="badge medium">medium</span></td><td>First row/column double as zero markers — O(1) extra space.</td></tr>
   <tr><td><a href="05-matrix.html#lc289">Game of Life</a></td><td>289</td><td><span class="badge medium">medium</span></td><td>Encode the next state in spare bits for an in-place simulation.</td></tr>
   <tr><td><a href="05-matrix.html#lc36">Valid Sudoku</a></td><td>36</td><td><span class="badge medium">medium</span></td><td>Row/column/box seen-sets checked in a single sweep.</td></tr>
+  <tr><td><a href="05-matrix.html#lc59">Spiral Matrix II</a></td><td>59</td><td><span class="badge medium">medium</span></td><td>The spiral boundaries again, writing 1..n² instead of reading.</td></tr>
+  <tr><td><a href="05-matrix.html#lc240">Search a 2D Matrix II</a></td><td>240</td><td><span class="badge medium">medium</span></td><td>Top-right staircase: each compare discards a full row or column.</td></tr>
+  <tr><td><a href="05-matrix.html#lc1329">Sort the Matrix Diagonally</a></td><td>1329</td><td><span class="badge medium">medium</span></td><td>Diagonals are named by row − col: group by key, sort each group.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> image transforms, spreadsheet engines, cellular-automata simulation (<a href="25-real-world-systems.html#sched">simulation</a>).</p>
