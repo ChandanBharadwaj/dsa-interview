@@ -231,7 +231,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
     <span class="hint">Generalize the machine: hold/free per transaction count → dp[k][2] states per day.</span></div>
 </div>
 
-<details class="sol">
+<details class="sol" id="lc122">
   <summary><span class="badge medium">medium</span> Best Time to Buy and Sell Stock II — LeetCode 122 (two-state machine)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Unlimited buy/sell (one share at a time) — maximize profit.</p>
@@ -255,7 +255,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc309">
   <summary><span class="badge medium">medium</span> Best Time ... with Cooldown — LeetCode 309 (three-state machine)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Same as Stock II, but after selling you must skip a day before buying again.</p>
@@ -282,7 +282,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc337">
   <summary><span class="badge medium">medium</span> House Robber III — LeetCode 337 (tree DP)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Houses form a binary tree; robbing a node forbids robbing its direct children.
@@ -312,7 +312,7 @@ private static int[] dfs(TreeNode node) {
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc312">
   <summary><span class="badge hard">hard</span> Burst Balloons — LeetCode 312 (interval DP)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Bursting balloon i earns <code>nums[left]·nums[i]·nums[right]</code> using its
@@ -345,7 +345,7 @@ private static int[] dfs(TreeNode node) {
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc877">
   <summary><span class="badge medium">medium</span> Stone Game — LeetCode 877</summary>
   <div class="sol-body">
     <p><strong>The problem.</strong> Piles of stones in a row; Alice and Bob alternately take a whole pile
@@ -380,7 +380,7 @@ private static int[] dfs(TreeNode node) {
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc698">
   <summary><span class="badge medium">medium</span> Partition to K Equal Sum Subsets — LeetCode 698</summary>
   <div class="sol-body">
     <p><strong>The problem.</strong> Can the array be split into exactly <code>k</code> non-empty subsets
@@ -427,7 +427,7 @@ private static boolean fill(int[] nums, boolean[] used, int k,
   </div>
 </details>
 
-<details class="sol">
+<details class="sol" id="lc188">
   <summary><span class="badge hard">hard</span> Best Time to Buy and Sell Stock IV — LeetCode 188</summary>
   <div class="sol-body">
     <p><strong>The problem.</strong> Same stock rules, but at most <code>k</code> complete transactions
