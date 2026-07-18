@@ -353,6 +353,50 @@ m.floorEntry(x);   // same but returns the (key, value) pair
     <span class="hint">Buckets: frequency → DLL of nodes at that frequency, plus a minFreq pointer; accessing a node moves it one bucket up.</span></div>
 </div>
 
+<details class="sol" id="lc706">
+  <summary><span class="badge easy">easy</span> Design HashMap — LeetCode 706</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Implement put/get/remove for integer keys without using
+    built-in hash tables.</p>
+    <p><strong>Example.</strong> put(1,1), put(2,2), get(1) → 1, put(2,1) overwrites, remove(2),
+    get(2) → −1.</p>
+    <p class="code-title">Separate chaining: bucket array + linked chains · O(1) average</p>
+<pre class="code"><code>private static final int BUCKETS = 1024;
+private final Node[] table = new Node[BUCKETS];
+
+private int index(int key) {
+    return Integer.hashCode(key) &amp; (BUCKETS - 1);   // power-of-two mask
+}
+
+public void put(int key, int value) {
+    int i = index(key);
+    for (Node n = table[i]; n != null; n = n.next)
+        if (n.key == key) {         // key exists: overwrite in place
+            n.value = value;
+            return;
+        }
+    table[i] = new Node(key, value, table[i]);      // else prepend a node
+}
+
+public void remove(int key) {
+    int i = index(key);
+    Node prev = null;
+    for (Node n = table[i]; n != null; prev = n, n = n.next)
+        if (n.key == key) {
+            if (prev == null) table[i] = n.next;    // chain head
+            else prev.next = n.next;                // splice out mid-chain
+            return;
+        }
+}</code></pre>
+    <p><strong>Takeaway.</strong> This is the data structure the whole runbook leans on, built from
+    parts: hash → bucket → chain walk, with collisions handled by chaining (keys 1024 apart in the
+    mirror share a bucket). What production adds: resizing at a load factor (~0.75), treeifying long
+    chains (Java 8+), and better hash mixing. Being able to sketch this in five minutes is the
+    difference between using HashMap and understanding it.
+    Mirror: <code>code/24-advanced-structures/DesignHashMap.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc146">
   <summary><span class="badge medium">medium</span> LRU Cache — LeetCode 146 (the flagship)</summary>
   <div class="sol-body">
@@ -650,6 +694,79 @@ m.floorEntry(x);   // same but returns the (key, value) pair
   </div>
 </details>
 
+
+
+<details class="sol" id="lc622">
+  <summary><span class="badge medium">medium</span> Design Circular Queue — LeetCode 622</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A fixed-capacity FIFO queue in an array where the tail wraps
+    around to reuse freed front slots: enQueue, deQueue, Front, Rear, isEmpty, isFull.</p>
+    <p><strong>Example.</strong> capacity 3: enQueue 1,2,3; enQueue(4) → false; deQueue;
+    enQueue(4) → true (wrapped into slot 0).</p>
+    <p class="code-title">head + size, indices mod capacity · all ops O(1)</p>
+<pre class="code"><code>private final int[] data;
+private int head = 0;               // index of the front element
+private int size = 0;               // storing SIZE avoids the full/empty ambiguity
+
+public boolean enQueue(int value) {
+    if (size == data.length) return false;          // full
+    data[(head + size) % data.length] = value;      // one past the tail
+    size++;
+    return true;
+}
+
+public boolean deQueue() {
+    if (size == 0) return false;
+    head = (head + 1) % data.length;                // front slides right
+    size--;
+    return true;
+}
+
+public int Rear() {
+    return size == 0 ? -1 : data[(head + size - 1) % data.length];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The design decision worth voicing: with only head and tail
+    pointers, "head == tail" is ambiguous (empty or full?) — classic fixes are storing the size
+    (done here) or sacrificing one slot. Ring buffers are everywhere real systems need bounded
+    queues without allocation: ArrayDeque's internals, Kafka partitions, audio pipelines, and
+    kernel I/O rings. Mirror: <code>code/24-advanced-structures/CircularQueue.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1396">
+  <summary><span class="badge medium">medium</span> Design Underground System — LeetCode 1396</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> checkIn(id, station, t), checkOut(id, station, t), and
+    getAverageTime(start, end) — the average travel time over all completed trips on that exact
+    route.</p>
+    <p><strong>Example.</strong> Trips Leyton→Waterloo of 12, 10, 14 minutes →
+    getAverageTime("Leyton","Waterloo") = 12.0.</p>
+    <p class="code-title">Open journeys map + per-route running aggregates · all ops O(1)</p>
+<pre class="code"><code>private final Map&lt;Integer, String&gt; inStation = new HashMap&lt;&gt;();  // id -&gt; start
+private final Map&lt;Integer, Integer&gt; inTime = new HashMap&lt;&gt;();    // id -&gt; t
+private final Map&lt;String, long[]&gt; routes = new HashMap&lt;&gt;();      // "a-&gt;b" -&gt; {sum, count}
+
+public void checkOut(int id, String stationName, int t) {
+    String route = inStation.remove(id) + "-&gt;" + stationName;
+    int started = inTime.remove(id);
+    long[] agg = routes.computeIfAbsent(route, k -&gt; new long[2]);
+    agg[0] += t - started;          // running total — never store all trips
+    agg[1]++;                       // trip count
+}
+
+public double getAverageTime(String startStation, String endStation) {
+    long[] agg = routes.get(startStation + "-&gt;" + endStation);
+    return (double) agg[0] / agg[1];
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two small decisions carry the design: keep <em>running
+    aggregates</em> (sum, count) instead of trip lists — averages stay O(1) and memory stays flat —
+    and <code>remove()</code> on checkout both reads and cleans in one call. This open-session +
+    aggregate shape is the skeleton of every metrics pipeline ("request started / request
+    finished / p50 by route"). A favorite "can you write clean code fast?" screen.
+    Mirror: <code>code/24-advanced-structures/UndergroundSystem.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc460">
   <summary><span class="badge hard">hard</span> LFU Cache — LeetCode 460</summary>
   <div class="sol-body">
@@ -714,6 +831,60 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc715">
+  <summary><span class="badge hard">hard</span> Range Module — LeetCode 715</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Track half-open ranges of numbers: addRange(left, right),
+    queryRange (is every point of [left, right) tracked?), removeRange. All must stay fast under
+    heavy mixing.</p>
+    <p><strong>Example.</strong> add [10,20), remove [14,16): query [10,14) → true,
+    [13,15) → false, [16,17) → true.</p>
+    <p class="code-title">TreeMap of disjoint intervals; touch only neighbors · O(log n) amortized</p>
+<pre class="code"><code>private final TreeMap&lt;Integer, Integer&gt; map = new TreeMap&lt;&gt;();  // start -&gt; end
+
+public void addRange(int left, int right) {
+    Map.Entry&lt;Integer, Integer&gt; e = map.floorEntry(left);
+    if (e != null &amp;&amp; e.getValue() &gt;= left) {        // left neighbor reaches us
+        left = Math.min(left, e.getKey());          // absorb it
+        right = Math.max(right, e.getValue());
+        map.remove(e.getKey());
+    }
+    while ((e = map.ceilingEntry(left)) != null &amp;&amp; e.getKey() &lt;= right) {
+        right = Math.max(right, e.getValue());      // swallow overlappers
+        map.remove(e.getKey());
+    }
+    map.put(left, right);                           // insert the merged blob
+}
+
+public boolean queryRange(int left, int right) {
+    Map.Entry&lt;Integer, Integer&gt; e = map.floorEntry(left);
+    return e != null &amp;&amp; e.getValue() &gt;= right;      // ONE interval must cover it
+}
+
+public void removeRange(int left, int right) {
+    Map.Entry&lt;Integer, Integer&gt; e = map.floorEntry(left);
+    if (e != null &amp;&amp; e.getValue() &gt; left) {
+        int end = e.getValue();
+        map.put(e.getKey(), left);                  // keep the left stub
+        if (end &gt; right) map.put(right, end);       // and a right stub if any
+    }
+    while ((e = map.ceilingEntry(left)) != null &amp;&amp; e.getKey() &lt; right) {
+        if (e.getValue() &gt; right)
+            map.put(right, e.getValue());           // right stub survives
+        map.remove(e.getKey());
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The culmination of the TreeMap-interval pattern (My Calendar's
+    grown-up sibling): keep tracked intervals <em>disjoint</em>, and every operation reduces to
+    floor/ceiling neighbor surgery — merge on add, stub-trim on remove, single-cover check on
+    query. Because the invariant holds, query is one floorEntry. Interval maps like this manage
+    allocated memory ranges, file locks, and calendar availability in real systems. The mirror
+    randomizes 500 mixed ops against a boolean-array oracle.
+    Mirror: <code>code/24-advanced-structures/RangeModule.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Store the key inside the LRU node.</strong> The #1 LRU bug: you evict <code>tail.prev</code> and then can't remove its map entry because the node only held a value.</li>

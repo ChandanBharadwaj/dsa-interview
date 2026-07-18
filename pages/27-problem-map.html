@@ -538,13 +538,17 @@
 <div class="tablewrap">
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="24-advanced-structures.html#lc706">Design HashMap</a></td><td>706</td><td><span class="badge easy">easy</span></td><td>Separate chaining from scratch: hash → bucket → chain walk.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc146">LRU Cache</a></td><td>146</td><td><span class="badge medium">medium</span></td><td>HashMap + doubly linked list = O(1) get/put in recency order.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc380">Insert Delete GetRandom O(1)</a></td><td>380</td><td><span class="badge medium">medium</span></td><td>Array + index map; swap-with-last makes remove O(1).</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc307">Range Sum Query — Mutable</a></td><td>307</td><td><span class="badge medium">medium</span></td><td>Fenwick tree: point update and prefix query, both O(log n).</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc729">My Calendar I</a></td><td>729</td><td><span class="badge medium">medium</span></td><td>TreeMap neighbors: only the floor and ceiling bookings can conflict.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc362">Design Hit Counter</a></td><td>362</td><td><span class="badge medium">medium</span></td><td>Timestamp queue vs 300 circular buckets — the window-counting trade.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc981">Time Based Key-Value Store</a></td><td>981</td><td><span class="badge medium">medium</span></td><td>Floor binary search over an append-only (hence sorted) version list.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc622">Design Circular Queue</a></td><td>622</td><td><span class="badge medium">medium</span></td><td>Ring buffer: head + size dodges the full/empty ambiguity.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc1396">Design Underground System</a></td><td>1396</td><td><span class="badge medium">medium</span></td><td>Open-session map + per-route running (sum, count) aggregates.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc460">LFU Cache</a></td><td>460</td><td><span class="badge hard">hard</span></td><td>Frequency buckets of LinkedHashSets plus a minFreq pointer.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc715">Range Module</a></td><td>715</td><td><span class="badge hard">hard</span></td><td>Disjoint TreeMap intervals; every op is floor/ceiling neighbor surgery.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> caches at every layer (<a href="25-real-world-systems.html#infra">infra</a>), rate limiters, time-series and versioned stores (<a href="25-real-world-systems.html#db">databases</a>).</p>
