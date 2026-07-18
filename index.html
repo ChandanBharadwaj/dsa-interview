@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Interview Runbook — Zero to Interview-Ready</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/app.js" defer></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <span class="brand">DSA Interview Runbook</span>
+    <nav>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#curriculum">Curriculum</a>
+      <a href="#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="hero">
+  <h1>Zero to Interview-Ready in 14 Weeks</h1>
+  <p class="subtitle">
+    A complete DSA runbook for an experienced Java engineer starting from scratch.
+    Concepts → animations → Java templates → when-to-use-what → real systems → practice.
+  </p>
+  <div class="progress-wrap">
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressInner"></div></div>
+    <div class="progress-label" id="progressLabel"></div>
+  </div>
+</div>
+
+<div class="why">
+  <strong>How to use this runbook.</strong>
+  Go in order — every topic builds on the ones before it. For each topic: read the page top to bottom,
+  play the animations until the mechanics feel obvious, type out (don't copy) the pattern template, then solve the
+  curated problems easy→hard, only opening a solution after 25–30 minutes of honest effort. Re-solve failed problems
+  2 days later. Tick the checkbox when you can solve the worked problems cold. Your progress is saved in this browser.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="roadmap">The journey at a glance</h2>
+
+<div class="anim">
+  <svg viewBox="0 0 660 250" role="img" aria-label="Phase dependency map">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--svg-stroke)"></path>
+      </marker>
+    </defs>
+    <!-- row 1 -->
+    <rect class="box done" x="10"  y="20" width="120" height="44" rx="9"></rect>
+    <text class="lbl onfill" x="70" y="42" text-anchor="middle" font-size="12">Phase 0</text>
+    <text class="lbl onfill" x="70" y="56" text-anchor="middle" font-size="11">Foundations</text>
+    <rect class="box active" x="180" y="20" width="130" height="44" rx="9"></rect>
+    <text class="lbl onfill" x="245" y="42" text-anchor="middle" font-size="12">Phase 1</text>
+    <text class="lbl onfill" x="245" y="56" text-anchor="middle" font-size="11">Arrays &amp; patterns</text>
+    <rect class="box" x="360" y="20" width="130" height="44" rx="9"></rect>
+    <text class="lbl" x="425" y="42" text-anchor="middle" font-size="12">Phase 2</text>
+    <text class="lbl" x="425" y="56" text-anchor="middle" font-size="11">Sort &amp; binary search</text>
+    <rect class="box" x="530" y="20" width="120" height="44" rx="9"></rect>
+    <text class="lbl" x="590" y="42" text-anchor="middle" font-size="12">Phase 3</text>
+    <text class="lbl" x="590" y="56" text-anchor="middle" font-size="11">Lists, stacks, queues</text>
+    <!-- row 2 -->
+    <rect class="box" x="530" y="105" width="120" height="44" rx="9"></rect>
+    <text class="lbl" x="590" y="127" text-anchor="middle" font-size="12">Phases 4–5</text>
+    <text class="lbl" x="590" y="141" text-anchor="middle" font-size="11">Recursion, trees, tries</text>
+    <rect class="box" x="360" y="105" width="130" height="44" rx="9"></rect>
+    <text class="lbl" x="425" y="127" text-anchor="middle" font-size="12">Phase 6</text>
+    <text class="lbl" x="425" y="141" text-anchor="middle" font-size="11">Graphs &amp; paths</text>
+    <rect class="box" x="180" y="105" width="130" height="44" rx="9"></rect>
+    <text class="lbl" x="245" y="127" text-anchor="middle" font-size="12">Phase 7</text>
+    <text class="lbl" x="245" y="141" text-anchor="middle" font-size="11">DP &amp; greedy</text>
+    <rect class="box" x="10" y="105" width="120" height="44" rx="9"></rect>
+    <text class="lbl" x="70" y="127" text-anchor="middle" font-size="12">Phase 8</text>
+    <text class="lbl" x="70" y="141" text-anchor="middle" font-size="11">Bits, math, design</text>
+    <!-- row 3 -->
+    <rect class="box frontier" x="230" y="190" width="200" height="44" rx="9"></rect>
+    <text class="lbl onfill" x="330" y="212" text-anchor="middle" font-size="12">Phase 9 · Capstone</text>
+    <text class="lbl onfill" x="330" y="226" text-anchor="middle" font-size="11">Real-world systems</text>
+    <!-- arrows -->
+    <line class="edge" x1="130" y1="42" x2="176" y2="42" marker-end="url(#arr)"></line>
+    <line class="edge" x1="310" y1="42" x2="356" y2="42" marker-end="url(#arr)"></line>
+    <line class="edge" x1="490" y1="42" x2="526" y2="42" marker-end="url(#arr)"></line>
+    <line class="edge" x1="590" y1="64" x2="590" y2="101" marker-end="url(#arr)"></line>
+    <line class="edge" x1="526" y1="127" x2="494" y2="127" marker-end="url(#arr)"></line>
+    <line class="edge" x1="356" y1="127" x2="314" y2="127" marker-end="url(#arr)"></line>
+    <line class="edge" x1="176" y1="127" x2="134" y2="127" marker-end="url(#arr)"></line>
+    <line class="edge" x1="100" y1="149" x2="240" y2="188" marker-end="url(#arr)"></line>
+    <line class="edge" x1="330" y1="149" x2="330" y2="186" marker-end="url(#arr)"></line>
+  </svg>
+  <div class="anim-caption">Each phase unlocks the next: array patterns make sorting natural, recursion makes trees natural, trees make graphs natural, and graphs + recursion make dynamic programming learnable.</div>
+</div>
+
+<h3>Week-by-week plan</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Week</th><th>Topics</th><th>Goal</th><th>Problem target</th></tr>
+  <tr><td>1</td><td><a href="pages/00-foundations.html">00 Foundations</a></td><td>Read complexity off any code; know your Java collections' costs</td><td>6 analysis drills</td></tr>
+  <tr><td>2–3</td><td><a href="pages/01-arrays-hashing.html">01 Arrays &amp; Hashing</a> · <a href="pages/02-two-pointers.html">02 Two Pointers</a> · <a href="pages/03-sliding-window.html">03 Sliding Window</a> · <a href="pages/04-prefix-sum.html">04 Prefix Sum</a> · <a href="pages/05-matrix.html">05 Matrix</a></td><td>The 5 highest-frequency patterns become reflexes</td><td>~25 problems</td></tr>
+  <tr><td>4</td><td><a href="pages/06-sorting.html">06 Sorting</a> · <a href="pages/07-binary-search.html">07 Binary Search</a></td><td>Know every sort's tradeoffs; master the binary-search template</td><td>~10 problems</td></tr>
+  <tr><td>5</td><td><a href="pages/08-linked-lists.html">08 Linked Lists</a> · <a href="pages/09-stacks-queues.html">09 Stacks &amp; Queues</a></td><td>Pointer fluency; monotonic stack unlocked</td><td>~12 problems</td></tr>
+  <tr><td>6–7</td><td><a href="pages/10-recursion-backtracking.html">10 Backtracking</a> · <a href="pages/11-trees.html">11 Trees</a> · <a href="pages/12-heaps.html">12 Heaps</a> · <a href="pages/13-tries.html">13 Tries</a></td><td>Recursion becomes instinct — the gateway skill</td><td>~20 problems</td></tr>
+  <tr><td>8</td><td><a href="pages/14-strings-advanced.html">14 String Algorithms</a></td><td>Palindromes cold; KMP/Rabin-Karp understood</td><td>~8 problems</td></tr>
+  <tr><td>9–10</td><td><a href="pages/15-graphs-basics.html">15 Graph Basics</a> · <a href="pages/16-graphs-advanced.html">16 Graphs Advanced</a> · <a href="pages/17-shortest-paths.html">17 Shortest Paths &amp; MST</a></td><td>Model anything as a graph; pick the right traversal instantly</td><td>~18 problems</td></tr>
+  <tr><td>11–12</td><td><a href="pages/18-dp-1d.html">18 DP 1D</a> · <a href="pages/19-dp-2d.html">19 DP 2D</a> · <a href="pages/20-dp-advanced.html">20 DP Advanced</a> · <a href="pages/21-greedy-intervals.html">21 Greedy &amp; Intervals</a></td><td>The 4-step DP recipe works on unseen problems</td><td>~22 problems</td></tr>
+  <tr><td>13</td><td><a href="pages/22-bit-manipulation.html">22 Bits</a> · <a href="pages/23-math-geometry.html">23 Math</a> · <a href="pages/24-advanced-structures.html">24 Advanced Structures</a></td><td>Design questions (LRU!) and the bag of tricks</td><td>~15 problems</td></tr>
+  <tr><td>14</td><td><a href="pages/25-real-world-systems.html">25 Real-World Systems</a></td><td>Connect every pattern to production systems; final review</td><td>Review + mocks</td></tr>
+</table>
+</div>
+
+<div class="tip">
+  <strong>Interviews before week 14?</strong> The 80/20 core is topics 00–03, 07, 09, 11, 12, 15, 17, 18–19, 21 and the
+  LRU cache in 24 — that set covers the majority of real interview questions. Do those first, then backfill.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="curriculum">Curriculum</h2>
+<p class="muted small">Tick a topic when you can solve its worked problems cold — saved locally in your browser.</p>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 0 — Foundations</h2><span class="weeks">Week 1</span></div>
+  <div class="topic-card" data-topic="00-foundations">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/00-foundations.html">00 · Foundations: How to Think About DSA</a>
+      <div class="desc">Big-O intuition · Java collections as data structures · space-for-time trades · the pattern-recognition mindset</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 1 — Arrays, Strings &amp; Core Patterns</h2><span class="weeks">Weeks 2–3 · the highest-frequency interview material</span></div>
+  <div class="topic-card" data-topic="01-arrays-hashing">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/01-arrays-hashing.html">01 · Arrays &amp; Hashing</a>
+      <div class="desc">Frequency counting · complement lookup (Two Sum) · group-by-key · seen-sets · cyclic sort</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="02-two-pointers">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/02-two-pointers.html">02 · Two Pointers</a>
+      <div class="desc">Converging pointers on sorted data · read/write pointers · 3Sum · container with most water</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="03-sliding-window">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/03-sliding-window.html">03 · Sliding Window</a>
+      <div class="desc">Fixed &amp; variable windows · window-state maps · minimum window substring · monotonic deque</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="04-prefix-sum">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/04-prefix-sum.html">04 · Prefix Sum</a>
+      <div class="desc">O(1) range queries · prefix + HashMap (subarray sum = K) · difference arrays</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="05-matrix">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/05-matrix.html">05 · Matrix &amp; 2D Simulation</a>
+      <div class="desc">Spiral traversal · rotate in place · set matrix zeroes · game of life state encoding</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 2 — Sorting &amp; Binary Search</h2><span class="weeks">Week 4</span></div>
+  <div class="topic-card" data-topic="06-sorting">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/06-sorting.html">06 · Sorting</a>
+      <div class="desc">Merge · quick · heap · counting/bucket/radix · stability · TimSort &amp; dual-pivot in the JDK · quickselect</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="07-binary-search">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/07-binary-search.html">07 · Binary Search</a>
+      <div class="desc">The invariant template · first/last occurrence · rotated arrays · binary search on the answer</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 3 — Linked Lists, Stacks &amp; Queues</h2><span class="weeks">Week 5</span></div>
+  <div class="topic-card" data-topic="08-linked-lists">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/08-linked-lists.html">08 · Linked Lists</a>
+      <div class="desc">Reversal · dummy heads · fast/slow · Floyd cycle detection · merge · copy with random pointer</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="09-stacks-queues">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/09-stacks-queues.html">09 · Stacks &amp; Queues</a>
+      <div class="desc">Matching/nesting · min-stack · RPN · monotonic stack (next greater, daily temperatures)</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 4 — Recursion, Trees, Heaps &amp; Tries</h2><span class="weeks">Weeks 6–7</span></div>
+  <div class="topic-card" data-topic="10-recursion-backtracking">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/10-recursion-backtracking.html">10 · Recursion &amp; Backtracking</a>
+      <div class="desc">Call-stack model · choose/explore/un-choose · subsets · permutations · N-Queens · word search</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="11-trees">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/11-trees.html">11 · Trees &amp; BSTs</a>
+      <div class="desc">DFS pre/in/post · BFS levels · top-down vs bottom-up · BST invariant · LCA · serialize/deserialize</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="12-heaps">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/12-heaps.html">12 · Heaps &amp; Priority Queues</a>
+      <div class="desc">Array-backed heaps · sift up/down · top-K trick · two-heap median · K-way merge</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="13-tries">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/13-tries.html">13 · Tries</a>
+      <div class="desc">Prefix trees · insert/search/startsWith · wildcard search · autocomplete design</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 5 — Advanced Strings</h2><span class="weeks">Week 8</span></div>
+  <div class="topic-card" data-topic="14-strings-advanced">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/14-strings-advanced.html">14 · String Algorithms</a>
+      <div class="desc">Expand-around-center palindromes · rolling hash &amp; Rabin-Karp · KMP failure function</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 6 — Graphs</h2><span class="weeks">Weeks 9–10</span></div>
+  <div class="topic-card" data-topic="15-graphs-basics">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/15-graphs-basics.html">15 · Graph Basics</a>
+      <div class="desc">Adjacency lists · BFS vs DFS · connected components · islands · multi-source BFS</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="16-graphs-advanced">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/16-graphs-advanced.html">16 · Graphs Advanced</a>
+      <div class="desc">Topological sort (Kahn &amp; DFS) · union-find · cycle detection · bipartite check</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="17-shortest-paths">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/17-shortest-paths.html">17 · Shortest Paths &amp; MST</a>
+      <div class="desc">BFS vs Dijkstra vs Bellman-Ford vs Floyd-Warshall vs grid-DP vs A* — the decision guide · Prim/Kruskal</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 7 — Dynamic Programming &amp; Greedy</h2><span class="weeks">Weeks 11–12</span></div>
+  <div class="topic-card" data-topic="18-dp-1d">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/18-dp-1d.html">18 · Dynamic Programming 1D</a>
+      <div class="desc">Memoization vs tabulation · the 4-step recipe · house robber · coin change · word break · LIS</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="19-dp-2d">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/19-dp-2d.html">19 · Dynamic Programming 2D</a>
+      <div class="desc">Grid DP (min path sum) · 0/1 knapsack · LCS · edit distance · partition equal subset</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="20-dp-advanced">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/20-dp-advanced.html">20 · DP Advanced</a>
+      <div class="desc">State-machine DP (stocks) · interval DP (burst balloons) · bitmask DP · DP on trees</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="21-greedy-intervals">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/21-greedy-intervals.html">21 · Greedy &amp; Intervals</a>
+      <div class="desc">Exchange-argument thinking · when greedy fails · merge intervals · meeting rooms II · partition labels</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 8 — Bits, Math &amp; Advanced Structures</h2><span class="weeks">Week 13</span></div>
+  <div class="topic-card" data-topic="22-bit-manipulation">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/22-bit-manipulation.html">22 · Bit Manipulation</a>
+      <div class="desc">XOR tricks · Kernighan's count · masks · bitset-as-int · counting-bits DP</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="23-math-geometry">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/23-math-geometry.html">23 · Math &amp; Geometry</a>
+      <div class="desc">Euclid's GCD · sieve of Eratosthenes · fast power mod 1e9+7 · Fisher-Yates · reservoir sampling</div>
+    </div>
+  </div>
+  <div class="topic-card" data-topic="24-advanced-structures">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/24-advanced-structures.html">24 · Advanced Structures &amp; Design</a>
+      <div class="desc">LRU cache (the classic) · segment tree &amp; Fenwick · TreeMap patterns · O(1) randomized set · bloom filters</div>
+    </div>
+  </div>
+</div>
+
+<div class="phase-block">
+  <div class="phase-head"><h2>Phase 9 — Capstone</h2><span class="weeks">Week 14</span></div>
+  <div class="topic-card" data-topic="25-real-world-systems">
+    <input type="checkbox" aria-label="Mark complete">
+    <div class="body">
+      <a class="title" href="pages/25-real-world-systems.html">25 · Real-World Systems</a>
+      <div class="desc">Recommendation systems deep-dive · Google Maps · Git · databases · consistent hashing · social graphs · schedulers</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="cheatsheet">Master cheat-sheet</h2>
+
+<h3>Problem signal → pattern</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>The problem says…</th><th>Reach for…</th><th>Page</th></tr>
+  <tr><td>"find pairs / have I seen it / count occurrences"</td><td>HashMap / HashSet</td><td><a href="pages/01-arrays-hashing.html">01</a></td></tr>
+  <tr><td>sorted array + pairs / in-place</td><td>two pointers</td><td><a href="pages/02-two-pointers.html">02</a></td></tr>
+  <tr><td>"longest/shortest substring or subarray that …"</td><td>sliding window</td><td><a href="pages/03-sliding-window.html">03</a></td></tr>
+  <tr><td>many range-sum queries / "subarray sum equals"</td><td>prefix sums (+ HashMap)</td><td><a href="pages/04-prefix-sum.html">04</a></td></tr>
+  <tr><td>sorted input, or O(log n) demanded, or monotonic answer</td><td>binary search (possibly on the answer)</td><td><a href="pages/07-binary-search.html">07</a></td></tr>
+  <tr><td>"next greater/smaller element", spans, histogram</td><td>monotonic stack</td><td><a href="pages/09-stacks-queues.html">09</a></td></tr>
+  <tr><td>"all combinations / permutations / ways to place"</td><td>backtracking</td><td><a href="pages/10-recursion-backtracking.html">10</a></td></tr>
+  <tr><td>"top K / K-th largest / running median / merge K"</td><td>heap</td><td><a href="pages/12-heaps.html">12</a></td></tr>
+  <tr><td>words by prefix / autocomplete</td><td>trie</td><td><a href="pages/13-tries.html">13</a></td></tr>
+  <tr><td>connections, grids, "minimum steps" unweighted</td><td>graph BFS</td><td><a href="pages/15-graphs-basics.html">15</a></td></tr>
+  <tr><td>ordering with prerequisites</td><td>topological sort</td><td><a href="pages/16-graphs-advanced.html">16</a></td></tr>
+  <tr><td>dynamic connectivity / grouping</td><td>union-find</td><td><a href="pages/16-graphs-advanced.html">16</a></td></tr>
+  <tr><td>weighted shortest path</td><td>Dijkstra (non-negative) / Bellman-Ford</td><td><a href="pages/17-shortest-paths.html">17</a></td></tr>
+  <tr><td>"minimum cost / maximum value / number of ways"</td><td>dynamic programming</td><td><a href="pages/18-dp-1d.html">18</a>–<a href="pages/20-dp-advanced.html">20</a></td></tr>
+  <tr><td>intervals, meetings, scheduling</td><td>sort + greedy / heap / sweep</td><td><a href="pages/21-greedy-intervals.html">21</a></td></tr>
+  <tr><td>"O(1) each operation" design (cache, set)</td><td>compose HashMap + list/heap/tree</td><td><a href="pages/24-advanced-structures.html">24</a></td></tr>
+</table>
+</div>
+
+<h3>Big-O quick reference</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Structure / algorithm</th><th>Key costs</th><th>Java</th></tr>
+  <tr><td>Dynamic array</td><td>index O(1) · append amortized O(1) · middle insert O(n)</td><td><code>ArrayList</code></td></tr>
+  <tr><td>Hash table</td><td>get/put/contains O(1) avg</td><td><code>HashMap</code>, <code>HashSet</code></td></tr>
+  <tr><td>Balanced BST</td><td>all ops O(log n), sorted order, floor/ceiling</td><td><code>TreeMap</code>, <code>TreeSet</code></td></tr>
+  <tr><td>Binary heap</td><td>offer/poll O(log n) · peek O(1) · heapify O(n)</td><td><code>PriorityQueue</code></td></tr>
+  <tr><td>Stack / queue / deque</td><td>ends O(1)</td><td><code>ArrayDeque</code></td></tr>
+  <tr><td>Linked list</td><td>ends O(1) · get(i) O(n)</td><td><code>LinkedList</code></td></tr>
+  <tr><td>Trie</td><td>insert/search O(L) in word length</td><td>hand-rolled</td></tr>
+  <tr><td>Good sorting</td><td>O(n log n) · counting/radix O(n+k)</td><td><code>Arrays.sort</code></td></tr>
+  <tr><td>Binary search</td><td>O(log n)</td><td><code>Arrays.binarySearch</code> or template</td></tr>
+  <tr><td>BFS / DFS</td><td>O(V + E)</td><td>queue / recursion</td></tr>
+  <tr><td>Dijkstra</td><td>O(E log V)</td><td>PQ of (dist, node)</td></tr>
+  <tr><td>Bellman-Ford / Floyd-Warshall</td><td>O(VE) / O(V³)</td><td>relaxation loops</td></tr>
+  <tr><td>Union-find</td><td>~O(1) amortized (α)</td><td>hand-rolled</td></tr>
+  <tr><td>Segment tree / Fenwick</td><td>query+update O(log n)</td><td>hand-rolled</td></tr>
+</table>
+</div>
+
+<div class="note">
+  <strong>Final-week ritual.</strong> Re-do one worked problem from every topic without looking. Anything shaky →
+  that page's pitfalls section. Then do 2–3 full mock interviews out loud with a timer: restate the problem,
+  state brute force + its complexity, improve it, code, test with an example, state final complexity. That
+  6-step out-loud loop is the actual interview skill.
+</div>
+
+<p class="center muted small">Built as a self-contained static site — works offline, progress saved in your browser.</p>
+
+</div>
+</body>
+</html>

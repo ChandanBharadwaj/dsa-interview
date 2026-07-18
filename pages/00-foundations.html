@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>00 · Foundations — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js" defer></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>Foundations: How to Think About DSA</h1>
+<p class="subtitle">Big-O intuition, the Java collections you already use, and the pattern-recognition mindset that makes every later topic click.</p>
+<p>
+  <span class="badge phase">Phase 0 · Week 1</span>
+  <span class="badge freq">Read this first — everything builds on it</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this topic exists.</strong>
+  Interviews don't test whether you can write Java — you've done that for 10 years. They test whether you can
+  <em>predict the cost</em> of code before running it, and whether you can <em>recognize which known pattern</em> a new
+  problem secretly is. This page gives you the vocabulary (Big-O) and the mental map (data structure ↔ Java class ↔ cost)
+  that every other page relies on.
+</div>
+
+<h3>Prerequisites</h3>
+<p>None — this is the starting point. You only need everyday Java: loops, arrays, <code>HashMap</code>, <code>List</code>.</p>
+
+<h3>What the interviewer is actually testing</h3>
+<ul>
+  <li><strong>Can you state the time and space complexity</strong> of your own solution, unprompted? This is asked in nearly 100% of interviews.</li>
+  <li><strong>Can you compare approaches?</strong> "I could sort in O(n log n), or use a HashMap for O(n) with O(n) extra space" is exactly the sentence they want to hear.</li>
+  <li><strong>Do you pick the right tool?</strong> Choosing <code>HashMap</code> vs <code>TreeMap</code> vs <code>PriorityQueue</code> deliberately — not by habit.</li>
+</ul>
+
+<h3>How this runbook builds incrementally</h3>
+<p>
+  Each phase depends only on the ones before it: Foundations → array patterns (the highest-frequency interview questions) →
+  sorting &amp; binary search → linked structures → recursion &amp; trees → graphs → dynamic programming → advanced topics →
+  a capstone showing how real systems (Google Maps, Netflix recommendations, Git) compose all of it.
+  Don't skip ahead: graph BFS is easy <em>if</em> tree BFS is instinct; DP is learnable <em>if</em> recursion is instinct.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="concepts">Core concepts</h2>
+
+<h3>1. Big-O: counting work, not seconds</h3>
+<p class="lead">
+  Big-O answers one question: <strong>as the input gets bigger, how fast does the work grow?</strong>
+  Constants and hardware don't matter; the <em>shape of growth</em> does.
+</p>
+
+<div class="anim" id="growthAnim">
+  <svg viewBox="0 0 640 320" role="img" aria-label="Growth of common complexity classes">
+    <!-- axes -->
+    <line x1="50" y1="280" x2="620" y2="280" class="edge"></line>
+    <line x1="50" y1="280" x2="50" y2="20" class="edge"></line>
+    <text x="600" y="302" class="small">input size n →</text>
+    <text x="12" y="30" class="small">work ↑</text>
+    <!-- curves (revealed one per step) -->
+    <path id="c1" class="edge" d="M50,270 L620,270" style="stroke:#16a34a; stroke-width:2.5; opacity:0"></path>
+    <text id="t1" class="small" x="560" y="262" style="opacity:0; fill:#16a34a">O(1)</text>
+    <path id="c2" class="edge" d="M50,270 C150,240 300,228 620,215" style="stroke:#22c55e; stroke-width:2.5; opacity:0"></path>
+    <text id="t2" class="small" x="560" y="207" style="opacity:0; fill:#22c55e">O(log n)</text>
+    <path id="c3" class="edge" d="M50,270 L620,120" style="stroke:#2563eb; stroke-width:2.5; opacity:0"></path>
+    <text id="t3" class="small" x="575" y="112" style="opacity:0; fill:#2563eb">O(n)</text>
+    <path id="c4" class="edge" d="M50,270 C220,240 420,160 620,55" style="stroke:#7c3aed; stroke-width:2.5; opacity:0"></path>
+    <text id="t4" class="small" x="545" y="48" style="opacity:0; fill:#7c3aed">O(n log n)</text>
+    <path id="c5" class="edge" d="M50,270 C260,255 400,170 480,25" style="stroke:#d97706; stroke-width:2.5; opacity:0"></path>
+    <text id="t5" class="small" x="488" y="22" style="opacity:0; fill:#d97706">O(n²)</text>
+    <path id="c6" class="edge" d="M50,270 C160,262 230,180 260,25" style="stroke:#dc2626; stroke-width:2.5; opacity:0"></path>
+    <text id="t6" class="small" x="268" y="22" style="opacity:0; fill:#dc2626">O(2ⁿ)</text>
+  </svg>
+  <div class="anim-caption"></div>
+  <div class="anim-controls"></div>
+</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Class</th><th>Name</th><th>If n = 1,000,000</th><th>Typical source</th></tr>
+  <tr><td><code>O(1)</code></td><td>constant</td><td>1 step</td><td>HashMap get/put, array index, stack push/pop</td></tr>
+  <tr><td><code>O(log n)</code></td><td>logarithmic</td><td>~20 steps</td><td>binary search, balanced-tree (TreeMap) ops, heap push/pop</td></tr>
+  <tr><td><code>O(n)</code></td><td>linear</td><td>1,000,000 steps</td><td>one pass over the input; building a HashMap</td></tr>
+  <tr><td><code>O(n log n)</code></td><td>linearithmic</td><td>~20,000,000 steps</td><td>good sorting (merge/quick/Tim), n heap operations</td></tr>
+  <tr><td><code>O(n²)</code></td><td>quadratic</td><td>10¹² steps — <strong>too slow</strong></td><td>nested loops over the same input</td></tr>
+  <tr><td><code>O(2ⁿ)</code></td><td>exponential</td><td>astronomical</td><td>trying every subset; unmemoized recursion</td></tr>
+</table>
+</div>
+
+<div class="tip">
+  <strong>Interview rule of thumb.</strong> Around 10⁸ simple operations per second is a safe mental budget.
+  If n ≤ 10⁵ and your idea is O(n²) (10¹⁰ ops), it will be "correct but too slow" — the interviewer is waiting
+  for you to notice and reach for a better tool. This single habit — check n, budget the ops — instantly makes you
+  sound experienced.
+</div>
+
+<h3>2. Reading complexity straight off the code</h3>
+
+<p class="code-title">Counting work — four shapes you'll see everywhere</p>
+<pre class="code"><code>// O(n): one pass, constant work per element
+int max = Integer.MIN_VALUE;
+for (int x : arr) {            // runs n times
+    max = Math.max(max, x);    // O(1) work each time
+}
+
+// O(n^2): for EACH element, scan all elements again
+for (int i = 0; i &lt; n; i++)
+    for (int j = i + 1; j &lt; n; j++)
+        check(arr[i], arr[j]);         // runs ~n*n/2 times
+
+// O(log n): the problem HALVES every iteration
+while (lo &lt;= hi) {
+    int mid = lo + (hi - lo) / 2;      // half the range remains
+    ...
+}
+
+// O(n log n): n elements, each paying an O(log n) price
+PriorityQueue&lt;Integer&gt; pq = new PriorityQueue&lt;&gt;();
+for (int x : arr) pq.offer(x);         // n pushes * O(log n) each</code></pre>
+
+<h3>3. Space complexity &amp; the classic trade</h3>
+<p>
+  Space complexity counts <em>extra</em> memory beyond the input. The single most common interview move is
+  <strong>trading space for time</strong>: spend O(n) memory on a <code>HashMap</code>/<code>HashSet</code> to
+  turn an O(n²) "search inside a loop" into O(n).
+</p>
+
+<p class="code-title">The trade in action: Two Sum (LeetCode 1), the most famous interview question</p>
+<pre class="code"><code>// Brute force: O(n^2) time, O(1) space — check every pair
+public int[] twoSumBrute(int[] nums, int target) {
+    for (int i = 0; i &lt; nums.length; i++)
+        for (int j = i + 1; j &lt; nums.length; j++)
+            if (nums[i] + nums[j] == target) return new int[]{i, j};
+    return new int[]{};
+}
+
+// HashMap: O(n) time, O(n) space — one pass
+public int[] twoSum(int[] nums, int target) {
+    // value -&gt; index of every number we've already walked past
+    Map&lt;Integer, Integer&gt; seen = new HashMap&lt;&gt;();
+    for (int i = 0; i &lt; nums.length; i++) {
+        int need = target - nums[i];        // the partner we're hoping exists
+        if (seen.containsKey(need))         // O(1) lookup instead of an O(n) rescan
+            return new int[]{seen.get(need), i};
+        seen.put(nums[i], i);               // remember current number for the future
+    }
+    return new int[]{};
+}</code></pre>
+
+<h3>4. Amortized cost (why <code>ArrayList.add</code> is "O(1)")</h3>
+<p>
+  <code>ArrayList</code> occasionally doubles its backing array (an O(n) copy), but doubling happens so rarely that the
+  <em>average</em> cost per add stays constant — that's <strong>amortized O(1)</strong>. Same idea behind
+  <code>HashMap</code> resizing and <code>StringBuilder</code> growth. If an interviewer asks "worst case?", the honest
+  answer is: a single add can be O(n), but any sequence of n adds is O(n) total.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="java">Your Java collections are already data structures</h2>
+<p>You've used these for a decade — here's what they are underneath, which is exactly what interviews test:</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Java class</th><th>Underlying structure</th><th>Key ops &amp; cost</th><th>Reach for it when…</th></tr>
+  <tr><td><code>ArrayList</code></td><td>dynamic array</td><td>get/set O(1) · add-at-end amortized O(1) · insert/remove middle O(n)</td><td>indexed access, iteration</td></tr>
+  <tr><td><code>LinkedList</code></td><td>doubly linked list</td><td>add/remove at ends O(1) · get(i) O(n)</td><td>rarely — know it for the concept (page 08)</td></tr>
+  <tr><td><code>HashMap</code> / <code>HashSet</code></td><td>hash table</td><td>get/put/contains O(1) average</td><td>"have I seen this?", counting, lookup by key</td></tr>
+  <tr><td><code>TreeMap</code> / <code>TreeSet</code></td><td>red-black tree (balanced BST)</td><td>get/put O(log n) · <code>floorKey</code>/<code>ceilingKey</code> O(log n), sorted iteration</td><td>need order + lookup: ranges, nearest key</td></tr>
+  <tr><td><code>ArrayDeque</code></td><td>resizable circular array</td><td>push/pop/offer/poll both ends O(1)</td><td>every stack and queue in interviews (page 09)</td></tr>
+  <tr><td><code>PriorityQueue</code></td><td>binary min-heap</td><td>offer/poll O(log n) · peek O(1)</td><td>"top K", "smallest/largest so far" (page 12)</td></tr>
+  <tr><td><code>LinkedHashMap</code></td><td>hash table + linked list</td><td>O(1) ops, remembers insertion/access order</td><td>LRU cache (page 24)</td></tr>
+</table>
+</div>
+
+<div class="warn">
+  <strong>Habit to build now.</strong> In interviews say the structure, not just the class: "I'll use a hash map for O(1)
+  lookups", "a min-heap to always grab the smallest". It shows you chose the structure, not the Java default.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="compare">When to use what</h2>
+<p>The master decision reflex — problem signal → structure. You'll refine this on every page:</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>The problem says…</th><th>Your brain should say…</th><th>Taught in</th></tr>
+  <tr><td>"have I seen X before?" / count occurrences / find pairs</td><td><code>HashMap</code> / <code>HashSet</code></td><td>01 · Arrays &amp; Hashing</td></tr>
+  <tr><td>sorted input, or "find in O(log n)"</td><td>binary search</td><td>07 · Binary Search</td></tr>
+  <tr><td>contiguous subarray / substring window</td><td>sliding window</td><td>03 · Sliding Window</td></tr>
+  <tr><td>pairs in a sorted array, in-place scanning</td><td>two pointers</td><td>02 · Two Pointers</td></tr>
+  <tr><td>"top K", "K-th largest", running median</td><td>heap / <code>PriorityQueue</code></td><td>12 · Heaps</td></tr>
+  <tr><td>nested structure, "all combinations"</td><td>recursion / backtracking</td><td>10 · Backtracking</td></tr>
+  <tr><td>connections, networks, grids, "shortest path"</td><td>graph + BFS/DFS/Dijkstra</td><td>15–17 · Graphs</td></tr>
+  <tr><td>"minimum cost / number of ways", overlapping choices</td><td>dynamic programming</td><td>18–20 · DP</td></tr>
+  <tr><td>matching brackets, "most recent", undo</td><td>stack</td><td>09 · Stacks &amp; Queues</td></tr>
+  <tr><td>prefixes of words, autocomplete</td><td>trie</td><td>13 · Tries</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="realworld">Where this shows up in real systems</h2>
+<div class="grid2">
+  <div class="card">
+    <h4>Latency budgets at scale</h4>
+    <p class="small">A feed request touching 10⁹ rows can't afford O(n) scans. Databases keep B-tree and hash indexes
+    (O(log n) / O(1) lookup) precisely because of the growth curves above. Big-O is the language of every
+    performance review you'll ever read.</p>
+  </div>
+  <div class="card">
+    <h4>Java itself</h4>
+    <p class="small"><code>HashMap</code> converts long collision buckets into red-black trees (Java 8+) to cap the
+    worst case at O(log n); <code>Arrays.sort</code> picks dual-pivot quicksort for primitives but TimSort for objects
+    (stability). The JDK is applied DSA — page 06 digs in.</p>
+  </div>
+  <div class="card">
+    <h4>Recommendation systems</h4>
+    <p class="small">Netflix-style pipelines are a chain of exactly these tools: hashing for similarity lookups, heaps
+    for top-K ranking, graphs for "users like you". The capstone (page 25) maps each stage back to a pattern you'll
+    learn here.</p>
+  </div>
+  <div class="card">
+    <h4>Caches everywhere</h4>
+    <p class="small">Redis, CDN edges, and your service's in-memory cache are hash tables with eviction policies —
+    LRU is a <code>HashMap</code> + doubly linked list (page 24). The trade "O(n) memory to make reads O(1)" runs the
+    modern internet.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problems">Practice: read the complexity</h2>
+<p>No LeetCode yet — first make cost-reading automatic. State time and space for each, then check.</p>
+
+<div class="problems card">
+  <div class="prob"><span class="badge easy">warm-up</span> <span class="t">1. A single loop summing an array of n ints.</span></div>
+  <div class="prob"><span class="badge easy">warm-up</span> <span class="t">2. Nested loops printing every pair (i, j) with i &lt; j.</span></div>
+  <div class="prob"><span class="badge easy">warm-up</span> <span class="t">3. A loop that does <code>n = n / 2</code> until n is 0.</span></div>
+  <div class="prob"><span class="badge medium">think</span> <span class="t">4. Sorting an array, then binary-searching it 50 times.</span></div>
+  <div class="prob"><span class="badge medium">think</span> <span class="t">5. Building a <code>HashSet</code> from array A, then checking every element of array B against it.</span></div>
+  <div class="prob"><span class="badge medium">think</span> <span class="t">6. String concatenation with <code>+=</code> inside a loop of n iterations.</span></div>
+</div>
+
+<details class="sol">
+  <summary>Answers with reasoning</summary>
+  <div class="sol-body">
+    <ol>
+      <li><strong>O(n) time, O(1) space</strong> — n iterations, constant work, one accumulator.</li>
+      <li><strong>O(n²) time</strong> — about n²/2 pairs; Big-O drops the ½.</li>
+      <li><strong>O(log n) time</strong> — halving until 0 takes log₂n steps. Halving ⇒ log. Always.</li>
+      <li><strong>O(n log n)</strong> — sort costs O(n log n); 50 searches cost 50·log n, a constant multiple of log n. The sort dominates.</li>
+      <li><strong>O(|A| + |B|) time, O(|A|) space</strong> — this is the space-for-time trade you'll use constantly.</li>
+      <li><strong>O(n²) time</strong> — each <code>+=</code> copies the whole string built so far (1+2+…+n chars). Fix: <code>StringBuilder</code>, which is amortized O(1) per append ⇒ O(n) total. A very common Java-specific interview probe.</li>
+    </ol>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<ul>
+  <li><strong>Don't say "O(2n)" or "O(n/2)".</strong> Constants are dropped: both are O(n). Nested-but-shrinking loops (pairs) are still O(n²).</li>
+  <li><strong>Two different inputs get two variables:</strong> processing lists of sizes n and m is O(n + m) (or O(n·m) if nested) — never collapse them into one n.</li>
+  <li><strong>HashMap is O(1) <em>average</em>.</strong> Saying "average, with a treeified O(log n) worst case in Java 8+" earns senior-level credit.</li>
+  <li><strong>Recursion isn't free space.</strong> The call stack counts: recursing n deep is O(n) space even with no allocations. (Big theme from page 10 on.)</li>
+  <li><strong>Say complexity before being asked.</strong> Finish every solution with "time O(…), space O(…) because …". It becomes a reflex within a week of practice.</li>
+  <li><strong>Integer overflow:</strong> <code>int</code> tops out at ~2.1·10⁹ — sums and products need <code>long</code>. Cheap point lost constantly.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="../index.html"><span class="dir">⟵ Back</span><span class="name"> Runbook home</span></a>
+  <a class="next" href="01-arrays-hashing.html"><span class="dir">Next ⟶</span><span class="name">01 · Arrays &amp; Hashing</span></a>
+</nav>
+
+</div>
+
+<script>
+new Stepper('growthAnim', {
+  totalSteps: 7,
+  intervalMs: 1600,
+  captions: [
+    'The axes: input size n grows to the right, total work grows upward. Watch how differently each complexity class climbs.',
+    'O(1) — constant: the flat line. HashMap lookups, array indexing. Input size is irrelevant.',
+    'O(log n) — halving: barely climbs. A million items? ~20 steps. This is why binary search and TreeMap feel free.',
+    'O(n) — linear: one pass over everything. The baseline for "I must at least look at each element once".',
+    'O(n log n) — a sort: n elements each paying a log n toll. The best a comparison sort can do.',
+    'O(n²) — nested loops: fine at n=1,000, hopeless at n=1,000,000. Most interview problems are "turn O(n²) into O(n) or O(n log n)".',
+    'O(2ⁿ) — exponential: hits the ceiling almost immediately. Unmemoized recursion lives here — dynamic programming (phase 7) is the escape hatch.'
+  ],
+  apply: function (svg, step) {
+    for (var i = 1; i <= 6; i++) {
+      var on = step >= i;
+      svg.querySelector('#c' + i).style.opacity = on ? 1 : 0;
+      svg.querySelector('#t' + i).style.opacity = on ? 1 : 0;
+    }
+  }
+});
+</script>
+
+</body>
+</html>
