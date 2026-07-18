@@ -320,6 +320,36 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc13">
+  <summary><span class="badge easy">easy</span> Roman to Integer — LeetCode 13</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Convert a Roman numeral (valid, 1–3999) to an integer, handling
+    the six subtractive pairs (IV, IX, XL, XC, CD, CM).</p>
+    <p><strong>Example.</strong> "LVIII" → 58. "MCMXCIV" → 1994.</p>
+    <p class="code-title">Smaller-before-bigger counts negative · O(n)</p>
+<pre class="code"><code>public static int romanToInt(String s) {
+    Map&lt;Character, Integer&gt; val = Map.of(
+            'I', 1, 'V', 5, 'X', 10, 'L', 50,
+            'C', 100, 'D', 500, 'M', 1000);
+    int total = 0;
+    for (int i = 0; i &lt; s.length(); i++) {
+        int v = val.get(s.charAt(i));
+        // The one rule that unifies IV, IX, XL, XC, CD, CM:
+        if (i + 1 &lt; s.length() &amp;&amp; v &lt; val.get(s.charAt(i + 1)))
+            total -= v;                // smaller before bigger: subtract
+        else
+            total += v;
+    }
+    return total;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Instead of six special-cased pairs, one generalization — "a symbol
+    smaller than its right neighbor is subtractive" — makes the code trivial and unforgettable.
+    Finding the rule that collapses the special cases is a transferable interview move; the reverse
+    problem (LC 12) inverts it with a greedy over value-symbol pairs including the subtractive ones.
+    Mirror: <code>code/14-strings-advanced/RomanToInteger.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc443">
   <summary><span class="badge medium">medium</span> String Compression — LeetCode 443</summary>
   <div class="sol-body">
@@ -530,6 +560,165 @@ static int[] buildLps(String p) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc8">
+  <summary><span class="badge medium">medium</span> String to Integer (atoi) — LeetCode 8</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Parse an int the way atoi does: skip leading spaces, read one
+    optional sign, read digits until a non-digit, clamp to
+    [Integer.MIN_VALUE, Integer.MAX_VALUE]. Everything else yields 0.</p>
+    <p><strong>Example.</strong> "   -042" → −42. "1337c0d3" → 1337. "words and 987" → 0.
+    "-91283472332" → −2147483648 (clamped).</p>
+    <p class="code-title">State-by-state parse with early clamping · O(n)</p>
+<pre class="code"><code>public static int myAtoi(String s) {
+    int i = 0, n = s.length();
+    while (i &lt; n &amp;&amp; s.charAt(i) == ' ') i++;        // 1. leading spaces
+
+    int sign = 1;
+    if (i &lt; n &amp;&amp; (s.charAt(i) == '+' || s.charAt(i) == '-')) {
+        sign = s.charAt(i) == '-' ? -1 : 1;         // 2. at most ONE sign
+        i++;
+    }
+
+    long value = 0;                                  // long: safe headroom
+    while (i &lt; n &amp;&amp; s.charAt(i) &gt;= '0' &amp;&amp; s.charAt(i) &lt;= '9') {
+        value = value * 10 + (s.charAt(i) - '0');
+        // 3. clamp EARLY — a 50-digit input would overflow even long
+        if (sign == 1 &amp;&amp; value &gt; Integer.MAX_VALUE) return Integer.MAX_VALUE;
+        if (sign == -1 &amp;&amp; -value &lt; Integer.MIN_VALUE) return Integer.MIN_VALUE;
+        i++;
+    }
+    return (int) (sign * value);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Zero algorithms, pure specification discipline — which is exactly
+    why it's asked: the signal is whether you enumerate the edge cases ("+-12"? spaces after the
+    sign? digits then letters?) before coding. Clamping <em>inside</em> the loop matters; waiting
+    until the end lets a long-enough input overflow the long. This is a miniature of writing any
+    protocol parser to spec. Mirror: <code>code/14-strings-advanced/MyAtoi.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc38">
+  <summary><span class="badge medium">medium</span> Count and Say — LeetCode 38</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The sequence starts "1"; each term describes the previous aloud:
+    "1" → "one 1" → "11" → "two 1s" → "21" → "one 2, one 1" → "1211"… Return the nth term.</p>
+    <p><strong>Example.</strong> n=4 → "1211". n=6 → "312211".</p>
+    <p class="code-title">Run-length encode the previous term, n−1 times · O(output)</p>
+<pre class="code"><code>public static String countAndSay(int n) {
+    String curr = "1";
+    for (int round = 2; round &lt;= n; round++) {
+        StringBuilder next = new StringBuilder();
+        int i = 0;
+        while (i &lt; curr.length()) {
+            char digit = curr.charAt(i);
+            int runLen = 0;
+            while (i &lt; curr.length() &amp;&amp; curr.charAt(i) == digit) {
+                runLen++;                    // measure the run of equal digits
+                i++;
+            }
+            next.append(runLen).append(digit);   // "say" it: count, then digit
+        }
+        curr = next.toString();
+    }
+    return curr;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The inner loop is run-length encoding — the same run-scanning
+    two-pointer as String Compression (above), applied iteratively. RLE itself is real: fax
+    machines, bitmap image formats, and column-store databases all compress runs this way. The
+    run-scan (anchor, advance while equal, emit) is worth having as a reflex; it appears in dozens
+    of "group consecutive" problems. Mirror: <code>code/14-strings-advanced/CountAndSay.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc151">
+  <summary><span class="badge medium">medium</span> Reverse Words in a String — LeetCode 151</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Reverse the word order; collapse all extra whitespace (leading,
+    trailing, between words) to single spaces.</p>
+    <p><strong>Example.</strong> "  hello world  " → "world hello".
+    "a good&nbsp;&nbsp;&nbsp;example" → "example good a".</p>
+    <p class="code-title">Carve words from the end · O(n), no split()</p>
+<pre class="code"><code>public static String reverseWords(String s) {
+    StringBuilder sb = new StringBuilder();
+    int i = s.length() - 1;
+    while (i &gt;= 0) {
+        while (i &gt;= 0 &amp;&amp; s.charAt(i) == ' ') i--;   // skip space runs
+        if (i &lt; 0) break;
+        int end = i;                                // word ends here
+        while (i &gt;= 0 &amp;&amp; s.charAt(i) != ' ') i--;   // find its start
+        if (sb.length() &gt; 0) sb.append(' ');        // exactly one separator
+        sb.append(s, i + 1, end + 1);
+    }
+    return sb.toString();
+}</code></pre>
+    <p><strong>Takeaway.</strong> <code>split("\\s+")</code> + reverse + join is the one-liner — say
+    it, then show the manual version, because the follow-up ("char array, in place, O(1) extra") has
+    a beautiful answer: reverse the whole string, then reverse each word — the same double-reversal
+    trick as <a href="23-math-geometry.html#lc189">Rotate Array</a>. Scanning backwards makes the
+    whitespace rules enforce themselves. Mirror:
+    <code>code/14-strings-advanced/ReverseWords.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc68">
+  <summary><span class="badge hard">hard</span> Text Justification — LeetCode 68</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Lay words into lines of exactly maxWidth: pack greedily, pad
+    gaps with spaces as evenly as possible (extra spaces to the left gaps); the last line and lines
+    with one word are left-justified and right-padded.</p>
+    <p><strong>Example.</strong> ["This","is","an","example","of","text","justification."], width 16
+    → "This&nbsp;&nbsp;&nbsp;&nbsp;is&nbsp;&nbsp;&nbsp;&nbsp;an", "example&nbsp;&nbsp;of text",
+    "justification.&nbsp;&nbsp;".</p>
+    <p class="code-title">Greedy fill, then distribute spaces div/mod · O(total chars)</p>
+<pre class="code"><code>public static List&lt;String&gt; fullJustify(String[] words, int maxWidth) {
+    List&lt;String&gt; lines = new ArrayList&lt;&gt;();
+    int i = 0;
+    while (i &lt; words.length) {
+        // Phase 1: greedily count words that fit (each needs ≥ 1 space between)
+        int j = i, lineChars = 0;
+        while (j &lt; words.length
+                &amp;&amp; lineChars + words[j].length() + (j - i) &lt;= maxWidth) {
+            lineChars += words[j].length();
+            j++;
+        }
+        int wordCount = j - i;
+        int spaces = maxWidth - lineChars;          // total spaces to place
+        StringBuilder line = new StringBuilder();
+
+        if (j == words.length || wordCount == 1) {
+            // Last line / lone word: left-justify, pad the right edge.
+            for (int k = i; k &lt; j; k++) {
+                line.append(words[k]);
+                if (k &lt; j - 1) line.append(' ');
+            }
+            while (line.length() &lt; maxWidth) line.append(' ');
+        } else {
+            // Even distribution: base spaces per gap, remainder to the left.
+            int gaps = wordCount - 1;
+            int base = spaces / gaps, extra = spaces % gaps;
+            for (int k = i; k &lt; j; k++) {
+                line.append(words[k]);
+                if (k &lt; j - 1) {
+                    int pad = base + (k - i &lt; extra ? 1 : 0);
+                    for (int p = 0; p &lt; pad; p++) line.append(' ');
+                }
+            }
+        }
+        lines.add(line.toString());
+        i = j;
+    }
+    return lines;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Hard by bookkeeping, not by algorithm — the div/mod split
+    (<code>base = spaces/gaps</code>, first <code>spaces%gaps</code> gaps get one extra) plus two
+    special cases <em>are</em> the problem. It's a beloved "real work" screen because it mirrors
+    writing a layout engine to spec. Fun fact: this greedy is what most terminals do; TeX's
+    prettier paragraphs use DP over break points to minimize raggedness.
+    Mirror: <code>code/14-strings-advanced/TextJustification.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Missing even-length centers</strong> — expanding only from (i, i) finds <code>aba</code> but never <code>abba</code>. Always run both (i, i) and (i, i+1).</li>

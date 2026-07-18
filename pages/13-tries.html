@@ -554,6 +554,87 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc720">
+  <summary><span class="badge medium">medium</span> Longest Word in Dictionary — LeetCode 720</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The longest word buildable one character at a time, with
+    <em>every prefix along the way also in the dictionary</em>. Ties go to the lexicographically
+    smaller word.</p>
+    <p><strong>Example.</strong> <code>["w","wo","wor","worl","world"]</code> → "world".
+    <code>["a","banana","app","appl","ap","apply","apple"]</code> → "apple" (beats "apply").</p>
+    <p class="code-title">Trie DFS through end-of-word nodes only · O(total letters)</p>
+<pre class="code"><code>static class Node {
+    Node[] next = new Node[26];
+    String word;                        // non-null marks end-of-word
+}
+
+private static String dfs(Node n, String best) {
+    for (int i = 0; i &lt; 26; i++) {      // ascending i = alphabetical order
+        Node child = n.next[i];
+        if (child == null || child.word == null)
+            continue;                   // prefix chain broken -&gt; dead branch
+        if (child.word.length() &gt; best.length())
+            best = child.word;          // strictly longer wins; ties keep the
+        best = dfs(child, best);        // earlier (smaller) find
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> "Every prefix must be a word" translates in trie language to
+    "every node on the path is flagged" — so the DFS simply refuses to pass through unflagged nodes,
+    and the constraint enforces itself structurally. Iterating children in index order makes the
+    lexicographic tie-break automatic. When a problem's constraint is about <em>prefixes</em>,
+    restating it as a trie-path property usually collapses the difficulty.
+    Mirror: <code>code/13-tries/LongestWordInDictionary.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc421">
+  <summary><span class="badge medium">medium</span> Maximum XOR of Two Numbers in an Array — LeetCode 421</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The maximum value of <code>nums[i] XOR nums[j]</code> over all
+    pairs — in better than O(n²).</p>
+    <p><strong>Example.</strong> <code>[3,10,5,25,2,8]</code> → 28 (5 ^ 25).</p>
+    <p class="code-title">Bitwise trie + opposite-bit greedy · O(32n)</p>
+<pre class="code"><code>static class Node {
+    Node[] next = new Node[2];                 // children: bit 0 / bit 1
+}
+
+public static int findMaximumXOR(int[] nums) {
+    Node root = new Node();
+    for (int x : nums) {                       // insert: 32 bits, MSB first
+        Node n = root;
+        for (int b = 31; b &gt;= 0; b--) {
+            int bit = (x &gt;&gt;&gt; b) &amp; 1;
+            if (n.next[bit] == null) n.next[bit] = new Node();
+            n = n.next[bit];
+        }
+    }
+    int best = 0;
+    for (int x : nums) {                       // query: chase opposite bits
+        Node n = root;
+        int xor = 0;
+        for (int b = 31; b &gt;= 0; b--) {
+            int bit = (x &gt;&gt;&gt; b) &amp; 1;
+            int want = 1 - bit;                // opposite bit -&gt; XOR bit = 1
+            if (n.next[want] != null) {
+                xor |= 1 &lt;&lt; b;
+                n = n.next[want];
+            } else {
+                n = n.next[bit];               // forced to settle for a match
+            }
+        }
+        best = Math.max(best, xor);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Tries aren't just for letters — any fixed-alphabet sequence works,
+    and a 32-bit number IS a 32-character string over {0,1}. The greedy is sound because bits are
+    positional: winning bit 31 outweighs losing all bits below, so prefer-the-opposite-bit per level
+    is optimal. This bitwise-trie tool solves a family of XOR-maximization problems (LC 1707, 1938).
+    Mirror (brute-force cross-checked): <code>code/13-tries/MaximumXOR.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc212">
   <summary><span class="badge hard">hard</span> Word Search II — LeetCode 212</summary>
   <div class="sol-body">
@@ -619,6 +700,50 @@ before opening the walkthrough.</p>
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc1032">
+  <summary><span class="badge hard">hard</span> Stream of Characters — LeetCode 1032</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> <code>query(letter)</code> appends a character to a growing
+    stream and asks: does some dictionary word equal a <em>suffix</em> of the stream right now?</p>
+    <p><strong>Example.</strong> words <code>["cd","f","kl"]</code>, stream "abcdefghijkl…" — true at
+    'd' (suffix "cd"), at 'f' ("f"), at 'l' ("kl"); false everywhere else.</p>
+    <p class="code-title">Trie of REVERSED words; walk the stream tail backwards · query O(maxLen)</p>
+<pre class="code"><code>public StreamChecker(String[] words) {
+    for (String w : words) {
+        maxLen = Math.max(maxLen, w.length());
+        Node n = root;
+        for (int i = w.length() - 1; i &gt;= 0; i--) {   // insert REVERSED
+            int c = w.charAt(i) - 'a';
+            if (n.next[c] == null) n.next[c] = new Node();
+            n = n.next[c];
+        }
+        n.isWord = true;
+    }
+}
+
+public boolean query(char letter) {
+    stream.append(letter);
+    Node n = root;
+    // Newest character first: a suffix of the stream read backwards
+    // is a prefix of some reversed word. Cap the walk at maxLen.
+    for (int i = stream.length() - 1;
+         i &gt;= 0 &amp;&amp; i &gt;= stream.length() - maxLen; i--) {
+        n = n.next[stream.charAt(i) - 'a'];
+        if (n == null) return false;          // no word has this tail
+        if (n.isWord) return true;            // a full reversed word matched
+    }
+    return false;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The reversal is the entire idea: suffix problems become prefix
+    problems when you flip the reading direction, and prefixes are what tries are built for. The
+    <code>maxLen</code> cap bounds each query regardless of stream length. This is the toy version of
+    multi-pattern stream matching — production engines (Aho–Corasick, used in intrusion detection and
+    spam filters) add failure links so the walk never restarts.
+    Mirror: <code>code/13-tries/StreamChecker.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Forgetting the word-end flag</strong> — the #1 trie bug. Without <code>isWord</code>, <code>search("ca")</code> returns true because <code>"cat"</code> passes through. Test exactly this case out loud.</li>

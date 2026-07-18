@@ -315,8 +315,12 @@
   <tr><td><a href="12-heaps.html#lc973">K Closest Points to Origin</a></td><td>973</td><td><span class="badge medium">medium</span></td><td>Size-k max-heap by distance keeps the k closest points.</td></tr>
   <tr><td><a href="12-heaps.html#lc347">Top K Frequent Elements</a></td><td>347</td><td><span class="badge medium">medium</span></td><td>Count map + size-k min-heap (compare with page 01’s buckets).</td></tr>
   <tr><td><a href="12-heaps.html#lc621">Task Scheduler</a></td><td>621</td><td><span class="badge medium">medium</span></td><td>Most-frequent-first greedy with a cooldown queue.</td></tr>
+  <tr><td><a href="12-heaps.html#lc767">Reorganize String</a></td><td>767</td><td><span class="badge medium">medium</span></td><td>Most-plentiful-first with a one-slot cooldown (Task Scheduler, no idles).</td></tr>
+  <tr><td><a href="12-heaps.html#lc355">Design Twitter</a></td><td>355</td><td><span class="badge medium">medium</span></td><td>A news feed IS Merge k Sorted Lists, read from the tails.</td></tr>
+  <tr><td><a href="12-heaps.html#lc373">Find K Pairs with Smallest Sums</a></td><td>373</td><td><span class="badge medium">medium</span></td><td>Heap frontier over the implicit sorted pair grid — touch only O(k) cells.</td></tr>
   <tr><td><a href="12-heaps.html#lc23">Merge k Sorted Lists</a></td><td>23</td><td><span class="badge hard">hard</span></td><td>A heap of the k list heads; pop-push until all lists drain.</td></tr>
   <tr><td><a href="12-heaps.html#lc295">Find Median from Data Stream</a></td><td>295</td><td><span class="badge hard">hard</span></td><td>Two heaps split the stream; the median lives at their tops.</td></tr>
+  <tr><td><a href="12-heaps.html#lc502">IPO</a></td><td>502</td><td><span class="badge hard">hard</span></td><td>Sorted unlock lane (capital) feeding a max-heap of wants (profit).</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> top-K ranking stages (<a href="25-real-world-systems.html#reco">reco systems</a>), task queues (<a href="25-real-world-systems.html#sched">schedulers</a>).</p>
@@ -331,7 +335,10 @@
   <tr><td><a href="13-tries.html#lc211">Design Add and Search Words</a></td><td>211</td><td><span class="badge medium">medium</span></td><td>Trie DFS that branches on “.” wildcards.</td></tr>
   <tr><td><a href="13-tries.html#lc677">Map Sum Pairs</a></td><td>677</td><td><span class="badge medium">medium</span></td><td>Store running prefix sums on every node during insert.</td></tr>
   <tr><td><a href="13-tries.html#lc1268">Search Suggestions System</a></td><td>1268</td><td><span class="badge medium">medium</span></td><td>Trie walk carrying the 3 lexicographically-first completions per node.</td></tr>
+  <tr><td><a href="13-tries.html#lc720">Longest Word in Dictionary</a></td><td>720</td><td><span class="badge medium">medium</span></td><td>“Every prefix is a word” = every node on the trie path is flagged.</td></tr>
+  <tr><td><a href="13-tries.html#lc421">Maximum XOR of Two Numbers in an Array</a></td><td>421</td><td><span class="badge medium">medium</span></td><td>A 32-bit number is a binary string — trie + opposite-bit greedy.</td></tr>
   <tr><td><a href="13-tries.html#lc212">Word Search II</a></td><td>212</td><td><span class="badge hard">hard</span></td><td>One trie for all words; DFS the grid against it, pruning dead branches.</td></tr>
+  <tr><td><a href="13-tries.html#lc1032">Stream of Characters</a></td><td>1032</td><td><span class="badge hard">hard</span></td><td>Reverse the words: stream suffixes become trie prefixes.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> search typeahead (<a href="25-real-world-systems.html#reco">reco systems</a>), IP routing tables, spell-check (<a href="25-real-world-systems.html#db">search engines</a>).</p>
@@ -342,10 +349,15 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="14-strings-advanced.html#lc125">Valid Palindrome</a></td><td>125</td><td><span class="badge easy">easy</span></td><td>Two pointers from both ends (page 02’s pattern on strings).</td></tr>
   <tr><td><a href="14-strings-advanced.html#lc459">Repeated Substring Pattern</a></td><td>459</td><td><span class="badge easy">easy</span></td><td>If s occurs inside (s+s) minus its end characters, s is a repeated unit.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc13">Roman to Integer</a></td><td>13</td><td><span class="badge easy">easy</span></td><td>One rule: a symbol smaller than its right neighbor is subtractive.</td></tr>
   <tr><td><a href="14-strings-advanced.html#lc443">String Compression</a></td><td>443</td><td><span class="badge medium">medium</span></td><td>Read/write pointers compress character runs in place.</td></tr>
   <tr><td><a href="14-strings-advanced.html#lc5">Longest Palindromic Substring</a></td><td>5</td><td><span class="badge medium">medium</span></td><td>Expand around each of the 2n−1 palindrome centers.</td></tr>
   <tr><td><a href="14-strings-advanced.html#lc647">Palindromic Substrings</a></td><td>647</td><td><span class="badge medium">medium</span></td><td>Same center expansion, counting every palindrome hit.</td></tr>
   <tr><td><a href="14-strings-advanced.html#lc28">Find the Index of the First Occurrence (strStr)</a></td><td>28</td><td><span class="badge medium">medium</span></td><td>KMP’s failure function skips re-matching known prefixes.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc8">String to Integer (atoi)</a></td><td>8</td><td><span class="badge medium">medium</span></td><td>Spec discipline: spaces, one sign, digits, clamp inside the loop.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc38">Count and Say</a></td><td>38</td><td><span class="badge medium">medium</span></td><td>Run-length encode the previous term, n−1 times.</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc151">Reverse Words in a String</a></td><td>151</td><td><span class="badge medium">medium</span></td><td>Carve words scanning backwards (or double-reversal in place).</td></tr>
+  <tr><td><a href="14-strings-advanced.html#lc68">Text Justification</a></td><td>68</td><td><span class="badge hard">hard</span></td><td>Greedy fill; spaces via div/mod with the remainder leftmost.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> plagiarism and dedup fingerprinting, grep/editors, DNA matching (<a href="25-real-world-systems.html#db">search engines</a>).</p>
@@ -355,6 +367,7 @@
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="15-graphs-basics.html#lc733">Flood Fill</a></td><td>733</td><td><span class="badge easy">easy</span></td><td>Repaint from the seed — the hello-world of graph traversal.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc463">Island Perimeter</a></td><td>463</td><td><span class="badge easy">easy</span></td><td>No traversal: 4 per cell, −2 per shared edge, counted once.</td></tr>
   <tr><td><a href="15-graphs-basics.html#lc200">Number of Islands</a></td><td>200</td><td><span class="badge medium">medium</span></td><td>Each DFS flood consumes one island; count the launches.</td></tr>
   <tr><td><a href="15-graphs-basics.html#lc695">Max Area of Island</a></td><td>695</td><td><span class="badge medium">medium</span></td><td>A flood fill that returns the size of its region.</td></tr>
   <tr><td><a href="15-graphs-basics.html#lc994">Rotting Oranges</a></td><td>994</td><td><span class="badge medium">medium</span></td><td>Multi-source BFS: every rotten cell starts at distance 0.</td></tr>
@@ -362,6 +375,9 @@
   <tr><td><a href="15-graphs-basics.html#lc133">Clone Graph</a></td><td>133</td><td><span class="badge medium">medium</span></td><td>Traverse with an old→new map to clone as you go.</td></tr>
   <tr><td><a href="15-graphs-basics.html#lc417">Pacific Atlantic Water Flow</a></td><td>417</td><td><span class="badge medium">medium</span></td><td>Reverse thinking: search inward from both oceans.</td></tr>
   <tr><td><a href="15-graphs-basics.html#lc1091">Shortest Path in Binary Matrix</a></td><td>1091</td><td><span class="badge medium">medium</span></td><td>Unweighted shortest path = plain BFS, eight directions.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc130">Surrounded Regions</a></td><td>130</td><td><span class="badge medium">medium</span></td><td>Solve the complement: flood from the border, flip the unmarked.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc909">Snakes and Ladders</a></td><td>909</td><td><span class="badge medium">medium</span></td><td>BFS on square numbers; the 2D board is just a lookup table.</td></tr>
+  <tr><td><a href="15-graphs-basics.html#lc127">Word Ladder</a></td><td>127</td><td><span class="badge hard">hard</span></td><td>Words are nodes, one-letter edits are edges — BFS the ladder.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> "users like you" traversal (<a href="25-real-world-systems.html#reco">reco systems</a>), degrees of separation (<a href="25-real-world-systems.html#social">social networks</a>).</p>

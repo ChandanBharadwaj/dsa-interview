@@ -477,6 +477,129 @@ private static long dist(int[] p) {
   </div>
 </details>
 
+<details class="sol" id="lc767">
+  <summary><span class="badge medium">medium</span> Reorganize String — LeetCode 767</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Rearrange a string so no two adjacent characters are equal, or
+    return "" if impossible.</p>
+    <p><strong>Example.</strong> "aab" → "aba". "aaab" → "" (three a's can't be separated by one b).</p>
+    <p class="code-title">Max-heap by count + a one-slot cooldown · O(n log 26)</p>
+<pre class="code"><code>public static String reorganizeString(String s) {
+    int[] counts = new int[26];
+    for (char c : s.toCharArray()) counts[c - 'a']++;
+
+    // Feasibility first: the majority letter needs a gap after each copy.
+    int max = 0;
+    for (int c : counts) max = Math.max(max, c);
+    if (max &gt; (s.length() + 1) / 2) return "";
+
+    PriorityQueue&lt;int[]&gt; heap =                       // {letter, count}
+            new PriorityQueue&lt;&gt;((a, b) -&gt; b[1] - a[1]);
+    for (int i = 0; i &lt; 26; i++)
+        if (counts[i] &gt; 0) heap.offer(new int[]{i, counts[i]});
+
+    StringBuilder sb = new StringBuilder();
+    int[] hold = null;                                // cooling: the letter just used
+    while (!heap.isEmpty()) {
+        int[] top = heap.poll();                      // most plentiful ≠ last used
+        sb.append((char) ('a' + top[0]));
+        top[1]--;
+        if (hold != null) heap.offer(hold);           // last letter re-eligible
+        hold = top[1] &gt; 0 ? top : null;               // cool the one just used
+    }
+    return sb.toString();
+}</code></pre>
+    <p><strong>Takeaway.</strong> Task Scheduler (above) without the idle slots: same
+    most-plentiful-first greedy, same one-step cooldown, same
+    <code>max ≤ ⌈n/2⌉</code>-style feasibility bound. Spending the most abundant resource first is
+    the exchange-argument-provable move whenever "no two identical adjacent" appears — the k-apart
+    generalization (LC 358) just deepens the cooldown queue.
+    Mirror: <code>code/12-heaps/ReorganizeString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc355">
+  <summary><span class="badge medium">medium</span> Design Twitter — LeetCode 355</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Implement postTweet, follow, unfollow, and getNewsFeed — the 10
+    most recent tweets across the user and everyone they follow, newest first.</p>
+    <p><strong>Example.</strong> user 1 posts 5; getNewsFeed(1) → [5]. Follow 2, who posts 6 →
+    [6,5]. Unfollow 2 → [5].</p>
+    <p class="code-title">Per-user lists + K-way merge by timestamp · feed O(F log F + 10 log F)</p>
+<pre class="code"><code>private int clock = 0;                                    // global timestamp
+private final Map&lt;Integer, List&lt;int[]&gt;&gt; tweets = new HashMap&lt;&gt;();  // {time, id}
+private final Map&lt;Integer, Set&lt;Integer&gt;&gt; follows = new HashMap&lt;&gt;();
+
+public List&lt;Integer&gt; getNewsFeed(int userId) {
+    // Max-heap over each source's NEWEST unread tweet — exactly the
+    // Merge-k-Sorted-Lists frontier, reading each list from its tail.
+    PriorityQueue&lt;int[]&gt; heap =            // {time, tweetId, ownerId, index}
+            new PriorityQueue&lt;&gt;((a, b) -&gt; b[0] - a[0]);
+    Set&lt;Integer&gt; sources = new HashSet&lt;&gt;(follows.getOrDefault(userId, Set.of()));
+    sources.add(userId);                   // your own tweets count too
+    for (int u : sources) {
+        List&lt;int[]&gt; list = tweets.get(u);
+        if (list != null &amp;&amp; !list.isEmpty()) {
+            int i = list.size() - 1;       // u's newest
+            int[] t = list.get(i);
+            heap.offer(new int[]{t[0], t[1], u, i});
+        }
+    }
+    List&lt;Integer&gt; feed = new ArrayList&lt;&gt;();
+    while (!heap.isEmpty() &amp;&amp; feed.size() &lt; 10) {
+        int[] top = heap.poll();           // globally newest remaining
+        feed.add(top[1]);
+        if (top[3] &gt; 0) {                  // slide to that user's next-newest
+            int[] t = tweets.get(top[2]).get(top[3] - 1);
+            heap.offer(new int[]{t[0], t[1], top[2], top[3] - 1});
+        }
+    }
+    return feed;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Merge k Sorted Lists wearing a product hoodie: each followee's
+    timeline is a sorted-by-time list, and the feed is a 10-item K-way merge — which is genuinely how
+    fan-out-on-read feed systems assemble timelines
+    (<a href="25-real-world-systems.html#reco">page 25</a>). A logical clock replaces wall time; the
+    self-follow and unfollow-yourself edge cases are where implementations lose points.
+    Mirror: <code>code/12-heaps/DesignTwitter.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc373">
+  <summary><span class="badge medium">medium</span> Find K Pairs with Smallest Sums — LeetCode 373</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Two sorted arrays; return the k pairs (one element from each)
+    with the smallest sums.</p>
+    <p><strong>Example.</strong> nums1 <code>[1,7,11]</code>, nums2 <code>[2,4,6]</code>, k=3 →
+    (1,2), (1,4), (1,6).</p>
+    <p class="code-title">Heap frontier over the implicit pair grid · O(k log k)</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; kSmallestPairs(int[] nums1, int[] nums2, int k) {
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    // The pair grid (i, j) is sorted along every row and column — explore
+    // it best-first without ever building it.
+    PriorityQueue&lt;int[]&gt; heap =               // {i, j}, ordered by pair sum
+            new PriorityQueue&lt;&gt;(Comparator.comparingLong(
+                    p -&gt; (long) nums1[p[0]] + nums2[p[1]]));
+    // Seed one entry per row; push (i, j+1) only when (i, j) pops.
+    // That discipline means no visited-set and no duplicates.
+    for (int i = 0; i &lt; Math.min(k, nums1.length); i++)
+        heap.offer(new int[]{i, 0});
+    while (!heap.isEmpty() &amp;&amp; res.size() &lt; k) {
+        int[] p = heap.poll();
+        res.add(Arrays.asList(nums1[p[0]], nums2[p[1]]));
+        if (p[1] + 1 &lt; nums2.length)
+            heap.offer(new int[]{p[0], p[1] + 1});
+    }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> A "virtual matrix" problem: the n×m grid of pair-sums is sorted
+    both ways, and a heap frontier walks it in order touching only O(k) cells. The seeding trick
+    (all rows at column 0, advance within the row on pop) sidesteps the visited-set that naive
+    two-successor expansion needs. Kth Smallest in a Sorted Matrix (LC 378) is this same skeleton.
+    Mirror: <code>code/12-heaps/KSmallestPairs.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc23">
   <summary><span class="badge hard">hard</span> Merge k Sorted Lists — LeetCode 23</summary>
   <div class="sol-body">
@@ -567,6 +690,43 @@ public double findMedian() {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc502">
+  <summary><span class="badge hard">hard</span> IPO — LeetCode 502</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Start with capital w; each project needs
+    <code>capital[i]</code> to start and yields <code>profits[i]</code> (added to your capital).
+    Pick at most k projects to maximize final capital.</p>
+    <p><strong>Example.</strong> k=2, w=0, profits <code>[1,2,3]</code>, capital
+    <code>[0,1,1]</code> → 4 (do project 0, then project 2).</p>
+    <p class="code-title">Two heaps: unlock by capital, pick by profit · O(n log n + k log n)</p>
+<pre class="code"><code>public static int findMaximizedCapital(int k, int w, int[] profits, int[] capital) {
+    int n = profits.length;
+    int[][] projects = new int[n][2];
+    for (int i = 0; i &lt; n; i++)
+        projects[i] = new int[]{capital[i], profits[i]};
+    Arrays.sort(projects, (a, b) -&gt; a[0] - b[0]);   // by capital needed
+
+    PriorityQueue&lt;Integer&gt; affordable =             // profits, max first
+            new PriorityQueue&lt;&gt;(Collections.reverseOrder());
+    int next = 0;
+    for (int round = 0; round &lt; k; round++) {
+        while (next &lt; n &amp;&amp; projects[next][0] &lt;= w)  // unlock all now-affordable
+            affordable.offer(projects[next++][1]);
+        if (affordable.isEmpty()) break;            // nothing in reach — stop
+        w += affordable.poll();                     // greedily take best profit
+    }
+    return w;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The two-structure pattern for "constraints unlock over time": a
+    sorted lane ordered by <em>when things become available</em> (capital needed) feeding a heap
+    ordered by <em>what you want most</em> (profit). Capital only grows, so the unlock pointer never
+    moves backwards — each project crosses from lane to heap exactly once, keeping it near-linear.
+    The greedy is safe because taking the max profit now never shrinks future options.
+    Mirror: <code>code/12-heaps/IPO.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Blurting "max-heap!" for k-largest.</strong> A max-heap of all n works but is O(n log n) time and O(n) space; the size-k <em>min</em>-heap is the expected answer.</li>
