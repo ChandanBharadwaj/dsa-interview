@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>26 · Interview Playbook — DSA Interview Runbook</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="../index.html">⟵ DSA Runbook</a>
+    <nav>
+      <a href="../index.html#curriculum">All topics</a>
+      <a href="../index.html#cheatsheet">Cheat-sheet</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h1>The Interview Playbook: One Problem, Many Algorithms</h1>
+<p class="subtitle">How to run the 45 minutes — and seven drills where a single problem is attacked with
+every reasonable algorithm, compared head-to-head, so choosing the right one becomes a reflex.</p>
+<p>
+  <span class="badge phase">Phase 9 · Week 14</span>
+  <span class="badge freq">The synthesis page — read after the topics, revisit before every interview</span>
+</p>
+
+<!-- ============================================================ -->
+<h2 id="before">Before you start</h2>
+
+<div class="why">
+  <strong>Why this page exists.</strong>
+  The topic pages taught you the tools one at a time. Real problems don't arrive labeled — the actual
+  interview skill is standing in front of an unlabeled problem, listing the two or three algorithms that
+  could work, comparing their costs <em>out loud</em>, and picking one for a stated reason. This page trains
+  exactly that: first the process for the 45 minutes, then seven "decision gym" drills where one problem is
+  run through multiple algorithms with the pros, cons, and the factor that flips the verdict.
+</div>
+
+<h3>Prerequisites</h3>
+<p>Everything — this is the synthesis. Each drill links back to the pages where the individual solutions
+are fully worked.</p>
+
+<!-- ============================================================ -->
+<h2 id="process">Part 1 — Running the 45 minutes</h2>
+
+<p>Interviews are lost on process as often as on knowledge: diving into code before understanding the
+problem, optimizing silently, declaring "done" without testing. Use the same six phases every time, with
+rough timeboxes for a 45-minute slot:</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Phase</th><th>Time</th><th>What you do</th><th>What it sounds like</th></tr>
+  <tr><td>1. Clarify</td><td>0–4 min</td><td>Restate the problem; ask about sizes, ranges, duplicates, sortedness, output format. Write one worked example yourself.</td><td>"Can values be negative? How large is n? So for [3,1,2], k=2, the answer would be … — correct?"</td></tr>
+  <tr><td>2. Brute force</td><td>4–8 min</td><td>State the obvious solution and its cost. Don't code it — it's the baseline that proves you understand the problem.</td><td>"Brute force checks every pair: O(n²). With n up to 10⁵ that's 10¹⁰ operations — too slow, so let's improve."</td></tr>
+  <tr><td>3. Compare candidates</td><td>8–14 min</td><td><strong>The phase this page trains.</strong> Name 2–3 applicable algorithms, give each one's cost and drawback, pick one for a stated reason.</td><td>"A HashMap gives O(n) with O(n) memory; sorting plus two pointers gives O(n log n) with O(1) memory but scrambles indexes. We need indexes, so HashMap."</td></tr>
+  <tr><td>4. Code</td><td>14–32 min</td><td>Code the chosen approach top-to-bottom, narrating decisions. Name the invariant of any loop that isn't obvious.</td><td>"The stack holds indexes of days still waiting for a warmer day, temperatures decreasing."</td></tr>
+  <tr><td>5. Test</td><td>32–39 min</td><td>Trace your example through the actual code, line by line. Then probe edges: empty, size 1, duplicates, extremes.</td><td>"For [2,7], target 9: i=0, map empty, insert 2… i=1, need=2, found — returns [0,1]. Empty array? Loop doesn't run, we return the fallback."</td></tr>
+  <tr><td>6. Wrap up</td><td>39–45 min</td><td>State final time and space with one sentence of justification; volunteer the natural follow-up.</td><td>"O(n) time, O(n) space. If memory were tight and the array were sorted, two pointers would drop it to O(1)."</td></tr>
+</table>
+</div>
+
+<h3>The failure modes that end interviews</h3>
+<div class="tablewrap">
+<table>
+  <tr><th>Failure</th><th>What it looks like</th><th>The fix</th></tr>
+  <tr><td>Coding at minute 2</td><td>Typing before the example is even settled; discovering the misread at minute 25</td><td>Phase 1 is mandatory. A wrong problem solved perfectly scores zero.</td></tr>
+  <tr><td>Skipping the brute force</td><td>Hunting the clever answer cold, freezing when it doesn't come</td><td>Say the brute force. It banks partial credit and its bottleneck usually points at the fix.</td></tr>
+  <tr><td>Silent thinking</td><td>60 seconds of quiet — the interviewer can't grade a blank</td><td>Narrate dead ends too: "sorting kills the index requirement, so that's out."</td></tr>
+  <tr><td>Optimizing the wrong axis</td><td>Micro-tuning constants while the algorithm is still O(n²)</td><td>Fix the complexity class first; constants never matter in interviews.</td></tr>
+  <tr><td>"Done" without a trace</td><td>Handing over untested code with an off-by-one</td><td>Phase 5 catches most bugs in two minutes. Never skip it.</td></tr>
+  <tr><td>Fighting the hint</td><td>Interviewer nudges toward heaps; candidate keeps digging their hole</td><td>Hints are steering, not judgment. Take them immediately and visibly.</td></tr>
+</table>
+</div>
+
+<div class="tip">
+  <strong>When you're stuck, say one of these</strong> — each restarts progress honestly:
+  "Let me re-examine the constraints — n ≤ 20 suggests something exponential is intended."
+  · "The brute force is slow because it recomputes X; what structure remembers X?"
+  · "Let me try a smaller example and look for the pattern."
+  · "I see two candidate approaches; let me cost them both quickly."
+</div>
+
+<!-- ============================================================ -->
+<h2 id="gym">Part 2 — The decision gym: one problem, many algorithms</h2>
+
+<p>Each drill below is a real interview problem attacked with <em>every</em> reasonable algorithm. Read the
+problem, list your own candidates first, then open the comparison. The verdict line matters less than the
+<strong>flip factors</strong> — the input changes that would switch the winner. Full code for every
+approach lives on the linked pages.</p>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 1</span> "Find a pair summing to target" — 3 algorithms</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given an array and a target, find two elements that sum to it
+    (Two Sum, LC 1 / LC 167).</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Pros</th><th>Cons</th></tr>
+      <tr><td>Brute-force pairs</td><td>O(n²)</td><td>O(1)</td><td>trivial to write; fine for n ≤ ~10³</td><td>too slow beyond that</td></tr>
+      <tr><td>HashMap complement (<a href="01-arrays-hashing.html#problems">01</a>)</td><td>O(n)</td><td>O(n)</td><td>one pass; unsorted input; keeps original indexes</td><td>O(n) memory; average-case bound</td></tr>
+      <tr><td>Sort + two pointers (<a href="02-two-pointers.html#problems">02</a>)</td><td>O(n log n)</td><td>O(1)</td><td>no extra memory; generalizes to 3Sum/k-sum</td><td>sorting destroys indexes; slower asymptotically</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> Unsorted + indexes needed → HashMap. Already sorted, or O(1) memory
+    demanded → two pointers.</p>
+    <p><strong>Flip factors.</strong> Input <em>arrives sorted</em> → two pointers wins outright (LC 167
+    exists precisely to test this). Asked for <em>all pairs / triples</em> → sort first anyway (dedup needs
+    adjacency), so two pointers. <em>Streaming</em> data → HashMap is the only one that works online.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 2</span> "Top-K elements" — 4 algorithms</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the k largest (or most frequent) elements
+    (LC 215 / LC 347 / LC 973).</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Pros</th><th>Cons</th></tr>
+      <tr><td>Full sort (<a href="06-sorting.html#problems">06</a>)</td><td>O(n log n)</td><td>O(1)–O(n)</td><td>two lines; output comes ordered</td><td>does far more work than needed for small k</td></tr>
+      <tr><td>Size-k min-heap (<a href="12-heaps.html#problems">12</a>)</td><td>O(n log k)</td><td>O(k)</td><td>works on <em>streams</em>; memory scales with k, not n</td><td>log k per element; result not fully sorted</td></tr>
+      <tr><td>Quickselect (<a href="06-sorting.html#problems">06</a>)</td><td>O(n) avg</td><td>O(1)</td><td>fastest one-shot; in place</td><td>mutates input; O(n²) worst case; needs all data in memory</td></tr>
+      <tr><td>Bucket by count (<a href="01-arrays-hashing.html#problems">01</a>)</td><td>O(n)</td><td>O(n)</td><td>true linear time for frequency problems</td><td>only works when the key (a count) is bounded by n</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> One-shot on an array you may mutate → quickselect. Streaming or huge-n,
+    small-k → heap. Frequency flavor → bucket. "I'll just sort" is acceptable only with the caveat said
+    aloud.</p>
+    <p><strong>Flip factors.</strong> <em>k ≈ n</em> → sorting is fine (the heap's advantage vanishes).
+    <em>Data doesn't fit in memory</em> → heap is the only option. <em>Need the k results in order</em> →
+    sort the k survivors afterwards (+O(k log k), usually negligible).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 3</span> "Count the connected groups" — 3 algorithms</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count connected components — islands in a grid, provinces in a matrix,
+    linked accounts (LC 200 / LC 547 / LC 721).</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Pros</th><th>Cons</th></tr>
+      <tr><td>DFS flood fill (<a href="15-graphs-basics.html#problems">15</a>)</td><td>O(V+E)</td><td>O(V) stack worst case</td><td>least code; natural on grids</td><td>recursion depth can blow the stack on huge/snaky regions</td></tr>
+      <tr><td>BFS (<a href="15-graphs-basics.html#problems">15</a>)</td><td>O(V+E)</td><td>O(V) queue</td><td>no recursion risk; gives distances for free</td><td>slightly more code than DFS</td></tr>
+      <tr><td>Union-find (<a href="16-graphs-advanced.html#problems">16</a>)</td><td>O(E·α)</td><td>O(V)</td><td>handles <em>incremental</em> edges; components merge in O(1); no traversal</td><td>more setup; overkill for a one-shot static graph</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> Static one-shot graph → DFS (or BFS if depth worries you). Edges arriving
+    over time with connectivity queries in between → union-find, no contest.</p>
+    <p><strong>Flip factors.</strong> The follow-up <em>"now islands appear one cell at a time — count after
+    each"</em> (LC 305) flips the verdict to union-find instantly: re-running DFS per addition is O(V) each,
+    union-find is ~O(1). <em>Grouping by shared attributes</em> (Accounts Merge) → union-find, because
+    "merge these two sets" is its native operation.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 4</span> "Cheapest path through a grid" — 4 algorithms (the screenshot problem)</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Travel from the top-left to the bottom-right of a grid at minimum cost
+    (LC 64 / LC 1091 / LC 1631). The movement rule and the cost model decide everything.</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>When it's the answer</th><th>Time</th><th>Fails when…</th></tr>
+      <tr><td>Grid DP (<a href="19-dp-2d.html#problems">19</a>)</td><td>movement restricted (right/down only) — the grid is a DAG</td><td>O(mn)</td><td>free movement creates cycles: no valid fill order exists</td></tr>
+      <tr><td>BFS (<a href="17-shortest-paths.html#problems">17</a>)</td><td>free movement, every step costs the same</td><td>O(mn)</td><td>weighted steps: layer count ≠ cost</td></tr>
+      <tr><td>Dijkstra (<a href="17-shortest-paths.html#problems">17</a>)</td><td>free movement, non-negative weights</td><td>O(mn log mn)</td><td>negative weights (→ Bellman-Ford)</td></tr>
+      <tr><td>Minimize-the-max Dijkstra (<a href="17-shortest-paths.html#problems">17</a>)</td><td>path cost = worst single step (effort/elevation)</td><td>O(mn log mn)</td><td>— (binary-search+BFS and union-find also work here)</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> Ask two questions in order: <em>Which moves are legal?</em> (restricted →
+    DP; free → graph search) and <em>What does a step cost?</em> (uniform → BFS; weighted → Dijkstra;
+    max-of-steps → the Dijkstra variant). Two questions classify every grid-path problem you'll ever see.</p>
+    <p><strong>Flip factors.</strong> This drill IS the flip-factor lesson: LC 64 and LC 1091 look nearly
+    identical and share zero algorithms. The movement rule — one line of the problem statement — is the
+    entire decision. This was the confusion in the post that started this runbook; if this table reads as
+    obvious now, that goal is met.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 5</span> "How many meeting rooms?" — 4 algorithms</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given meeting intervals, find the minimum number of rooms — i.e. the
+    maximum overlap (LC 253, and Car Pooling LC 1094 is the same question).</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Pros</th><th>Cons</th></tr>
+      <tr><td>Min-heap of end times (<a href="21-greedy-intervals.html#problems">21</a>)</td><td>O(n log n)</td><td>O(n)</td><td>simulates room reuse directly — easy to extend to "which room"</td><td>heap machinery for what's really just counting</td></tr>
+      <tr><td>Sweep line: sort +1/−1 events (<a href="21-greedy-intervals.html#problems">21</a>)</td><td>O(n log n)</td><td>O(n)</td><td>minimal code; generalizes to any max-overlap question</td><td>loses track of <em>which</em> meeting is in which room</td></tr>
+      <tr><td>Difference array (<a href="04-prefix-sum.html#problems">04</a>)</td><td>O(n + R)</td><td>O(R)</td><td>O(1) per interval; beats sorting when coordinates are small</td><td>needs a bounded coordinate range R (times of day: yes; arbitrary longs: no)</td></tr>
+      <tr><td>TreeMap of boundary deltas (<a href="24-advanced-structures.html">24</a>)</td><td>O(n log n)</td><td>O(n)</td><td>handles unbounded coordinates AND online insertion (My Calendar III)</td><td>most machinery of the four</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> One-shot with arbitrary times → sweep line (least code) or heap (if a
+    follow-up about room <em>assignment</em> is likely). Bounded integer coordinates → difference array.
+    Bookings arriving online → TreeMap.</p>
+    <p><strong>Flip factors.</strong> <em>"Which room does each meeting get?"</em> → heap (it names rooms;
+    the counters don't). <em>"Positions are 0..1000"</em> → difference array turns the sort into an array
+    walk. <em>"Bookings stream in, report the max after each"</em> → TreeMap deltas.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 6</span> "Sum of a range, many times" — 4 structures</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Answer many <code>sum(i..j)</code> queries over an array
+    (LC 303 / LC 307).</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Structure</th><th>Query</th><th>Update</th><th>Build</th><th>Use when</th></tr>
+      <tr><td>Recompute per query</td><td>O(n)</td><td>O(1)</td><td>—</td><td>a handful of queries; don't over-engineer</td></tr>
+      <tr><td>Prefix array (<a href="04-prefix-sum.html#problems">04</a>)</td><td>O(1)</td><td>O(n) ✗</td><td>O(n)</td><td>array never changes — the immutable sweet spot</td></tr>
+      <tr><td>Fenwick / BIT (<a href="24-advanced-structures.html#problems">24</a>)</td><td>O(log n)</td><td>O(log n)</td><td>O(n log n)</td><td>point updates + prefix-style (invertible) aggregates</td></tr>
+      <tr><td>Segment tree (<a href="24-advanced-structures.html#problems">24</a>)</td><td>O(log n)</td><td>O(log n)</td><td>O(n)</td><td>non-invertible aggregates (min/max/gcd) or range updates</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> The mutability question decides everything: immutable → prefix array;
+    mutable with sums → Fenwick (half the code of a segment tree); mutable with min/max → segment tree,
+    because you can't subtract a minimum back out.</p>
+    <p><strong>Flip factors.</strong> <em>"Now the array can change"</em> is the exact flip LC 303 → LC 307
+    tests. <em>"Range minimum instead of sum"</em> kills Fenwick's prefix trick (min isn't invertible) →
+    segment tree. <em>"Only 10 queries total"</em> → just loop; simplicity is also an engineering answer.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">drill 7</span> "Best contiguous stretch" — window vs prefix-map vs DP</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Find the best subarray/substring satisfying a condition — the family
+    covering LC 3, LC 76, LC 560, LC 53.</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Algorithm</th><th>Time</th><th>Works when</th><th>Breaks when</th></tr>
+      <tr><td>Sliding window (<a href="03-sliding-window.html#problems">03</a>)</td><td>O(n)</td><td>validity is <em>monotonic</em>: growing the window only pushes one way (all-positive sums, distinct-char counts)</td><td>negatives (or any non-monotonic measure) — shrinking might help OR hurt, so the greedy window logic is simply wrong</td></tr>
+      <tr><td>Prefix sum + HashMap (<a href="04-prefix-sum.html#problems">04</a>)</td><td>O(n)</td><td>the condition is an <em>equation</em> on prefix values (sum == k, balance repeats)</td><td>the condition is an inequality/optimization over unsorted prefixes</td></tr>
+      <tr><td>Kadane-style running DP (<a href="18-dp-1d.html#problems">18</a>)</td><td>O(n)</td><td>optimizing a value where "best ending here" has a recurrence (max sum, max product)</td><td>counting all occurrences — DP carries one best, not a tally</td></tr>
+    </table>
+    </div>
+    <p><strong>Verdict.</strong> All three are O(n) — the choice is about <em>correctness</em>, not speed,
+    which makes this the subtlest drill. Ask: is window-validity monotonic? Is the condition a prefix
+    equation? Am I optimizing or counting?</p>
+    <p><strong>Flip factors.</strong> "Subarray sum equals k, all positives" → window works. Add one
+    negative number → window silently wrong, prefix-map required (LC 560's whole point). "Maximum sum"
+    instead of "sum equals k" → Kadane. And if "substring" becomes "subsequence", the contiguity is gone —
+    none of these apply; you're in DP-table territory (<a href="19-dp-2d.html">19</a>).</p>
+  </div>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="master">The master comparison, one table</h2>
+<p>The seven drills, compressed into the sentence you should say when each situation appears:</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Situation</th><th>The sentence to say</th></tr>
+  <tr><td>Pair/complement search</td><td>"Unsorted with indexes → HashMap; sorted or O(1)-space → two pointers."</td></tr>
+  <tr><td>Top-K</td><td>"One-shot mutable → quickselect O(n); streaming or small k → size-k heap O(n log k); bounded counts → bucket O(n)."</td></tr>
+  <tr><td>Components</td><td>"Static → DFS; incremental edges or merging groups → union-find."</td></tr>
+  <tr><td>Grid path</td><td>"Restricted moves → DAG → DP; free moves uniform-cost → BFS; weighted → Dijkstra."</td></tr>
+  <tr><td>Interval overlap</td><td>"One-shot → sweep line; need room identity → heap; bounded coords → difference array; online → TreeMap."</td></tr>
+  <tr><td>Range queries</td><td>"Immutable → prefix array; point updates on sums → Fenwick; min/max or range updates → segment tree."</td></tr>
+  <tr><td>Contiguous stretch</td><td>"Monotonic validity → window; prefix equation → prefix-map; optimizing a running best → Kadane."</td></tr>
+</table>
+</div>
+
+<div class="note">
+  <strong>How to practice this page.</strong> Don't reread it — drill it. Pick any problem from the earlier
+  pages, and before opening the solution, write down: every algorithm that could plausibly apply, each one's
+  time/space, one con each, your pick, and the input change that would flip your pick. Two minutes per
+  problem. After twenty problems, phase 3 of the interview becomes the part you look forward to.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="pitfalls">Pitfalls</h2>
+<ul>
+  <li><strong>Presenting one algorithm as the only option.</strong> Even when the best choice is obvious, naming the runner-up and why it loses is what demonstrates judgment rather than memorization.</li>
+  <li><strong>Comparing on time alone.</strong> Half the verdicts above hinge on memory, mutation rights, streaming, or index preservation — read the constraints for all of them.</li>
+  <li><strong>Ignoring the flip factor mid-interview.</strong> Follow-ups ("now the data streams in…", "now the array can change…") are usually a deliberate flip of your chosen algorithm. Expect the flip; it's the second half of the question.</li>
+  <li><strong>Over-engineering small inputs.</strong> n ≤ 100 makes O(n²) instantly fine — saying "brute force is actually sufficient here, and simpler" is a strong answer, not a cop-out.</li>
+  <li><strong>Letting the comparison eat the clock.</strong> Phase 3 is five minutes, spoken, no code. Compare, commit, and move — a finished good solution beats an unfinished perfect one.</li>
+</ul>
+
+<nav class="pager">
+  <a class="prev" href="25-real-world-systems.html"><span class="dir">⟵ Prev</span><span class="name">25 · Real-World Systems</span></a>
+  <a class="next" href="../index.html#cheatsheet"><span class="dir">Next ⟶</span><span class="name">Master cheat-sheet</span></a>
+</nav>
+
+</div>
+
+</body>
+</html>
