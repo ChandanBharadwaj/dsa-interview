@@ -46,13 +46,7 @@
   <li><a href="06-sorting.html">06 · Sorting</a> — binary search's price of admission is sorted data (or a monotonic answer).</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you avoid the classic bugs?</strong> Infinite loops, off-by-one boundaries, and the <code>(lo+hi)/2</code> overflow are exactly what they watch for.</li>
-  <li><strong>Do you know the boundary variants?</strong> "Find the <em>first</em> occurrence" is a different template than "find any occurrence" — most candidates fumble it.</li>
-  <li><strong>Can you spot hidden binary search?</strong> Nothing in "minimum eating speed" says "sorted array". Recognizing a monotonic answer space is the senior-level signal.</li>
-  <li><strong>Can you state the invariant?</strong> Saying "everything left of <code>lo</code> is known-false, everything from <code>hi</code> on is known-true" proves you're reasoning, not pattern-matching.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> top-5 topic; the "binary search on the answer" recipe unlocks a whole family of hard problems.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -288,57 +282,111 @@ return lo;                                 // the boundary (first true index)</c
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/binary-search/">Binary Search</a>
-    <span class="hint">Template A verbatim — build muscle memory for the guard and the overflow-safe mid.</span>
-  </div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/first-bad-version/">First Bad Version</a>
-    <span class="hint">Pure Template B with no array — the predicate is the API call itself. Minimize calls.</span>
-  </div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/search-insert-position/">Search Insert Position</a>
-    <span class="hint">The insert position IS the boundary: first index where nums[i] ≥ target. Template B returns it directly.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">Find First and Last Position of Element in Sorted Array</a>
-    <span class="hint">Run firstTrue twice: ≥ target gives the left edge, ≥ target+1 gives one past the right edge.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/search-in-rotated-sorted-array/">Search in Rotated Sorted Array</a>
-    <span class="hint">At every mid, one half is sorted — check its endpoints to decide where target can live.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/">Find Minimum in Rotated Sorted Array</a>
-    <span class="hint">Predicate "nums[i] ≤ nums[n-1]" is false before the rotation point, true after — boundary search.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/koko-eating-bananas/">Koko Eating Bananas</a>
-    <span class="hint">Search the answer (speed 1..max pile); the checker is a one-pass ceil-division sum.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/">Capacity To Ship Packages Within D Days</a>
-    <span class="hint">Same recipe as Koko: answer range [max weight .. total weight], greedy day-count checker.</span>
-  </div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <a class="t" href="https://leetcode.com/problems/median-of-two-sorted-arrays/">Median of Two Sorted Arrays</a>
-    <span class="hint">Hint only: binary-search the CUT position in the shorter array so left halves balance; check the four boundary values. O(log min(m,n)).</span>
-  </div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>★ Worked: Find First and Last Position of Element in Sorted Array (LC 34)</summary>
+  <summary><span class="badge easy">easy</span> Binary Search — LeetCode 704</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> in a sorted array with duplicates, return the first and last index of
-    <code>target</code>, or <code>[-1,-1]</code> — in O(log n).</p>
-    <p><strong>Idea:</strong> Template A can land on <em>any</em> duplicate, so it can't answer this. Instead find two
-    boundaries with Template B: the first index where <code>nums[i] ≥ target</code> is the left edge; the first index
-    where <code>nums[i] ≥ target+1</code> is one <em>past</em> the right edge. Two boundary searches, no scanning —
-    duplicates never hurt because we never walk along equal values.</p>
-<pre class="code"><code>public static int[] searchRange(int[] nums, int target) {
+    <p><strong>The problem.</strong> Find <code>target</code>'s index in a sorted array of distinct integers,
+    or return −1. Required: O(log n).</p>
+    <p><strong>Example.</strong> <code>nums=[-1,0,3,5,9,12], target=9</code> → <code>4</code>.
+    <code>target=2</code> → <code>-1</code>.</p>
+    <p class="code-title">Template A verbatim — exact-match search · O(log n)</p>
+<pre class="code"><code>public int search(int[] nums, int target) {
+    int lo = 0, hi = nums.length - 1;      // inclusive search range
+    while (lo &lt;= hi) {                     // range still non-empty
+        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint
+        if (nums[mid] == target) return mid;
+        if (nums[mid] &lt; target) lo = mid + 1;   // left half (incl. mid) too small
+        else hi = mid - 1;                      // right half (incl. mid) too big
+    }
+    return -1;                             // range emptied: not present
+}</code></pre>
+    <p><strong>Takeaway.</strong> The base template. The invariant that proves it correct: everything left of
+    <code>lo</code> is known-too-small, everything right of <code>hi</code> is known-too-big. Both moves
+    (<code>mid ± 1</code>) preserve it, and the <code>lo &lt;= hi</code> guard matches those moves — mixing
+    this guard with Template B's <code>hi = mid</code> move is the classic infinite loop.
+    Mirror: <code>code/07-binary-search/BinarySearchBasic.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> First Bad Version — LeetCode 278</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Versions 1..n were released in order; at some unknown version the build
+    went bad, and every later version is also bad. Given an API <code>isBadVersion(v)</code>, find the first
+    bad version with as few API calls as possible.</p>
+    <p><strong>Example.</strong> n=5, versions bad from 4 on: calls might go isBad(3)→false, isBad(4)→true,
+    isBad(... ) — answer <code>4</code>.</p>
+    <p class="code-title">Template B on a predicate — no array at all · O(log n) API calls</p>
+<pre class="code"><code>public int firstBadVersion(int n) {
+    int lo = 1, hi = n;                    // answer is guaranteed to exist in [1..n]
+    while (lo &lt; hi) {                      // Template B guard: shrink to one candidate
+        int mid = lo + (hi - lo) / 2;
+        if (isBadVersion(mid)) {
+            hi = mid;                      // mid is bad — it COULD be the first bad; keep it
+        } else {
+            lo = mid + 1;                  // mid is good — first bad is strictly later
+        }
+    }
+    return lo;                             // lo == hi == the first bad version
+}</code></pre>
+    <p><strong>Takeaway.</strong> There is no array here — just a monotonic predicate
+    <code>F F F T T T</code> over version numbers. This is binary search in its purest form, and it's
+    literally what <code>git bisect</code> does over commits: O(log n) test runs to find the breaking change.
+    Mirror: <code>code/07-binary-search/FirstBadVersion.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Search Insert Position — LeetCode 35</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> In a sorted array of distinct values, return <code>target</code>'s index
+    if present, else the index where it would be inserted to keep the array sorted. O(log n) required.</p>
+    <p><strong>Example.</strong> <code>nums=[1,3,5,6]</code>: target 5 → <code>2</code>; target 2 →
+    <code>1</code>; target 7 → <code>4</code> (append position).</p>
+    <p class="code-title">The insert position IS a boundary — Template B · O(log n)</p>
+<pre class="code"><code>public int searchInsert(int[] nums, int target) {
+    // Both cases collapse into one question: what is the FIRST index
+    // whose value is &gt;= target? (present -&gt; its index; absent -&gt; the gap)
+    int lo = 0, hi = nums.length;          // hi EXCLUSIVE: "insert at end" = nums.length
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] &gt;= target) hi = mid;      // mid could be the first &gt;= — keep it
+        else lo = mid + 1;                      // mid too small — answer is right of it
+    }
+    return lo;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Recognizing that "found index" and "insert position" are the <em>same</em>
+    boundary (<code>lowerBound</code>) removes every special case. Exclusive <code>hi = nums.length</code>
+    is what lets "insert past the end" fall out naturally.
+    Mirror: <code>code/07-binary-search/SearchInsertPosition.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Find First and Last Position — LeetCode 34</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A sorted array may contain duplicates. Return the first and last index of
+    <code>target</code> (or <code>[-1,-1]</code>) in O(log n).</p>
+    <p><strong>Example.</strong> <code>nums=[5,7,7,8,8,10], target=8</code> → <code>[3,4]</code>;
+    <code>target=6</code> → <code>[-1,-1]</code>.</p>
+
+    <p class="code-title">Variation 1 — Template A hit, then scan outward · O(log n + k), degrades to O(n)</p>
+<pre class="code"><code>public int[] searchRangeScan(int[] nums, int target) {
+    int hit = binarySearch(nums, target);        // any matching index
+    if (hit &lt; 0) return new int[]{-1, -1};
+    int first = hit, last = hit;
+    while (first &gt; 0 &amp;&amp; nums[first - 1] == target) first--;  // walk left
+    while (last &lt; nums.length - 1 &amp;&amp; nums[last + 1] == target) last++;  // walk right
+    return new int[]{first, last};               // an all-equal array makes this O(n)!
+}</code></pre>
+    <p>With many duplicates the walk is linear — exactly what O(log n) forbids. Boundary searches never walk:</p>
+
+    <p class="code-title">Variation 2 — two lowerBound calls (optimal) · O(log n)</p>
+<pre class="code"><code>public int[] searchRange(int[] nums, int target) {
     // First index whose value is &gt;= target  (first position of target, if present)
     int first = lowerBound(nums, target);
     // If we ran off the end, or the value there isn't target, target is absent
@@ -350,7 +398,7 @@ return lo;                                 // the boundary (first true index)</c
 
 // Classic "first index where predicate is true" template.
 // Predicate here: nums[i] &gt;= target. It's false,false,...,true,true — monotonic.
-static int lowerBound(int[] nums, int target) {
+int lowerBound(int[] nums, int target) {
     int lo = 0, hi = nums.length;          // hi is EXCLUSIVE: answer may be nums.length ("never true")
     while (lo &lt; hi) {                      // stop when the range is empty: lo == hi is the answer
         int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint (never write (lo+hi)/2)
@@ -362,24 +410,32 @@ static int lowerBound(int[] nums, int target) {
     }
     return lo;                             // lo == hi == first index where nums[i] &gt;= target
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(log n) — two boundary searches; space O(1).
-    Runnable version: <code>code/07-binary-search/SearchRange.java</code>.</p>
+    <p><strong>Takeaway.</strong> The trick "<em>last</em> occurrence of x = (first occurrence of x+1) − 1"
+    means one helper answers both edges. <code>lowerBound</code> is the single most reusable function on this
+    page. Mirror: <code>code/07-binary-search/SearchRange.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Search in Rotated Sorted Array (LC 33)</summary>
+  <summary><span class="badge medium">medium</span> Search in Rotated Sorted Array — LeetCode 33</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> a sorted, distinct array was rotated at an unknown pivot
-    (<code>[4,5,6,7,0,1,2]</code>); find <code>target</code>'s index in O(log n).</p>
-    <p><strong>Idea:</strong> at any <code>mid</code>, the rotation point lies in only one half — so the <em>other</em>
-    half is perfectly sorted, and <code>nums[lo] ≤ nums[mid]</code> tells you which (using ≤ handles the 1-element
-    half). A sorted half's endpoints tell you in O(1) whether the target is inside it: if yes, search it; if no,
-    the target must be in the messy half. Either way, half the range is discarded per step.</p>
-<pre class="code"><code>public static int search(int[] nums, int target) {
-    int lo = 0, hi = nums.length - 1;      // inclusive range this time — we're hunting an exact index
+    <p><strong>The problem.</strong> A sorted, distinct array was rotated at an unknown pivot — e.g.
+    <code>[0,1,2,4,5,6,7]</code> became <code>[4,5,6,7,0,1,2]</code>. Find <code>target</code>'s index in
+    O(log n), or −1.</p>
+    <p><strong>Example.</strong> <code>nums=[4,5,6,7,0,1,2]</code>: target 0 → <code>4</code>;
+    target 3 → <code>-1</code>.</p>
+
+    <p class="code-title">Variation 1 — find the pivot, then two ordinary searches · O(log n), two phases</p>
+<pre class="code"><code>// Phase 1: find the rotation point (index of the minimum) with the
+// boundary search from Find Minimum below. Phase 2: the array is two
+// sorted halves — run plain binary search in whichever half could
+// contain target. Correct and O(log n), just more moving parts.</code></pre>
+
+    <p class="code-title">Variation 2 — one pass: identify the sorted half (optimal) · O(log n)</p>
+<pre class="code"><code>public int search(int[] nums, int target) {
+    int lo = 0, hi = nums.length - 1;      // inclusive range — hunting an exact index
     while (lo &lt;= hi) {
-        int mid = lo + (hi - lo) / 2;      // overflow-safe midpoint
+        int mid = lo + (hi - lo) / 2;
         if (nums[mid] == target) return mid;
 
         if (nums[lo] &lt;= nums[mid]) {
@@ -400,22 +456,61 @@ static int lowerBound(int[] nums, int target) {
     }
     return -1;                             // range emptied without a hit — not present
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(log n), space O(1). (With duplicates — LC 81 — the
-    <code>nums[lo] == nums[mid]</code> case becomes ambiguous and worst case degrades to O(n).)
-    Runnable version: <code>code/07-binary-search/SearchRotated.java</code>.</p>
+    <p><strong>Takeaway.</strong> The saving fact: at any mid, the rotation point lies in only one half, so
+    the <em>other half is perfectly sorted</em> — and a sorted range's endpoints tell you in O(1) whether the
+    target is inside. With duplicates (LC 81) the <code>nums[lo] == nums[mid]</code> case turns ambiguous and
+    the worst case degrades to O(n). Mirror: <code>code/07-binary-search/SearchRotated.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Koko Eating Bananas (LC 875)</summary>
+  <summary><span class="badge medium">medium</span> Find Minimum in Rotated Sorted Array — LeetCode 153</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given banana piles and <code>h</code> hours (one pile per hour max,
-    eating <code>k</code> bananas/hour), find the minimum speed <code>k</code> that finishes everything in time.</p>
-    <p><strong>Idea:</strong> nothing here is sorted — but the <em>answers</em> are monotonic: if speed 4 works,
-    every speed above 4 works. So the speeds form <code>F F F T T T</code> and we binary-search for the first true.
-    The checker is a one-pass simulation: hours for a pile of <code>p</code> at speed <code>s</code> is
-    <code>ceil(p/s)</code>. Answer range: 1 to the largest pile (faster than that changes nothing).</p>
-<pre class="code"><code>public static int minEatingSpeed(int[] piles, int h) {
+    <p><strong>The problem.</strong> Same rotated array setup (distinct values); return the minimum element in
+    O(log n).</p>
+    <p><strong>Example.</strong> <code>[3,4,5,1,2]</code> → <code>1</code>.
+    <code>[4,5,6,7,0,1,2]</code> → <code>0</code>. <code>[11,13,15,17]</code> → <code>11</code> (rotation of 0).</p>
+    <p class="code-title">Boundary search with a clever predicate · O(log n)</p>
+<pre class="code"><code>public int findMin(int[] nums) {
+    // Predicate P(i): nums[i] &lt;= nums[n-1] ("i is in the tail segment").
+    // Before the rotation point P is false, after it P is true — monotonic!
+    // The minimum is the FIRST index where P is true.
+    int lo = 0, hi = nums.length - 1;      // hi starts at n-1: P(n-1) is trivially true
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] &lt;= nums[nums.length - 1]) {
+            hi = mid;                      // mid is in the tail — the min is mid or earlier
+        } else {
+            lo = mid + 1;                  // mid is in the head (big values) — min is later
+        }
+    }
+    return nums[lo];                       // first index of the tail segment = the minimum
+}</code></pre>
+    <p><strong>Takeaway.</strong> The creative act is <em>designing the predicate</em>: comparing against the
+    last element converts "find the dip" into a standard false→true boundary. When a binary-search problem
+    looks weird, ask "what yes/no question about index i is false then true across the array?"
+    Mirror: <code>code/07-binary-search/FindMinRotated.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Koko Eating Bananas — LeetCode 875</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Koko has banana piles and <code>h</code> hours; each hour she picks one
+    pile and eats up to <code>k</code> bananas from it (a finished pile ends the hour early). Find the minimum
+    integer speed <code>k</code> that finishes all piles within <code>h</code> hours.</p>
+    <p><strong>Example.</strong> <code>piles=[3,6,7,11], h=8</code> → <code>4</code>
+    (hours at speed 4: 1+2+2+3 = 8 ✓; speed 3 needs 1+2+3+4 = 10 ✗).</p>
+
+    <p class="code-title">Variation 1 — try speeds 1, 2, 3, … · O(max · n)</p>
+<pre class="code"><code>public int minEatingSpeedLinear(int[] piles, int h) {
+    for (int speed = 1; ; speed++)          // first speed that works is the answer
+        if (canFinish(piles, speed, h)) return speed;
+}</code></pre>
+    <p>Correct because feasibility is monotonic — which is precisely what makes binary search legal too:</p>
+
+    <p class="code-title">Variation 2 — binary search on the answer (optimal) · O(n · log max)</p>
+<pre class="code"><code>public int minEatingSpeed(int[] piles, int h) {
     int lo = 1, hi = 0;                    // candidate speeds: 1 .. max(pile)
     for (int p : piles) hi = Math.max(hi, p);  // eating faster than the biggest pile is pointless
     while (lo &lt; hi) {                      // "first true" template: shrink to a single candidate
@@ -437,20 +532,109 @@ static boolean canFinish(int[] piles, int speed, int h) {
     }
     return hours &lt;= h;                     // monotonic: a faster speed never needs MORE hours
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n · log(max pile)) — each of ~30 probes runs an O(n) check; space O(1).
-    Runnable version: <code>code/07-binary-search/KokoBananas.java</code>.</p>
+    <p><strong>Takeaway.</strong> Nothing in the <em>input</em> is sorted — the monotonicity lives in the
+    <em>answer space</em> ("if speed k works, k+1 works"). Spotting that unlocks a whole family of hards;
+    the recipe is always: answer range + feasibility checker + first-true template.
+    Mirror: <code>code/07-binary-search/KokoBananas.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Capacity To Ship Packages Within D Days — LeetCode 1011</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Packages must ship <em>in order</em>; each day the ship loads consecutive
+    packages up to its capacity. Find the minimum capacity that ships everything within <code>days</code> days.</p>
+    <p><strong>Example.</strong> <code>weights=[1,2,3,4,5,6,7,8,9,10], days=5</code> → <code>15</code>
+    (loads: [1..5], [6,7], [8], [9], [10] — five days at capacity 15; 14 would need six).</p>
+    <p class="code-title">Binary search on capacity + greedy day-count checker · O(n · log Σw)</p>
+<pre class="code"><code>public int shipWithinDays(int[] weights, int days) {
+    // Answer range: at least the heaviest single package (it must fit),
+    // at most the total weight (everything in one day).
+    int lo = 0, hi = 0;
+    for (int w : weights) { lo = Math.max(lo, w); hi += w; }
+
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;      // candidate capacity
+        if (daysNeeded(weights, mid) &lt;= days) hi = mid;   // enough — try smaller
+        else lo = mid + 1;                                // too small — grow it
+    }
+    return lo;
+}
+
+// Greedy checker: fill each day as full as order allows, count the days.
+static int daysNeeded(int[] weights, int capacity) {
+    int days = 1, load = 0;
+    for (int w : weights) {
+        if (load + w &gt; capacity) {         // doesn't fit today —
+            days++;                        // start a new day
+            load = 0;
+        }
+        load += w;
+    }
+    return days;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Structurally identical to Koko: only the checker and the answer range
+    change. The lower bound being <code>max(weight)</code> (not 1) matters — capacities below it are
+    infeasible no matter how many days you have. Split Array Largest Sum (LC 410, hard) is this exact
+    problem in different clothes. Mirror: <code>code/07-binary-search/ShipCapacity.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Median of Two Sorted Arrays — LeetCode 4</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Two sorted arrays of sizes m and n. Return the median of all m+n values
+    in O(log(m+n)) — merging (O(m+n)) is explicitly too slow.</p>
+    <p><strong>Example.</strong> <code>[1,3]</code> and <code>[2]</code> → <code>2.0</code>.
+    <code>[1,2]</code> and <code>[3,4]</code> → <code>2.5</code> ((2+3)/2).</p>
+    <p><strong>The insight.</strong> The median splits the combined data into equal halves. So find a
+    <em>cut</em> in each array — i elements from A, j = half − i from B — such that everything left of both
+    cuts ≤ everything right of both cuts. Only the four values touching the cuts need checking, and the
+    correct i can be binary-searched in the shorter array.</p>
+    <p class="code-title">Binary search the cut position · O(log min(m,n))</p>
+<pre class="code"><code>public double findMedianSortedArrays(int[] A, int[] B) {
+    if (A.length &gt; B.length) return findMedianSortedArrays(B, A);  // search the SHORTER array
+    int m = A.length, n = B.length;
+    int half = (m + n + 1) / 2;            // size of the combined left part (+1 favors left on odd)
+
+    int lo = 0, hi = m;                    // i = how many of A's elements go left (0..m)
+    while (lo &lt;= hi) {
+        int i = lo + (hi - lo) / 2;        // cut in A
+        int j = half - i;                  // cut in B is forced: left parts must total `half`
+
+        // The four border values (±infinity when a cut touches an edge)
+        int aLeft  = (i == 0) ? Integer.MIN_VALUE : A[i - 1];
+        int aRight = (i == m) ? Integer.MAX_VALUE : A[i];
+        int bLeft  = (j == 0) ? Integer.MIN_VALUE : B[j - 1];
+        int bRight = (j == n) ? Integer.MAX_VALUE : B[j];
+
+        if (aLeft &lt;= bRight &amp;&amp; bLeft &lt;= aRight) {
+            // Valid partition: all-left &lt;= all-right. Median from the borders:
+            if (((m + n) &amp; 1) == 1)
+                return Math.max(aLeft, bLeft);                    // odd total: left part's max
+            return (Math.max(aLeft, bLeft) + Math.min(aRight, bRight)) / 2.0;
+        }
+        if (aLeft &gt; bRight) hi = i - 1;    // A contributes too much — move A's cut left
+        else lo = i + 1;                   // A contributes too little — move it right
+    }
+    throw new IllegalArgumentException("inputs not sorted");
+}</code></pre>
+    <p><strong>Takeaway.</strong> The search space isn't indexes of a value — it's <em>partitions</em>, and
+    the predicate is "is this partition balanced?" The ±infinity sentinels for edge cuts remove every special
+    case. This is the hardest standard binary-search problem; if you can explain the invariant here, the
+    whole topic is yours. Mirror: <code>code/07-binary-search/MedianTwoSorted.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
-  <li><strong>Never write <code>(lo + hi) / 2</code>.</strong> Use <code>lo + (hi - lo) / 2</code> and say why (int overflow — the nine-year JDK bug). One sentence, instant credibility.</li>
+  <li><strong>Never write <code>(lo + hi) / 2</code>.</strong> Use <code>lo + (hi - lo) / 2</code> — the classic int-overflow bug that sat in the JDK for nine years.</li>
   <li><strong>Match the guard to the moves.</strong> Template A: <code>lo &lt;= hi</code> with <code>mid ± 1</code> moves. Template B: <code>lo &lt; hi</code> with <code>hi = mid</code>. Mixing them (e.g. <code>lo &lt;= hi</code> with <code>hi = mid</code>) is the #1 infinite-loop recipe.</li>
-  <li><strong>Test the tiny cases by hand:</strong> empty array, one element, two elements, target absent, target at each end. Nearly every binary-search bug shows up on n ≤ 2 — trace before declaring done.</li>
-  <li><strong>Duplicates change the problem.</strong> "Find target" is Template A; "find <em>first</em>/<em>last</em> target" needs Template B. Say which variant you're using and why.</li>
-  <li><strong>Know the JDK quirk:</strong> <code>Arrays.binarySearch</code> returns <code>-(insertionPoint) - 1</code> for misses and an <em>arbitrary</em> matching index for duplicates — fine in application code, but interviewers want the hand-rolled version.</li>
-  <li><strong>Say the invariant out loud.</strong> "Everything before <code>lo</code> is known too small; everything after <code>hi</code> is known too big." If every branch of your code preserves that sentence, the code is correct — and the interviewer hears you <em>prove</em> it, not guess it.</li>
+  <li><strong>Test the tiny cases by hand:</strong> empty array, one element, two elements, target absent, target at each end. Nearly every binary-search bug shows up on n ≤ 2.</li>
+  <li><strong>Duplicates change the problem.</strong> "Find target" is Template A; "find <em>first</em>/<em>last</em> target" needs Template B.</li>
+  <li><strong>Know the JDK quirk:</strong> <code>Arrays.binarySearch</code> returns <code>-(insertionPoint) - 1</code> for misses and an <em>arbitrary</em> matching index for duplicates.</li>
+  <li><strong>Hold the invariant.</strong> "Everything before <code>lo</code> is known too small; everything after <code>hi</code> is known too big." If every branch of your code preserves that sentence, the code is correct.</li>
 </ul>
 
 <nav class="pager">
