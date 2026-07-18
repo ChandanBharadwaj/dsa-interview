@@ -312,6 +312,40 @@ private static int[] dfs(TreeNode node) {
   </div>
 </details>
 
+<details class="sol" id="lc1049">
+  <summary><span class="badge medium">medium</span> Last Stone Weight II — LeetCode 1049</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Smash any two stones; the difference survives. Minimize the
+    final remaining weight.</p>
+    <p><strong>Example.</strong> <code>[2,7,4,1,8,1]</code> → 1. <code>[31,26,33,21,40]</code> → 5.</p>
+    <p class="code-title">Reduce to closest-to-half subset sum · O(n · total/2)</p>
+<pre class="code"><code>public static int lastStoneWeightII(int[] stones) {
+    // Every smash sequence ends at |sum(A) − sum(B)| for SOME partition
+    // (each stone's weight ends up + or −). Minimize = get sum(A) as
+    // close to total/2 as possible from below.
+    int total = 0;
+    for (int s : stones) total += s;
+    int half = total / 2;
+
+    boolean[] dp = new boolean[half + 1];   // dp[s]: some subset sums to s
+    dp[0] = true;
+    for (int stone : stones)
+        for (int s = half; s &gt;= stone; s--) // backwards: one use per stone
+            dp[s] |= dp[s - stone];
+
+    for (int s = half; s &gt;= 0; s--)         // best achievable ≤ half
+        if (dp[s])
+            return total - 2 * s;           // |(total−s) − s|
+    return total;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The smash game is a decoy — proving every outcome is a signed sum
+    (and every partition is achievable) collapses it to Partition Equal Subset Sum's optimization
+    twin. Compare the trio: LC 416 asks <em>can</em> we hit total/2, Target Sum <em>counts</em> hits
+    of a target, this <em>minimizes</em> the miss — one boolean knapsack, three question types.
+    Mirror: <code>code/20-dp-advanced/LastStoneWeightII.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc312">
   <summary><span class="badge hard">hard</span> Burst Balloons — LeetCode 312 (interval DP)</summary>
   <div class="sol-body">
@@ -469,6 +503,78 @@ private static boolean fill(int[] nums, boolean[] used, int k,
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc329">
+  <summary><span class="badge hard">hard</span> Longest Increasing Path in a Matrix — LeetCode 329</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The longest strictly increasing path in a grid, moving in the
+    four cardinal directions.</p>
+    <p><strong>Example.</strong> <code>[[9,9,4],[6,6,8],[2,1,1]]</code> → 4 (1→2→6→9).</p>
+    <p class="code-title">Memoized DFS — DP on the implicit DAG · O(mn)</p>
+<pre class="code"><code>private static int dfs(int[][] m, int r, int c, int[][] memo) {
+    if (memo[r][c] != 0) return memo[r][c];   // solved before — reuse
+    int best = 1;                             // the cell alone
+    for (int[] d : DIRS) {
+        int nr = r + d[0], nc = c + d[1];
+        if (nr &gt;= 0 &amp;&amp; nr &lt; m.length &amp;&amp; nc &gt;= 0 &amp;&amp; nc &lt; m[0].length
+                &amp;&amp; m[nr][nc] &gt; m[r][c])       // strictly uphill only
+            best = Math.max(best, 1 + dfs(m, nr, nc, memo));
+    }
+    memo[r][c] = best;
+    return best;
+}
+// answer = max of dfs over every start cell</code></pre>
+    <p><strong>Takeaway.</strong> Remember why grid DP was "forbidden" for free-movement grids
+    (page 17): cycles. Here <em>strict increase</em> makes cycles impossible — the grid becomes a
+    DAG, and memoized DFS is DP running in topological order without ever computing that order. The
+    contrast is the interview payload: movement rules decide whether a grid is a DAG, and DAG-ness
+    decides whether DP applies. Visited-marking is unnecessary (the uphill rule can't revisit) —
+    adding it anyway is the common self-inflicted bug.
+    Mirror: <code>code/20-dp-advanced/LongestIncreasingPath.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc10">
+  <summary><span class="badge hard">hard</span> Regular Expression Matching — LeetCode 10</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Full-string matching where '.' matches any character and '*'
+    means <em>zero or more of the preceding element</em>.</p>
+    <p><strong>Example.</strong> "aa" vs "a*" → true. "ab" vs ".*" → true.
+    "mississippi" vs "mis*is*p*." → false. "aab" vs "c*a*b" → true (c* matches zero c's).</p>
+    <p class="code-title">2D boolean table; '*' branches zero-or-more · O(mn)</p>
+<pre class="code"><code>public static boolean isMatch(String s, String p) {
+    int m = s.length(), n = p.length();
+    boolean[][] dp = new boolean[m + 1][n + 1];   // dp[i][j]: s[0..i) vs p[0..j)
+    dp[0][0] = true;                        // empty matches empty
+    // Empty s can still match a*, a*b*, …: each '*' erases its element.
+    for (int j = 2; j &lt;= n; j++)
+        if (p.charAt(j - 1) == '*')
+            dp[0][j] = dp[0][j - 2];
+
+    for (int i = 1; i &lt;= m; i++)
+        for (int j = 1; j &lt;= n; j++) {
+            char pc = p.charAt(j - 1);
+            if (pc == '*') {
+                char prev = p.charAt(j - 2);
+                dp[i][j] = dp[i][j - 2]     // ZERO copies: drop "x*" entirely
+                    || ((prev == '.' || prev == s.charAt(i - 1))
+                        &amp;&amp; dp[i - 1][j]);   // ONE MORE copy: consume s's char,
+            } else {                        //   keep the same "x*" active
+                dp[i][j] = (pc == '.' || pc == s.charAt(i - 1))
+                    &amp;&amp; dp[i - 1][j - 1];    // plain/dot char: both advance
+            }
+        }
+    return dp[m][n];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The key reframe: '*' isn't a character, it's a <em>modifier</em> —
+    the unit is the two-character block "x*", which the DP either deletes (<code>dp[i][j−2]</code>)
+    or expands one copy at a time (<code>dp[i−1][j]</code> with the same j — the star stays
+    active). The empty-string row seeding is where most attempts die. This table is a tabular
+    NFA simulation, the same construction real regex engines compile to.
+    Mirror: <code>code/20-dp-advanced/RegexMatching.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Rolling-state bug:</strong> updating <code>hold</code> before <code>free</code> reads it silently uses <em>today's</em> value. Always compute all new states into temporaries, then assign.</li>
