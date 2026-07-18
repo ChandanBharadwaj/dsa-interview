@@ -321,6 +321,33 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc724">
+  <summary><span class="badge easy">easy</span> Find Pivot Index — LeetCode 724</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The leftmost index where the sum of everything strictly to the
+    left equals the sum of everything strictly to the right (−1 if none).</p>
+    <p><strong>Example.</strong> <code>[1,7,3,6,5,6]</code> → 3 (left 1+7+3 = 11 = right 5+6).
+    <code>[2,1,-1]</code> → 0 (empty left side counts as 0).</p>
+    <p class="code-title">Total once, then a running left sum · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int pivotIndex(int[] nums) {
+    int total = 0;
+    for (int x : nums) total += x;
+
+    int leftSum = 0;
+    for (int i = 0; i &lt; nums.length; i++) {
+        if (leftSum == total - leftSum - nums[i])   // right side by subtraction
+            return i;
+        leftSum += nums[i];                          // i joins the left side
+    }
+    return -1;
+}</code></pre>
+    <p><strong>Takeaway.</strong> You don't always need the prefix <em>array</em> — one running number
+    plus the precomputed total gives any "left vs right" comparison by subtraction. Watch the empty
+    sides: at i=0 the left sum is legitimately 0, which is why <code>[2,1,-1]</code> answers 0.
+    Mirror: <code>code/04-prefix-sum/PivotIndex.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc560">
   <summary><span class="badge medium">medium</span> Subarray Sum Equals K — LeetCode 560</summary>
   <div class="sol-body">
@@ -489,6 +516,176 @@ before opening the walkthrough.</p>
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc304">
+  <summary><span class="badge medium">medium</span> Range Sum Query 2D, Immutable — LeetCode 304</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Preprocess a matrix so <code>sumRegion(r1,c1,r2,c2)</code> —
+    the sum of any axis-aligned sub-rectangle — answers in O(1), over many queries.</p>
+    <p><strong>Example.</strong> For the classic 5×5 test matrix, sumRegion(2,1,4,3) = 8,
+    sumRegion(1,1,2,2) = 11.</p>
+    <p class="code-title">2D prefix table + inclusion–exclusion · O(mn) build, O(1) query</p>
+<pre class="code"><code>public class RangeSum2D {
+    // prefix[r][c] = sum of the rectangle (0,0)..(r-1,c-1); the extra
+    // zero row/column kills all boundary special-casing.
+    private final int[][] prefix;
+
+    public RangeSum2D(int[][] matrix) {
+        int rows = matrix.length, cols = matrix[0].length;
+        prefix = new int[rows + 1][cols + 1];
+        for (int r = 0; r &lt; rows; r++)
+            for (int c = 0; c &lt; cols; c++)
+                // cell + above-rect + left-rect − their double-counted overlap
+                prefix[r + 1][c + 1] = matrix[r][c]
+                        + prefix[r][c + 1] + prefix[r + 1][c] - prefix[r][c];
+    }
+
+    public int sumRegion(int r1, int c1, int r2, int c2) {
+        // big rectangle − top strip − left strip + corner (subtracted twice)
+        return prefix[r2 + 1][c2 + 1] - prefix[r1][c2 + 1]
+             - prefix[r2 + 1][c1] + prefix[r1][c1];
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The 1D "two lookups" trick becomes <em>four</em> lookups in 2D via
+    inclusion–exclusion — draw the rectangles once and the formula writes itself. The zero-padding
+    row/column is the same guard as 1D's <code>prefix[0]=0</code>. This is how image processing
+    computes box blurs ("summed-area tables") and how OLAP dashboards pre-aggregate.
+    Mirror: <code>code/04-prefix-sum/RangeSum2D.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc974">
+  <summary><span class="badge medium">medium</span> Subarray Sums Divisible by K — LeetCode 974</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count subarrays whose sum is divisible by k (elements may be
+    negative).</p>
+    <p><strong>Example.</strong> <code>[4,5,0,-2,-3,1], k=5</code> → 7.</p>
+    <p class="code-title">Count prefixes by remainder class · O(n)</p>
+<pre class="code"><code>public static int subarraysDivByK(int[] nums, int k) {
+    // Subarray (i, j] divisible by k  ⇔  prefix[j] ≡ prefix[i]  (mod k).
+    int[] byRemainder = new int[k];
+    byRemainder[0] = 1;             // the empty prefix: remainder 0, seen once
+    int prefix = 0, count = 0;
+    for (int x : nums) {
+        prefix += x;
+        int r = ((prefix % k) + k) % k;   // Java's % is negative for negatives!
+        count += byRemainder[r];    // pairs with every earlier equal remainder
+        byRemainder[r]++;
+    }
+    return count;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Subarray Sum Equals K asks for prefix <em>differences</em> equal to
+    k; this asks for prefix <em>remainders</em> that match — same "have I seen a compatible earlier
+    prefix?" engine, different equivalence. The one Java landmine: <code>%</code> yields negative
+    remainders for negative numbers, hence the <code>((p % k) + k) % k</code> normalization.
+    Mirror: <code>code/04-prefix-sum/SubarraysDivByK.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc523">
+  <summary><span class="badge medium">medium</span> Continuous Subarray Sum — LeetCode 523</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Does a subarray of length ≥ 2 sum to a multiple of k?
+    (Non-negative elements; 0 is a multiple of everything.)</p>
+    <p><strong>Example.</strong> <code>[23,2,4,6,7], k=6</code> → true ([2,4]).
+    <code>[1,0], k=2</code> → false (the qualifying zero is length 1). <code>[0,0], k=2</code> → true.</p>
+    <p class="code-title">Earliest index per remainder + distance check · O(n)</p>
+<pre class="code"><code>public static boolean checkSubarraySum(int[] nums, int k) {
+    Map&lt;Integer, Integer&gt; firstAt = new HashMap&lt;&gt;();
+    firstAt.put(0, -1);                  // empty prefix, "index" -1
+    int prefix = 0;
+    for (int i = 0; i &lt; nums.length; i++) {
+        prefix += nums[i];
+        int r = prefix % k;
+        Integer first = firstAt.putIfAbsent(r, i);  // keep the EARLIEST only
+        if (first != null &amp;&amp; i - first &gt;= 2)        // same remainder, ≥ 2 apart
+            return true;
+    }
+    return false;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The length-≥-2 constraint changes the bookkeeping from
+    <em>counting</em> remainders to remembering each remainder's <em>first</em> index —
+    <code>putIfAbsent</code> does the "never overwrite" part for free, and the distance check enforces
+    the length. Storing first-occurrence-index instead of count is a recurring micro-variation across
+    the prefix-map family (compare Contiguous Array above).
+    Mirror: <code>code/04-prefix-sum/CheckSubarraySum.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1109">
+  <summary><span class="badge medium">medium</span> Corporate Flight Bookings — LeetCode 1109</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> n flights; each booking <code>[first, last, seats]</code> adds
+    seats to every flight in the range. Return the final seat count per flight.</p>
+    <p><strong>Example.</strong> bookings <code>[[1,2,10],[2,3,20],[2,5,25]]</code>, n=5 →
+    <code>[10,55,45,25,25]</code>.</p>
+    <p class="code-title">Difference array: O(1) per booking, one final scan · O(n + b)</p>
+<pre class="code"><code>public static int[] corpFlightBookings(int[][] bookings, int n) {
+    int[] diff = new int[n + 1];             // +1 slot so `last` never overflows
+    for (int[] b : bookings) {
+        int first = b[0], last = b[1], seats = b[2];
+        diff[first - 1] += seats;            // seats start here (1-indexed input)
+        diff[last] -= seats;                 // and stop after `last`
+    }
+    int[] out = new int[n];
+    int running = 0;
+    for (int i = 0; i &lt; n; i++) {
+        running += diff[i];                  // prefix sum = actual seat count
+        out[i] = running;
+    }
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The difference array is the prefix sum's inverse: range updates
+    become two point edits, and one integration pass at the end recovers the values. Car Pooling
+    (above) is the same trick keyed by time instead of flight number. Any "N range-add operations,
+    then read the result" problem — booking systems, brightness adjustments on image rows, load
+    accumulation — wants this shape.
+    Mirror: <code>code/04-prefix-sum/CorpFlightBookings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc862">
+  <summary><span class="badge hard">hard</span> Shortest Subarray with Sum at Least K — LeetCode 862</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Shortest non-empty subarray with sum ≥ k — but elements may be
+    <em>negative</em> (−1 if none exists).</p>
+    <p><strong>Example.</strong> <code>[2,-1,2], k=3</code> → 3. <code>[84,-37,32,40,95], k=167</code>
+    → 3. With <code>[1,2], k=4</code> → −1.</p>
+    <p class="code-title">Prefix sums + monotonic deque of candidate starts · O(n)</p>
+<pre class="code"><code>public static int shortestSubarray(int[] nums, int k) {
+    // Negatives break page 03's shrinking window: growing the window can now
+    // DECREASE the sum, so "shrink while it qualifies" loses answers.
+    int n = nums.length;
+    long[] prefix = new long[n + 1];         // sums can exceed int range
+    for (int i = 0; i &lt; n; i++)
+        prefix[i + 1] = prefix[i] + nums[i];
+
+    int best = n + 1;
+    Deque&lt;Integer&gt; dq = new ArrayDeque&lt;&gt;();  // indices; prefix strictly rising
+    for (int j = 0; j &lt;= n; j++) {
+        // 1) Harvest: while the oldest candidate start satisfies sum ≥ k,
+        //    record it and RETIRE it — any later end j only gives a longer
+        //    subarray from that same start.
+        while (!dq.isEmpty() &amp;&amp; prefix[j] - prefix[dq.peekFirst()] &gt;= k)
+            best = Math.min(best, j - dq.pollFirst());
+        // 2) Prune: an earlier start with a bigger prefix is strictly worse
+        //    (longer AND leaves more sum to cover) — drop it forever.
+        while (!dq.isEmpty() &amp;&amp; prefix[dq.peekLast()] &gt;= prefix[j])
+            dq.pollLast();
+        dq.offerLast(j);
+    }
+    return best == n + 1 ? -1 : best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The graduation exam of this page: prefix sums restate the question
+    as "for each j, the latest i with prefix[j] − prefix[i] ≥ k", and the monotonic deque
+    (<a href="09-stacks-queues.html">page 09</a>'s tool) keeps exactly the starts that could still
+    win. Both pruning rules are one-way-door arguments — once retired, a start can never be optimal
+    again, which is what makes it linear. If the interviewer adds "negative numbers" to a window
+    problem, this is the escalation path they're probing for.
+    Mirror: <code>code/04-prefix-sum/ShortestSubarraySumK.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Size the prefix array n+1, not n.</strong> The leading zero eliminates the "range starts at 0" special

@@ -291,6 +291,55 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc566">
+  <summary><span class="badge easy">easy</span> Reshape the Matrix — LeetCode 566</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Refill an m×n matrix's elements, in row-major order, into an
+    r×c matrix. If the shapes hold different element counts, return the original.</p>
+    <p><strong>Example.</strong> <code>[[1,2],[3,4]]</code>, r=1, c=4 → <code>[[1,2,3,4]]</code>.</p>
+    <p class="code-title">One linear index, two coordinate systems · O(mn)</p>
+<pre class="code"><code>public static int[][] matrixReshape(int[][] mat, int r, int c) {
+    int m = mat.length, n = mat[0].length;
+    if (m * n != r * c) return mat;         // element counts must match
+
+    int[][] out = new int[r][c];
+    for (int k = 0; k &lt; m * n; k++)
+        out[k / c][k % c] = mat[k / n][k % n];   // same k, two shapes
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The conversion <code>k ↔ (k/cols, k%cols)</code> is how 2D data
+    actually lives in memory — every matrix in every language is a flat array wearing coordinates.
+    NumPy's reshape and image-buffer manipulation are this one-liner at scale. Internalizing the
+    round-trip also demystifies "treat the matrix as a sorted list" problems (binary search on a
+    matrix). Mirror: <code>code/05-matrix/ReshapeMatrix.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc766">
+  <summary><span class="badge easy">easy</span> Toeplitz Matrix — LeetCode 766</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Is every ↘ diagonal constant?</p>
+    <p><strong>Example.</strong> <code>[[1,2,3,4],[5,1,2,3],[9,5,1,2]]</code> → true.
+    <code>[[1,2],[2,2]]</code> → false.</p>
+    <p class="code-title">Check each cell against its up-left neighbor · O(mn)</p>
+<pre class="code"><code>public static boolean isToeplitzMatrix(int[][] matrix) {
+    // Global property ("whole diagonal constant") reduced to a local rule:
+    // every cell equals its up-left neighbor. Chained equality does the rest.
+    for (int r = 1; r &lt; matrix.length; r++)
+        for (int c = 1; c &lt; matrix[0].length; c++)
+            if (matrix[r][c] != matrix[r - 1][c - 1])
+                return false;
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two transferable ideas: (1) diagonals have algebraic names —
+    ↘ diagonals share <code>row − col</code>, ↗ anti-diagonals share <code>row + col</code> (the same
+    keys N-Queens uses for attack sets); (2) a global invariant often collapses to a local
+    neighbor-check, which is also how the follow-up ("matrix streamed row by row, limited memory")
+    stays solvable: you only ever need the previous row.
+    Mirror: <code>code/05-matrix/ToeplitzMatrix.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc54">
   <summary><span class="badge medium">medium</span> Spiral Matrix — LeetCode 54</summary>
   <div class="sol-body">
@@ -563,6 +612,97 @@ before opening the walkthrough.</p>
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc59">
+  <summary><span class="badge medium">medium</span> Spiral Matrix II — LeetCode 59</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Generate an n×n matrix filled 1..n² in spiral order.</p>
+    <p><strong>Example.</strong> n=3 → <code>[[1,2,3],[8,9,4],[7,6,5]]</code>.</p>
+    <p class="code-title">Four shrinking boundaries, writing instead of reading · O(n²)</p>
+<pre class="code"><code>public static int[][] generateMatrix(int n) {
+    int[][] out = new int[n][n];
+    int top = 0, bottom = n - 1, left = 0, right = n - 1;
+    int v = 1;
+    while (v &lt;= n * n) {
+        for (int c = left; c &lt;= right; c++) out[top][c] = v++;      // → top row
+        top++;
+        for (int r = top; r &lt;= bottom; r++) out[r][right] = v++;    // ↓ right col
+        right--;
+        for (int c = right; c &gt;= left; c--) out[bottom][c] = v++;   // ← bottom row
+        bottom--;
+        for (int r = bottom; r &gt;= top; r--) out[r][left] = v++;     // ↑ left col
+        left++;
+    }
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Identical skeleton to Spiral Matrix (above) with read swapped for
+    write — a good test that you own the boundary logic rather than having memorized one variant.
+    Squareness makes it slightly kinder than the m×n version: the <code>v ≤ n²</code> guard alone
+    suffices, where rectangles need the mid-loop boundary re-checks.
+    Mirror: <code>code/05-matrix/SpiralMatrixII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc240">
+  <summary><span class="badge medium">medium</span> Search a 2D Matrix II — LeetCode 240</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Every row is sorted left→right and every column top→bottom
+    (but rows don't wrap into each other). Find whether target exists.</p>
+    <p><strong>Example.</strong> In the classic 5×5 grid, target 5 → true, target 20 → false.</p>
+    <p class="code-title">Staircase search from the top-right corner · O(m + n)</p>
+<pre class="code"><code>public static boolean searchMatrix(int[][] matrix, int target) {
+    int r = 0, c = matrix[0].length - 1;      // top-right corner
+    while (r &lt; matrix.length &amp;&amp; c &gt;= 0) {
+        int v = matrix[r][c];
+        if (v == target) return true;
+        if (v &gt; target) c--;        // whole column below v is even bigger — cut it
+        else r++;                   // whole row left of v is even smaller — cut it
+    }
+    return false;                   // walked off the edge
+}</code></pre>
+    <p><strong>Takeaway.</strong> The top-right corner is the only place where one comparison is
+    decisive in both directions: it's the max of its row and the min of its column, so each step
+    permanently discards a full row or column — m+n steps total. Note this matrix is <em>not</em> one
+    sorted list (unlike LC 74, which binary-searches in O(log mn) on
+    <a href="07-binary-search.html">page 07</a>'s pattern); recognizing which sortedness you've been
+    given is the actual test. Mirror: <code>code/05-matrix/SearchMatrixII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1329">
+  <summary><span class="badge medium">medium</span> Sort the Matrix Diagonally — LeetCode 1329</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Sort each ↘ diagonal of an m×n matrix independently, ascending
+    toward the bottom-right.</p>
+    <p><strong>Example.</strong> <code>[[3,3,1,1],[2,2,1,2],[1,1,1,2]]</code> →
+    <code>[[1,1,1,1],[1,2,2,2],[1,2,3,3]]</code>.</p>
+    <p class="code-title">Bucket by row − col, sort each bucket, write back · O(mn log min(m,n))</p>
+<pre class="code"><code>public static int[][] diagonalSort(int[][] mat) {
+    int m = mat.length, n = mat[0].length;
+    // Every ↘ diagonal shares one (row − col) value — use it as the bucket key.
+    Map&lt;Integer, List&lt;Integer&gt;&gt; diag = new HashMap&lt;&gt;();
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++)
+            diag.computeIfAbsent(r - c, k -&gt; new ArrayList&lt;&gt;()).add(mat[r][c]);
+
+    for (List&lt;Integer&gt; d : diag.values())
+        d.sort(Collections.reverseOrder());   // descending: cheap removal below
+
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++) {
+            List&lt;Integer&gt; d = diag.get(r - c);
+            mat[r][c] = d.remove(d.size() - 1);   // smallest first, back in order
+        }
+    return mat;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Once you know diagonals are named by <code>row − col</code>, the
+    problem stops being about matrices at all — it's "group by key, sort each group", pure page-01
+    machinery. The reverse-sort-then-pop-from-tail detail avoids O(k) front removals from ArrayLists.
+    A tidy example of reducing an unfamiliar-looking problem to two patterns you already own.
+    Mirror: <code>code/05-matrix/SortDiagonally.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong><code>rows = m.length; cols = m[0].length;</code> on line one, always.</strong> Re-deriving dimensions

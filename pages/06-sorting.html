@@ -358,6 +358,61 @@ before opening the walkthrough.</p>
   </div>
 </details>
 
+<details class="sol" id="lc905">
+  <summary><span class="badge easy">easy</span> Sort Array By Parity — LeetCode 905</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Rearrange so all even numbers come before all odd numbers
+    (any order within each group), ideally in place.</p>
+    <p><strong>Example.</strong> <code>[3,1,2,4]</code> → <code>[2,4,3,1]</code> (any even-first
+    arrangement accepted).</p>
+    <p class="code-title">Two-way partition — quicksort's inner move · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int[] sortArrayByParity(int[] nums) {
+    int write = 0;                          // invariant: [0, write) is all even
+    for (int read = 0; read &lt; nums.length; read++)
+        if (nums[read] % 2 == 0) {
+            int t = nums[read];             // swap the even back to the boundary
+            nums[read] = nums[write];
+            nums[write++] = t;
+        }
+    return nums;
+}</code></pre>
+    <p><strong>Takeaway.</strong> This <em>is</em> quicksort's partition step, with "is even" playing
+    the pivot test — worth seeing stripped bare, because partition is the piece of quicksort people
+    fumble at the whiteboard. Sort Colors (above) is the three-way version of the same move.
+    Mirror: <code>code/06-sorting/SortArrayByParity.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc1122">
+  <summary><span class="badge easy">easy</span> Relative Sort Array — LeetCode 1122</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Sort arr1 so its elements follow the relative order given by
+    arr2; elements not in arr2 go last, ascending. Values are 0..1000.</p>
+    <p><strong>Example.</strong> arr1 <code>[2,3,1,3,2,4,6,7,9,2,19]</code>, arr2
+    <code>[2,1,4,3,9,6]</code> → <code>[2,2,2,1,4,3,3,9,6,7,19]</code>.</p>
+    <p class="code-title">Counting sort with a custom emission order · O(n + m + 1000)</p>
+<pre class="code"><code>public static int[] relativeSortArray(int[] arr1, int[] arr2) {
+    int[] count = new int[1001];        // bounded values -&gt; counting sort
+    for (int x : arr1) count[x]++;
+
+    int[] out = new int[arr1.length];
+    int w = 0;
+    for (int v : arr2)                  // arr2's order first, with multiplicity
+        while (count[v]-- &gt; 0)
+            out[w++] = v;
+    for (int v = 0; v &lt;= 1000; v++)     // leftovers ascending — free, because
+        while (count[v]-- &gt; 0)          // we scan values in increasing order
+            out[w++] = v;
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Counting sort's superpower isn't just speed — it lets you <em>emit
+    in any order you can enumerate</em>: here arr2's order first, then ascending. (The comparator
+    alternative — rank map + custom sort — is O(n log n) and boxes every int.) Whenever values are
+    small and dense, think buckets before comparisons.
+    Mirror: <code>code/06-sorting/RelativeSortArray.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc75">
   <summary><span class="badge medium">medium</span> Sort Colors (Dutch National Flag) — LeetCode 75</summary>
   <div class="sol-body">
@@ -539,6 +594,106 @@ private void swap(int[] a, int i, int j) { int t = a[i]; a[i] = a[j]; a[j] = t; 
   </div>
 </details>
 
+
+
+<details class="sol" id="lc912">
+  <summary><span class="badge medium">medium</span> Sort an Array — LeetCode 912</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Sort the array in O(n log n) without built-in sort — the
+    "implement a real sorting algorithm, correctly" question. LeetCode's tests include the two classic
+    quicksort killers: already-sorted input and long runs of equal values.</p>
+    <p><strong>Example.</strong> <code>[5,2,3,1]</code> → <code>[1,2,3,5]</code>.</p>
+
+    <p class="code-title">Variation 1 — merge sort · stable, guaranteed O(n log n), O(n) extra</p>
+<pre class="code"><code>private static void mergeSort(int[] a, int[] tmp, int lo, int hi) {
+    if (lo &gt;= hi) return;
+    int mid = lo + (hi - lo) / 2;
+    mergeSort(a, tmp, lo, mid);         // sort left half
+    mergeSort(a, tmp, mid + 1, hi);     // sort right half
+    int i = lo, j = mid + 1, w = lo;
+    while (i &lt;= mid &amp;&amp; j &lt;= hi)         // merge: smaller head wins
+        tmp[w++] = a[i] &lt;= a[j] ? a[i++] : a[j++];
+    while (i &lt;= mid) tmp[w++] = a[i++];
+    while (j &lt;= hi) tmp[w++] = a[j++];
+    System.arraycopy(tmp, lo, a, lo, hi - lo + 1);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — quicksort, random pivot + three-way partition · in place</p>
+<pre class="code"><code>private static void quickSort(int[] a, int lo, int hi) {
+    if (lo &gt;= hi) return;
+    // Random pivot defuses the sorted-input killer; the three-way (Dutch
+    // flag) partition defuses the all-equal killer — equal values settle
+    // in the middle band and are never recursed into again.
+    int pivot = a[lo + RAND.nextInt(hi - lo + 1)];
+    int lt = lo, gt = hi, i = lo;
+    while (i &lt;= gt) {
+        if (a[i] &lt; pivot) swap(a, lt++, i++);
+        else if (a[i] &gt; pivot) swap(a, i, gt--);
+        else i++;                       // equal: stays in the middle band
+    }
+    quickSort(a, lo, lt - 1);           // strictly-less zone
+    quickSort(a, gt + 1, hi);           // strictly-greater zone
+}</code></pre>
+
+    <p class="code-title">Variation 3 — heap sort · O(n log n) worst case, O(1) extra, not stable</p>
+<pre class="code"><code>public static void heapSort(int[] a) {
+    int n = a.length;
+    for (int i = n / 2 - 1; i &gt;= 0; i--)   // heapify: bottom-up sift-downs, O(n)
+        siftDown(a, i, n);
+    for (int end = n - 1; end &gt; 0; end--) {
+        swap(a, 0, end);                   // current max to its final slot
+        siftDown(a, 0, end);               // restore the heap on the prefix
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> One problem, all three engines from this page — and the reason
+    naive quicksort fails here is the lesson: random pivots handle adversarial <em>order</em>,
+    three-way partitioning handles adversarial <em>equality</em>; you need both. All three variants
+    are cross-checked against <code>Arrays.sort</code> on hundreds of random arrays in the mirror:
+    <code>code/06-sorting/SortAnArray.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc274">
+  <summary><span class="badge medium">medium</span> H-Index — LeetCode 274</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A researcher's h-index is the largest h such that h of their
+    papers have at least h citations each. Compute it from the citation counts.</p>
+    <p><strong>Example.</strong> <code>[3,0,6,1,5]</code> → 3 (three papers with ≥ 3 citations).
+    <code>[1,3,1]</code> → 1.</p>
+
+    <p class="code-title">Variation 1 — sort ascending, scan · O(n log n)</p>
+<pre class="code"><code>public static int hIndexSort(int[] citations) {
+    Arrays.sort(citations);                  // ascending
+    int n = citations.length;
+    for (int i = 0; i &lt; n; i++) {
+        int papersAtLeast = n - i;           // papers with ≥ citations[i] cites
+        if (citations[i] &gt;= papersAtLeast)   // first index that qualifies:
+            return papersAtLeast;            // that count IS the h-index
+    }
+    return 0;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — counting buckets, clamped at n · O(n)</p>
+<pre class="code"><code>public static int hIndex(int[] citations) {
+    int n = citations.length;
+    int[] buckets = new int[n + 1];
+    for (int c : citations)
+        buckets[Math.min(c, n)]++;           // h ≤ n, so 1000 citations act like n
+    int papers = 0;
+    for (int h = n; h &gt;= 0; h--) {           // walk h downward,
+        papers += buckets[h];                // accumulating papers with ≥ h
+        if (papers &gt;= h) return h;           // first h that enough papers support
+    }
+    return 0;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The clamp <code>min(c, n)</code> is the insight that unlocks
+    counting sort here: the h-index can't exceed the paper count, so citation counts above n are
+    interchangeable — suddenly the value range is bounded and O(n) drops out. "Can I clamp or bucket
+    the values?" is the standard question to ask before paying for a comparison sort.
+    Mirror: <code>code/06-sorting/HIndex.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc315">
   <summary><span class="badge hard">hard</span> Count of Smaller Numbers After Self — LeetCode 315</summary>
   <div class="sol-body">
@@ -603,6 +758,54 @@ private void mergeCount(int[] a, int[] idx, int[] tmp, int[] counts, int lo, int
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc164">
+  <summary><span class="badge hard">hard</span> Maximum Gap — LeetCode 164</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The maximum difference between successive elements of the
+    <em>sorted</em> array — computed in O(n) time, without actually sorting.</p>
+    <p><strong>Example.</strong> <code>[3,6,9,1]</code> → 3 (sorted: 1,3,6,9 — gaps 2,3,3).</p>
+    <p class="code-title">Pigeonhole buckets: the answer lives between buckets · O(n)</p>
+<pre class="code"><code>public static int maximumGap(int[] nums) {
+    int n = nums.length;
+    if (n &lt; 2) return 0;
+    int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+    for (int x : nums) {
+        lo = Math.min(lo, x);
+        hi = Math.max(hi, x);
+    }
+    if (lo == hi) return 0;                       // all equal
+
+    // Pigeonhole: n numbers over range R force some sorted gap ≥ R/(n−1).
+    // Buckets of that size (or smaller) can never CONTAIN the max gap —
+    // so only each bucket's min and max matter.
+    int bucketSize = Math.max(1, (hi - lo) / (n - 1));
+    int bucketCount = (hi - lo) / bucketSize + 1;
+    int[] mins = new int[bucketCount], maxs = new int[bucketCount];
+    Arrays.fill(mins, Integer.MAX_VALUE);
+    Arrays.fill(maxs, Integer.MIN_VALUE);
+    for (int x : nums) {
+        int b = (x - lo) / bucketSize;            // which bucket x lands in
+        mins[b] = Math.min(mins[b], x);
+        maxs[b] = Math.max(maxs[b], x);
+    }
+
+    int best = 0, prevMax = maxs[0];              // bucket 0 surely holds `lo`
+    for (int b = 1; b &lt; bucketCount; b++) {
+        if (mins[b] == Integer.MAX_VALUE) continue;   // empty bucket — skip it
+        best = Math.max(best, mins[b] - prevMax); // gap across the boundary
+        prevMax = maxs[b];
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The rare problem where bucket sort's <em>idea</em> beats every
+    comparison sort provably: pigeonhole guarantees the max gap spans a bucket boundary, so each
+    bucket only needs its min/max — not its contents, not its order. When a problem asks for a
+    property of the sorted order but not the order itself, look for an argument that skips the sort.
+    Mirror (cross-checked vs sorting on random arrays):
+    <code>code/06-sorting/MaximumGap.java</code>.</p>
+  </div>
+</details>
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>"Just sort it" isn't free.</strong> Before sorting, say what it costs (O(n log n)) and check a hash-based O(n) alternative isn't cleaner. Sorting <em>mutates</em> — copy first if indexes matter later.</li>

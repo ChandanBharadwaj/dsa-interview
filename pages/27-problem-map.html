@@ -141,10 +141,16 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="04-prefix-sum.html#lc1480">Running Sum of 1d Array</a></td><td>1480</td><td><span class="badge easy">easy</span></td><td>The definition of a prefix sum, verbatim.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc303">Range Sum Query, Immutable</a></td><td>303</td><td><span class="badge easy">easy</span></td><td>Precompute once; any range sum becomes two lookups.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc724">Find Pivot Index</a></td><td>724</td><td><span class="badge easy">easy</span></td><td>One running left sum + the total: right side by subtraction.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc560">Subarray Sum Equals K</a></td><td>560</td><td><span class="badge medium">medium</span></td><td>Prefix + HashMap: count earlier prefixes equal to currentSum − k.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc525">Contiguous Array</a></td><td>525</td><td><span class="badge medium">medium</span></td><td>Map 0→−1; equal 0/1 counts mean the same prefix value seen twice.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix/suffix products — the additive trick with × instead of +.</td></tr>
   <tr><td><a href="04-prefix-sum.html#lc1094">Car Pooling</a></td><td>1094</td><td><span class="badge medium">medium</span></td><td>Difference array: +passengers at pickup, − at drop-off, then scan.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc304">Range Sum Query 2D, Immutable</a></td><td>304</td><td><span class="badge medium">medium</span></td><td>2D prefix table; any rectangle = four lookups (inclusion–exclusion).</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc974">Subarray Sums Divisible by K</a></td><td>974</td><td><span class="badge medium">medium</span></td><td>Divisible subarray ⇔ two prefixes share a remainder class.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc523">Continuous Subarray Sum</a></td><td>523</td><td><span class="badge medium">medium</span></td><td>Remember each remainder’s FIRST index; distance ≥ 2 seals it.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc1109">Corporate Flight Bookings</a></td><td>1109</td><td><span class="badge medium">medium</span></td><td>Range adds become two point edits; integrate once at the end.</td></tr>
+  <tr><td><a href="04-prefix-sum.html#lc862">Shortest Subarray with Sum at Least K</a></td><td>862</td><td><span class="badge hard">hard</span></td><td>Negatives kill the window — prefix sums + monotonic deque of starts.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> pre-aggregated metrics and OLAP cubes (<a href="25-real-world-systems.html#db">databases</a>), capacity planning (<a href="25-real-world-systems.html#sched">schedulers</a>).</p>
@@ -154,11 +160,16 @@
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="05-matrix.html#lc867">Transpose Matrix</a></td><td>867</td><td><span class="badge easy">easy</span></td><td>Pure index gymnastics: out[c][r] = in[r][c].</td></tr>
+  <tr><td><a href="05-matrix.html#lc566">Reshape the Matrix</a></td><td>566</td><td><span class="badge easy">easy</span></td><td>One linear index k ↔ (k/cols, k%cols) bridges both shapes.</td></tr>
+  <tr><td><a href="05-matrix.html#lc766">Toeplitz Matrix</a></td><td>766</td><td><span class="badge easy">easy</span></td><td>Whole-diagonal constancy collapses to “equal up-left neighbor”.</td></tr>
   <tr><td><a href="05-matrix.html#lc54">Spiral Matrix</a></td><td>54</td><td><span class="badge medium">medium</span></td><td>Four shrinking boundaries walk the spiral layer by layer.</td></tr>
   <tr><td><a href="05-matrix.html#lc48">Rotate Image</a></td><td>48</td><td><span class="badge medium">medium</span></td><td>Transpose + reverse each row = 90° rotation in place.</td></tr>
   <tr><td><a href="05-matrix.html#lc73">Set Matrix Zeroes</a></td><td>73</td><td><span class="badge medium">medium</span></td><td>First row/column double as zero markers — O(1) extra space.</td></tr>
   <tr><td><a href="05-matrix.html#lc289">Game of Life</a></td><td>289</td><td><span class="badge medium">medium</span></td><td>Encode the next state in spare bits for an in-place simulation.</td></tr>
   <tr><td><a href="05-matrix.html#lc36">Valid Sudoku</a></td><td>36</td><td><span class="badge medium">medium</span></td><td>Row/column/box seen-sets checked in a single sweep.</td></tr>
+  <tr><td><a href="05-matrix.html#lc59">Spiral Matrix II</a></td><td>59</td><td><span class="badge medium">medium</span></td><td>The spiral boundaries again, writing 1..n² instead of reading.</td></tr>
+  <tr><td><a href="05-matrix.html#lc240">Search a 2D Matrix II</a></td><td>240</td><td><span class="badge medium">medium</span></td><td>Top-right staircase: each compare discards a full row or column.</td></tr>
+  <tr><td><a href="05-matrix.html#lc1329">Sort the Matrix Diagonally</a></td><td>1329</td><td><span class="badge medium">medium</span></td><td>Diagonals are named by row − col: group by key, sort each group.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> image transforms, spreadsheet engines, cellular-automata simulation (<a href="25-real-world-systems.html#sched">simulation</a>).</p>
@@ -169,11 +180,16 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="06-sorting.html#lc88">Merge Sorted Array</a></td><td>88</td><td><span class="badge easy">easy</span></td><td>Merge from the back so nothing gets overwritten.</td></tr>
   <tr><td><a href="06-sorting.html#lc1365">How Many Numbers Are Smaller Than the Current Number</a></td><td>1365</td><td><span class="badge easy">easy</span></td><td>Value range 0–100 → counting sort beats comparisons.</td></tr>
+  <tr><td><a href="06-sorting.html#lc905">Sort Array By Parity</a></td><td>905</td><td><span class="badge easy">easy</span></td><td>Quicksort’s partition step bare, with “is even” as the pivot test.</td></tr>
+  <tr><td><a href="06-sorting.html#lc1122">Relative Sort Array</a></td><td>1122</td><td><span class="badge easy">easy</span></td><td>Counting sort emitting in a custom order: arr2 first, leftovers ascending.</td></tr>
   <tr><td><a href="06-sorting.html#lc75">Sort Colors (Dutch National Flag)</a></td><td>75</td><td><span class="badge medium">medium</span></td><td>Dutch national flag: three-way partition in one pass.</td></tr>
   <tr><td><a href="06-sorting.html#lc215">Kth Largest Element in an Array</a></td><td>215</td><td><span class="badge medium">medium</span></td><td>Quickselect: partition until the pivot lands at index k.</td></tr>
   <tr><td><a href="06-sorting.html#lc179">Largest Number</a></td><td>179</td><td><span class="badge medium">medium</span></td><td>Custom comparator: order by (a+b) vs (b+a) concatenation.</td></tr>
   <tr><td><a href="06-sorting.html#lc148">Sort List</a></td><td>148</td><td><span class="badge medium">medium</span></td><td>Merge sort is the natural O(n log n) for linked lists.</td></tr>
+  <tr><td><a href="06-sorting.html#lc912">Sort an Array</a></td><td>912</td><td><span class="badge medium">medium</span></td><td>Implement the engines: merge, random-pivot 3-way quick, heap.</td></tr>
+  <tr><td><a href="06-sorting.html#lc274">H-Index</a></td><td>274</td><td><span class="badge medium">medium</span></td><td>Clamp citations at n — the range becomes bounded, counting sort applies.</td></tr>
   <tr><td><a href="06-sorting.html#lc315">Count of Smaller Numbers After Self</a></td><td>315</td><td><span class="badge hard">hard</span></td><td>Merge sort counts cross-half inversions while it merges.</td></tr>
+  <tr><td><a href="06-sorting.html#lc164">Maximum Gap</a></td><td>164</td><td><span class="badge hard">hard</span></td><td>Pigeonhole: the max sorted gap must span a bucket boundary.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> external sort in databases and MapReduce shuffles (<a href="25-real-world-systems.html#db">databases</a>).</p>
@@ -185,12 +201,17 @@
   <tr><td><a href="07-binary-search.html#lc704">Binary Search</a></td><td>704</td><td><span class="badge easy">easy</span></td><td>The classic halving template.</td></tr>
   <tr><td><a href="07-binary-search.html#lc278">First Bad Version</a></td><td>278</td><td><span class="badge easy">easy</span></td><td>Boundary search: first index where the predicate flips to true.</td></tr>
   <tr><td><a href="07-binary-search.html#lc35">Search Insert Position</a></td><td>35</td><td><span class="badge easy">easy</span></td><td>lowerBound: first index with value ≥ target.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc69">Sqrt(x)</a></td><td>69</td><td><span class="badge easy">easy</span></td><td>Last k with k² ≤ x — answer-space search; cast to long before squaring.</td></tr>
   <tr><td><a href="07-binary-search.html#lc34">Find First and Last Position</a></td><td>34</td><td><span class="badge medium">medium</span></td><td>Two boundary searches: first ≥ target and first &gt; target.</td></tr>
   <tr><td><a href="07-binary-search.html#lc33">Search in Rotated Sorted Array</a></td><td>33</td><td><span class="badge medium">medium</span></td><td>One half is always sorted — decide which, then recurse into it.</td></tr>
   <tr><td><a href="07-binary-search.html#lc153">Find Minimum in Rotated Sorted Array</a></td><td>153</td><td><span class="badge medium">medium</span></td><td>Compare mid with the right end to find the unrotated minimum.</td></tr>
   <tr><td><a href="07-binary-search.html#lc875">Koko Eating Bananas</a></td><td>875</td><td><span class="badge medium">medium</span></td><td>Binary search the answer: “can Koko finish at speed s?” is monotonic.</td></tr>
   <tr><td><a href="07-binary-search.html#lc1011">Capacity To Ship Packages Within D Days</a></td><td>1011</td><td><span class="badge medium">medium</span></td><td>Search on capacity; each feasibility check is a greedy scan.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc74">Search a 2D Matrix</a></td><td>74</td><td><span class="badge medium">medium</span></td><td>Row-chained matrix = one sorted list; search the flat index.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc162">Find Peak Element</a></td><td>162</td><td><span class="badge medium">medium</span></td><td>No sortedness needed — the slope at mid is the direction oracle.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc540">Single Element in a Sorted Array</a></td><td>540</td><td><span class="badge medium">medium</span></td><td>Search where pair-start index parity flips from even to odd.</td></tr>
   <tr><td><a href="07-binary-search.html#lc4">Median of Two Sorted Arrays</a></td><td>4</td><td><span class="badge hard">hard</span></td><td>Partition both arrays so the left halves hold exactly half the elements.</td></tr>
+  <tr><td><a href="07-binary-search.html#lc410">Split Array Largest Sum</a></td><td>410</td><td><span class="badge hard">hard</span></td><td>Minimize-the-max ⇒ binary search the cap + greedy feasibility.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> index lookups and LSM-tree reads (<a href="25-real-world-systems.html#db">databases</a>), autoscaling thresholds (<a href="25-real-world-systems.html#infra">infra</a>).</p>
