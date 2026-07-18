@@ -74,10 +74,19 @@
   <tr><td><a href="01-arrays-hashing.html#lc217">Contains Duplicate</a></td><td>217</td><td><span class="badge easy">easy</span></td><td>Seen-before test — one HashSet membership check per element.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc242">Valid Anagram</a></td><td>242</td><td><span class="badge easy">easy</span></td><td>Frequency counting: two strings are anagrams iff their count maps match.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc1">Two Sum</a></td><td>1</td><td><span class="badge easy">easy</span></td><td>Complement lookup: “have I seen target−x?” is one HashMap probe.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc383">Ransom Note</a></td><td>383</td><td><span class="badge easy">easy</span></td><td>Frequency counting as inventory: stock the magazine, spend on the note.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc169">Majority Element</a></td><td>169</td><td><span class="badge easy">easy</span></td><td>HashMap count — or Boyer-Moore voting for O(1) space.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc205">Isomorphic Strings</a></td><td>205</td><td><span class="badge easy">easy</span></td><td>Bijection check: two maps, one per direction.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc290">Word Pattern</a></td><td>290</td><td><span class="badge easy">easy</span></td><td>The same bijection, letters ↔ whole words.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc202">Happy Number</a></td><td>202</td><td><span class="badge easy">easy</span></td><td>Repeat detection: HashSet of seen values (or Floyd at two speeds).</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc219">Contains Duplicate II</a></td><td>219</td><td><span class="badge easy">easy</span></td><td>A windowed HashSet: membership over only the last k elements.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc448">Find All Numbers Disappeared in an Array</a></td><td>448</td><td><span class="badge easy">easy</span></td><td>The array is its own hash table — mark presence by negating.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc49">Group Anagrams</a></td><td>49</td><td><span class="badge medium">medium</span></td><td>Canonical key (sorted word / count signature) groups anagrams in one map.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc347">Top K Frequent Elements</a></td><td>347</td><td><span class="badge medium">medium</span></td><td>Count map + bucket-by-frequency beats sorting for top-K.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix × suffix products — the no-division two-pass trick.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc128">Longest Consecutive Sequence</a></td><td>128</td><td><span class="badge medium">medium</span></td><td>Set membership lets each streak be walked once from its true start.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc271">Encode and Decode Strings</a></td><td>271</td><td><span class="badge medium">medium</span></td><td>No delimiter is safe → length-prefix framing, like network protocols.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc2013">Detect Squares</a></td><td>2013</td><td><span class="badge medium">medium</span></td><td>Fix the diagonal partner; the two forced corners are O(1) count lookups.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc41">First Missing Positive</a></td><td>41</td><td><span class="badge hard">hard</span></td><td>Index-as-hash: cyclic sort puts value v at index v−1; the first hole answers.</td></tr>
 </table>
 </div>
@@ -90,8 +99,16 @@
   <tr><td><a href="02-two-pointers.html#lc125">Valid Palindrome</a></td><td>125</td><td><span class="badge easy">easy</span></td><td>Converging pointers compare both ends, skipping non-alphanumerics.</td></tr>
   <tr><td><a href="02-two-pointers.html#lc167">Two Sum II (sorted input)</a></td><td>167</td><td><span class="badge medium">medium</span></td><td>Sorted input: move the pair inward based on sum vs target.</td></tr>
   <tr><td><a href="02-two-pointers.html#lc26">Remove Duplicates from Sorted Array</a></td><td>26</td><td><span class="badge easy">easy</span></td><td>Reader/writer parallel pointers compact the array in place.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc344">Reverse String</a></td><td>344</td><td><span class="badge easy">easy</span></td><td>The converging-pointer skeleton with nothing else attached.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc27">Remove Element</a></td><td>27</td><td><span class="badge easy">easy</span></td><td>Reader/writer: reader scans all, writer advances over keepers.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc283">Move Zeroes</a></td><td>283</td><td><span class="badge easy">easy</span></td><td>Reader/writer compaction plus a zero-filled tail.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc977">Squares of a Sorted Array</a></td><td>977</td><td><span class="badge easy">easy</span></td><td>Largest squares live at the ends — converge and fill backwards.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc680">Valid Palindrome II</a></td><td>680</td><td><span class="badge easy">easy</span></td><td>Converge; the one deletion must happen at the first mismatch.</td></tr>
   <tr><td><a href="02-two-pointers.html#lc11">Container With Most Water</a></td><td>11</td><td><span class="badge medium">medium</span></td><td>Move the shorter wall inward — the classic discard argument.</td></tr>
   <tr><td><a href="02-two-pointers.html#lc15">3Sum</a></td><td>15</td><td><span class="badge medium">medium</span></td><td>Sort, fix one element, two-pointer the remaining pair; skip duplicates.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc16">3Sum Closest</a></td><td>16</td><td><span class="badge medium">medium</span></td><td>3Sum’s pointer engine, recording the closest miss instead of exact hits.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc18">4Sum</a></td><td>18</td><td><span class="badge medium">medium</span></td><td>kSum recursion: fix two, two-pointer the rest, dedup every level.</td></tr>
+  <tr><td><a href="02-two-pointers.html#lc287">Find the Duplicate Number</a></td><td>287</td><td><span class="badge medium">medium</span></td><td>i → nums[i] is a linked list; the duplicate is the cycle entrance (Floyd).</td></tr>
   <tr><td><a href="02-two-pointers.html#lc42">Trapping Rain Water</a></td><td>42</td><td><span class="badge hard">hard</span></td><td>Water at i = min(maxLeft, maxRight) − height; two pointers track both maxes.</td></tr>
 </table>
 </div>
@@ -103,8 +120,15 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="03-sliding-window.html#lc121">Best Time to Buy and Sell Stock</a></td><td>121</td><td><span class="badge easy">easy</span></td><td>Min-so-far scan = a window whose left edge only jumps at a new low.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc643">Maximum Average Subarray I</a></td><td>643</td><td><span class="badge easy">easy</span></td><td>Fixed window: add the entering element, subtract the leaving one.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc485">Max Consecutive Ones</a></td><td>485</td><td><span class="badge easy">easy</span></td><td>The degenerate window: grow on 1s, hard-reset on a 0.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc3">Longest Substring Without Repeating Characters</a></td><td>3</td><td><span class="badge medium">medium</span></td><td>Variable window + last-seen map; jump the left edge past repeats.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc567">Permutation in String</a></td><td>567</td><td><span class="badge medium">medium</span></td><td>Fixed-size window comparing 26-letter histograms.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc1456">Maximum Number of Vowels in a Substring of Given Length</a></td><td>1456</td><td><span class="badge medium">medium</span></td><td>Fixed window, one counter — update only what enters and leaves.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc209">Minimum Size Subarray Sum</a></td><td>209</td><td><span class="badge medium">medium</span></td><td>Shrink while it still qualifies — positivity makes the sum monotonic.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc904">Fruit Into Baskets</a></td><td>904</td><td><span class="badge medium">medium</span></td><td>“At most 2 distinct types” = count-map window that shrinks on a third.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc424">Longest Repeating Character Replacement</a></td><td>424</td><td><span class="badge medium">medium</span></td><td>Legal while size − maxFreq ≤ k; the stale maxFreq is provably safe.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc1004">Max Consecutive Ones III</a></td><td>1004</td><td><span class="badge medium">medium</span></td><td>“Flip ≤ k zeros” reframed: window may contain at most k zeros.</td></tr>
+  <tr><td><a href="03-sliding-window.html#lc438">Find All Anagrams in a String</a></td><td>438</td><td><span class="badge medium">medium</span></td><td>Histogram window + an agreement counter for O(1) slides.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc76">Minimum Window Substring</a></td><td>76</td><td><span class="badge hard">hard</span></td><td>Expand to cover, shrink to minimal — the canonical variable window.</td></tr>
   <tr><td><a href="03-sliding-window.html#lc239">Sliding Window Maximum</a></td><td>239</td><td><span class="badge hard">hard</span></td><td>Monotonic deque keeps the window maximum at the front.</td></tr>
 </table>
