@@ -123,6 +123,52 @@
   key hashes into one bucket and gets compared in another.
 </div>
 
+<p>
+  Chaining is one of <em>two</em> classic collision policies, and senior interviews like to hear you compare
+  them. The alternative is <strong>open addressing</strong>: store entries directly in the table array, and on
+  a collision <em>probe</em> for another slot (linear probing tries i, i+1, i+2, …). It's more cache-friendly
+  — probes walk consecutive memory instead of chasing chain pointers — but it buys two headaches. Deletion
+  can't just null a slot (that would break every probe sequence that passed through it), so you leave a
+  <strong>tombstone</strong> marker, and tombstones accumulate until a rebuild. And linear probing suffers
+  <strong>primary clustering</strong>: occupied runs grow and merge, so probe lengths degrade sharply as the
+  table fills. <strong>Robin Hood hashing</strong> is the well-known fix — on insertion, an entry that has
+  probed far from its home slot steals the position of any resident that sits closer to its own home ("take
+  from the rich"), which keeps the <em>variance</em> of probe lengths tiny even at high load.
+</p>
+<p>
+  The JDK uses both policies where each fits: <code>HashMap</code>/<code>HashSet</code> chain (tombstone-free
+  deletes, and chains give treeification somewhere to attach), while <code>IdentityHashMap</code> and the
+  <code>ThreadLocalMap</code> inside <code>ThreadLocal</code> use open addressing with linear probing —
+  small tables, reference-equality keys, and cache locality matter more there.
+</p>
+<p>
+  The <strong>load factor</strong> is the knob behind "chains stay short". At load α = entries/buckets, a
+  well-spread table has chains averaging α, so lookups cost ~1 + α — which is why Java resizes at α = 0.75
+  rather than waiting for fullness. Resizing itself is the <code>ArrayList</code> argument from
+  <a href="00-foundations.html">page 00</a> again: each doubling rehashes n entries but capacity doubles too,
+  so the geometric series keeps <code>put</code> at <strong>amortized O(1)</strong>. Java's capacities are
+  powers of two so the bucket index is a bit-mask, <code>(cap − 1) &amp; hash</code>, instead of a slow
+  <code>%</code> — but masking reads only the <em>low</em> bits, so <code>HashMap</code> first spreads each
+  key's hash with <code>h ^ (h &gt;&gt;&gt; 16)</code>, folding the high bits down so they influence the
+  bucket choice. Power-of-two sizing has a second payoff: on resize, each bucket splits into exactly two
+  (the newly unmasked bit decides low half or high half), so rehashing is a clean redistribution, not a full
+  recompute.
+</p>
+
+<div class="note">
+  <strong>Hostile keys: hash-flooding and Java's answer.</strong> <code>String.hashCode()</code> is a fixed,
+  documented polynomial — s[0]·31ⁿ⁻¹ + s[1]·31ⁿ⁻² + … (31 being an odd prime whose multiply JIT-compiles to
+  a shift-and-subtract) — and <code>String</code> caches the result in a private field after the first call,
+  so repeated hashing is free. But "fixed and documented" means an adversary can precompute thousands of
+  colliding strings offline and post them as request parameters, collapsing a server's parameter map into one
+  bucket: O(n) per lookup, and the CPU dies — the 2011 <em>hash-flooding DoS</em> that hit most web
+  frameworks. Two industry defenses exist: <strong>seeded/universal hashing</strong> (pick the hash function
+  at random per-process from a family, as Python and Ruby now do), and Java's choice — keep the deterministic
+  hash but <strong>treeify</strong> flooded buckets so the worst case is capped at O(log n) rather than O(n).
+  Quoting this trade-off is a reliable senior-signal answer to "why did Java 8 add red-black trees to
+  HashMap?".
+</div>
+
 <h3>3. The five patterns of this page</h3>
 <ul>
   <li><strong>Frequency counting</strong> — map value → count. One pass builds it; questions like Valid Anagram and Top K Frequent fall out.</li>
@@ -137,6 +183,40 @@
   array, pause and ask: "what would I need to <em>remember</em> from the first loop to delete the second
   one?" That memory — value→index, value→count, or just a set — is your hash table.
 </div>
+
+<h3>4. Keys that betray you</h3>
+<p class="lead">
+  Every hash-table guarantee on this page assumes one thing: a key's <code>hashCode()</code> and
+  <code>equals()</code> stay consistent for as long as the key lives in the map. The classic Java bugs in
+  this area are all violations of that assumption — worth knowing as mechanisms, not just rules.
+</p>
+<ul>
+  <li><strong>Mutable keys strand entries.</strong> A key is hashed <em>once, at insertion</em>, to pick its
+    bucket. Mutate a field that feeds <code>hashCode()</code> afterwards and the entry still sits in the old
+    bucket — but every future <code>get</code>, even with the very same object, hashes to the <em>new</em>
+    bucket and misses. The entry isn't gone; it's unreachable by lookup (iteration still finds it), which is
+    why these bugs surface as "impossible" intermittent failures. Rule: map keys must be immutable, or at
+    least immutable in their hashed fields.</li>
+  <li><strong>Records are the safe default.</strong> A Java <code>record</code> auto-generates
+    <code>equals</code>/<code>hashCode</code> from all components — consistent by construction, and (with
+    immutable components) safe as a key. Hand-rolled classes must uphold the contract themselves: equal
+    objects <em>must</em> produce equal hashes (the reverse isn't required), and both methods must use the
+    same fields. A composite key like <code>record Cell(int r, int c) {}</code> beats string-concatenation
+    keys (<code>r + "," + c</code>) on both clarity and allocation cost.
+<pre class="code"><code>record Cell(int r, int c) {}                 // equals/hashCode generated, immutable — ideal key
+Map&lt;Cell, Integer&gt; grid = new HashMap&lt;&gt;();
+grid.put(new Cell(2, 3), 42);
+grid.get(new Cell(2, 3));                    // hits: value equality, not identity</code></pre></li>
+  <li><strong>Boxing hides an identity trap.</strong> <code>Integer.valueOf</code> caches −128..127, so
+    small boxed values compare fine with <code>==</code> in tests — then production data crosses 127 and
+    reference comparison silently starts failing. The cache is why the bug hides; <code>.equals()</code> (or
+    unboxing to <code>int</code>) is why it never happens.</li>
+  <li><strong><code>LinkedHashMap</code>: ordering for free.</strong> It threads a doubly linked list through
+    the hash entries, so iteration follows <em>insertion order</em> (or <em>access order</em> with the
+    <code>accessOrder=true</code> constructor) at the same O(1) per operation. Access order plus an overridden
+    <code>removeEldestEntry</code> is a complete LRU cache in ~10 lines — the production answer behind the
+    LRU design question on <a href="24-advanced-structures.html">page 24</a>.</li>
+</ul>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

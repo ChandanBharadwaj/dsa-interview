@@ -122,6 +122,28 @@
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  The "each pointer moves at most n times" sentence is an <strong>aggregate</strong> amortized argument; the
+  <strong>accounting</strong> version is even cleaner to say: when <code>right</code> admits an element, charge
+  it two tokens — one pays for entering, one is banked for its eventual eviction. Every iteration of the inner
+  shrink loop evicts exactly one element and is paid by that element's banked token. Total tokens issued: 2n;
+  total work: O(n), <em>no matter how unevenly the shrinking clusters</em>. One pass might shrink 1,000 times
+  in a single outer iteration — those 1,000 steps were pre-paid by 1,000 earlier expansions. (This is the same
+  banker's method from <a href="00-foundations.html">page 00</a>'s ArrayList proof, and you'll reuse it for
+  monotonic stacks on <a href="09-stacks-queues.html">page 09</a>.)
+</p>
+<p>
+  The proof also exposes the pattern's <em>real</em> precondition, which is not "positive numbers" but
+  <strong>predicate monotonicity</strong>: expanding the window must only ever push it <em>toward</em>
+  violation, and shrinking must only push it toward validity. Then each pointer's motion is one-way and the
+  token argument holds. "No repeated characters", "at most k distinct", "sum ≥ target over positives" are all
+  monotone in this sense. "Sum equals k with negatives allowed" is not — growing the window can swing the sum
+  in either direction, so there's no principled moment to shrink, and the window silently skips answers (the
+  warning box below, and the escape hatch on <a href="04-prefix-sum.html">page 04</a>). Checking monotonicity
+  <em>before</em> coding is the thirty-second habit that separates "I know the template" from "I know when the
+  template applies".
+</p>
+
 <h3>3. Window state: what the window "knows" about itself</h3>
 <p>
   The window must answer "am I valid?" in O(1). Pick the lightest structure that can:
@@ -132,6 +154,19 @@
   <li><strong>HashMap + a counter</strong> — Minimum Window Substring's <code>required</code> trick: one integer summarizes "how many characters am I still missing?", making validity a <code>required == 0</code> check instead of a 52-entry comparison.</li>
 </ul>
 
+<div class="note">
+  <strong>When the state itself needs a data structure.</strong> Some windows must answer order-statistic
+  questions — Sliding Window Median (LC 480) needs the middle element on every slide. The standard machinery:
+  <strong>two heaps</strong> (a max-heap for the lower half, a min-heap for the upper) balanced within one
+  element, giving the median at the tops. The catch is eviction: <code>PriorityQueue.remove(Object)</code> is
+  O(n), so real solutions use <strong>lazy deletion</strong> — record evicted values in a map and discard them
+  only when they surface at a heap top; each element is added and removed once, keeping slides at amortized
+  O(log n). The tidier alternative is a <code>TreeMap&lt;Integer,Integer&gt;</code> (value → count) used as a
+  sorted multiset: O(log n) insert, <em>true</em> O(log n) delete, <code>firstKey()</code>/<code>lastKey()</code>
+  for the extremes. Both structures are dissected on <a href="12-heaps.html">page 12</a> — the takeaway here
+  is that "window + expensive question" usually means "window + cleverer state", not a new pattern.
+</div>
+
 <h3>4. Monotonic deque: sliding window <em>maximum</em></h3>
 <p>
   "Max of each k-window" breaks the plain pattern — when the max leaves the window, what's the new max?
@@ -141,6 +176,18 @@
   max, and every index enters/leaves the deque once ⇒ O(n). Full monotonic-structure treatment in
   <a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a>.
 </p>
+<p>
+  Correctness rests on a one-line <strong>dominance argument</strong>: if a younger element is ≥ an older one,
+  the older can never again be a window maximum — every future window containing the older element also
+  contains its dominator. So popping dominated elements from the back discards only provably-dead candidates,
+  and what survives is a decreasing sequence whose front is, by elimination, the max of the current window.
+  The cost argument is the same two-token accounting as §2: each index is pushed once and popped at most once
+  (from the back by domination or the front by expiry), so all the inner popping sums to ≤ 2n deque
+  operations — amortized O(1) per slide. One subtlety to note aloud: popping on <code>&lt;=</code> (ties
+  evicted) versus <code>&lt;</code> (ties kept) — for a pure max either works, but the choice becomes
+  load-bearing in monotonic-stack problems where equal heights decide widths
+  (<a href="09-stacks-queues.html">page 09</a> dissects it in the histogram problem).
+</p>
 
 <div class="warn">
   <strong>When the window logic breaks: negative numbers.</strong> "Shrink while sum &gt; target" assumes
@@ -149,6 +196,40 @@
   problem: it belongs to prefix sums + HashMap, next page. Recognizing this boundary is a favorite
   follow-up question.
 </div>
+
+<h3>5. Counting windows: exactly-k = atMost(k) − atMost(k−1)</h3>
+<p class="lead">
+  "Count the subarrays with <em>exactly</em> k distinct elements" defeats the plain template: "exactly k" is
+  not monotone (both growing and shrinking can break it), so no single grow/shrink pass can enumerate the
+  windows. The standard escape is to count a monotone quantity twice and subtract.
+</p>
+<p>
+  "At most k distinct" <em>is</em> monotone, and it's countable in O(n): while sliding the usual window, every
+  time the window <code>[left..right]</code> is valid, all <code>right − left + 1</code> subarrays that end at
+  <code>right</code> and start at or after <code>left</code> are valid too — add that count and move on. Then
+  the partition <em>{exactly k} = {at most k} − {at most k−1}</em> is exact, because every subarray with at
+  most k distinct values has either exactly k or at most k−1, never both. Two O(n) passes, O(n) total —
+  this is the intended solution to Subarrays With K Different Integers (LC 992), and the same subtraction
+  answers "exactly k odd numbers", "sum exactly S over positives", and most other exactly-flavored counts.
+</p>
+<p class="code-title">The exactly-k reduction (LC 992 skeleton)</p>
+<pre class="code"><code>public int subarraysWithKDistinct(int[] nums, int k) {
+    return atMost(nums, k) - atMost(nums, k - 1);   // exact = difference of two monotone counts
+}
+
+private int atMost(int[] nums, int k) {
+    Map&lt;Integer, Integer&gt; count = new HashMap&lt;&gt;();
+    int res = 0, left = 0;
+    for (int right = 0; right &lt; nums.length; right++) {
+        count.merge(nums[right], 1, Integer::sum);
+        while (count.size() &gt; k) {                  // standard shrink-to-valid
+            int v = nums[left++];
+            if (count.merge(v, -1, Integer::sum) == 0) count.remove(v);
+        }
+        res += right - left + 1;    // every start in [left..right] ends a valid subarray here
+    }
+    return res;
+}</code></pre>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

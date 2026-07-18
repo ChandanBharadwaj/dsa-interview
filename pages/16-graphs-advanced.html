@@ -89,6 +89,25 @@
   easier to get right under pressure and hands you the order for free.
 </p>
 
+<p>
+  The two flavors are mirror images, and saying so cleanly is a senior signal: Kahn's peels nodes with no remaining
+  <em>incoming</em> constraints off the <em>front</em> of the order, while DFS stamps a node only once everything
+  <em>downstream</em> of it is finished — it discovers the order back-to-front, which is exactly why you reverse the
+  finish sequence. Same theorem underneath, approached from opposite ends: a node may be emitted only when it is a
+  source of the not-yet-emitted subgraph. Two upgrades interviewers actually ask for:
+</p>
+<ul>
+  <li><strong>Lexicographically smallest valid order:</strong> swap Kahn's <code>ArrayDeque</code> for a
+  <code>PriorityQueue</code> so the smallest currently-unblocked node is always emitted next. Cost rises to
+  O(E + V log V) — the standard follow-up to Course Schedule II, and the same move Reconstruct Itinerary (worked
+  below) applies to edges.</li>
+  <li><strong>Return the cycle, not just "false":</strong> in the DFS variant, carry an explicit path stack; when an
+  edge hits a gray node v, the cycle is the stack's suffix starting at v — pop and collect. In Kahn's, use the fact
+  that after the queue drains, every leftover node still has an unmet edge <em>from another leftover node</em>: start
+  at any leftover, repeatedly step to such a predecessor, and within V steps a node repeats — the walk between the
+  two visits is your cycle.</li>
+</ul>
+
 <h3>2. Union-find (disjoint set union): groups without traversal</h3>
 <p>
   Union-find maintains a collection of disjoint sets under two operations: <code>find(x)</code> — which set is x in? —
@@ -139,6 +158,32 @@
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  Those two optimizations deserve their actual arguments — this is precisely the depth a senior loop probes for.
+  First, <strong>why union by size caps tree height at log₂ n</strong>: a node's depth grows only when its root is
+  hung under another root, and the rule guarantees the winning tree is at least as large — so every time a node gets
+  one level deeper, the size of the tree containing it at least <em>doubles</em>. Starting from size 1 and capped at
+  n, it can double at most log₂ n times, so no node ever sits deeper than log₂ n. That alone makes
+  <code>find</code> a worst-case O(log n) operation, before compression does anything.
+</p>
+<p>
+  <strong>Path compression</strong> attacks history rather than height: each find flattens the exact chain it just
+  paid to walk, so an expensive chain can never be charged twice. On its own it yields amortized O(log n). The
+  celebrated bounds are for the combination: Hopcroft and Ullman proved O(log* n) per operation — the
+  <em>iterated</em> logarithm, "how many times must you take log₂ to get down to 1", which is 5 even for
+  2<sup>65536</sup> — and Tarjan sharpened it to Θ(α(n)) amortized and proved that's optimal for this structure.
+  The interview move is to know the ladder — log n → log* n → α(n) — and quote it; nobody expects the
+  potential-function proof live.
+</p>
+<div class="note">
+  <strong>Look closely at the find you'll memorize in Template 3 below:</strong>
+  <code>parent[x] = parent[parent[x]]</code> is not full compression — it's <strong>path halving</strong>,
+  re-pointing every other node on the walk to its grandparent in a single pass. Full compression re-points every
+  visited node all the way to the root, which needs recursion or a second pass. Path halving and its sibling
+  <em>path splitting</em> (re-point every node, not every other one) both preserve the α(n) bound with one loop and
+  no recursion — which is why practical implementations prefer them.
+</div>
+
 <h3>3. What union-find unlocks</h3>
 <ul>
   <li><strong>Cycle detection in undirected graphs:</strong> process edges one by one; if <code>union(a,b)</code> reports the endpoints were <em>already</em> in the same set, this edge closes a cycle. (That is the entire solution to Redundant Connection, worked below.)</li>
@@ -178,6 +223,27 @@
     return true;
 }</code></pre>
 
+<p>
+  The theorem behind the painting — <em>bipartite ⇔ no odd cycle</em> — deserves both directions, because "why does
+  this work?" is the natural follow-up. (⇒) If the graph is bipartite, every edge crosses camps, so walking around
+  any cycle alternates camp, camp, camp… and needs an <em>even</em> number of steps to land back where it started:
+  odd cycles are impossible. (⇐) If no odd cycle exists, color each node by the <strong>parity of its BFS
+  distance</strong> from the start. A violating edge would join two nodes whose distances share a parity — but then
+  their two BFS-tree paths plus that edge close a walk of odd total length, and any odd closed walk contains a
+  genuine odd cycle (splice out repeated vertices; each removed loop has some parity, and an odd total can't be built
+  from even pieces alone). Contradiction. So the BFS 2-coloring isn't a heuristic that happens to work — it <em>is</em>
+  the constructive proof, and the edge it fails on is your witness to an odd cycle.
+</p>
+<div class="tip">
+  <strong>Edges arriving over time? Bipartite meets union-find.</strong> BFS needs the whole graph up front; the DSU
+  formulation doesn't. Allocate 2n slots — node u and a shadow u+n meaning "the camp opposite u". For each edge
+  (u,v): if <code>find(u) == find(v)</code> the two endpoints are provably same-camp — an odd cycle just closed,
+  not bipartite; otherwise <code>union(u, v+n)</code> and <code>union(v, u+n)</code>. Each edge costs O(α(n)), and
+  the check works mid-stream — the same incremental superpower union-find brings everywhere else. (The
+  space-tighter variant, <em>DSU with parity</em>, stores each node's camp-flip relative to its root and updates it
+  during path compression — name it, implement the 2n version.)
+</div>
+
 <h3>5. Bridges &amp; articulation points (concept only)</h3>
 <p>
   A <strong>bridge</strong> is an edge whose removal disconnects the graph; an <strong>articulation point</strong> is
@@ -186,6 +252,59 @@
   the vocabulary and that "one DFS with discovery times and low-links" solves it; implementing it live is almost never
   required outside specialist loops.
 </p>
+
+<p>
+  "One DFS with discovery times and low-links" deserves to be unpacked, because the mechanism is only three ideas.
+  Stamp <code>disc[u]</code> — the time DFS first reaches u — and define <strong>low[u]</strong> as the smallest
+  discovery time reachable from u's subtree using any number of tree edges plus <em>at most one</em> back edge.
+  Computing it is two <code>min</code>s during the DFS: absorb <code>low[child]</code> after each recursive call, and
+  absorb <code>disc[v]</code> whenever an edge lands on an already-visited non-parent v (a back edge — an escape route
+  toward the ancestors). Then the conditions read off directly: tree edge u–v is a <strong>bridge</strong> iff
+  <code>low[v] &gt; disc[u]</code> — v's entire subtree has no escape route reaching u or above, so cutting the edge
+  strands it. Non-root u is an <strong>articulation point</strong> iff some child v has
+  <code>low[v] &gt;= disc[u]</code> (note ≥, not &gt;: escaping only <em>to u itself</em> still leaves the subtree
+  dependent on u); the DFS root is special — it's an articulation point iff it has two or more DFS children.
+</p>
+
+<p class="code-title">Tarjan bridges (LC 1192 Critical Connections in a Network) · O(V+E)</p>
+<pre class="code"><code>int timer = 0;
+int[] disc, low;                        // disc[u] == 0 means "not yet visited"
+
+void dfs(int u, int parent, List&lt;List&lt;Integer&gt;&gt; adj, List&lt;List&lt;Integer&gt;&gt; bridges) {
+    disc[u] = low[u] = ++timer;         // low starts as "my own discovery time"
+    for (int v : adj.get(u)) {
+        if (v == parent) continue;      // don't ride the tree edge straight back up
+        if (disc[v] == 0) {             // tree edge: recurse, then absorb the child's low
+            dfs(v, u, adj, bridges);
+            low[u] = Math.min(low[u], low[v]);
+            if (low[v] &gt; disc[u])                // subtree of v has NO escape past u
+                bridges.add(List.of(u, v));      // -&gt; removing u-v disconnects it
+        } else {
+            low[u] = Math.min(low[u], disc[v]);  // back edge: an escape route upward
+        }
+    }
+}</code></pre>
+<p class="muted small">
+  One caveat for graphs with <em>parallel edges</em>: skipping "the parent" by node id wrongly ignores a second u–v
+  edge (which makes u–v un-cuttable). Track the incoming <em>edge index</em> instead of the parent node.
+</p>
+
+<p>
+  The same low-link idea aimed at <em>directed</em> graphs finds <strong>strongly connected components</strong> —
+  maximal sets in which every node reaches every other. <strong>Tarjan's SCC</strong> keeps the current DFS path's
+  nodes on an explicit stack; when a node finishes with <code>low[u] == disc[u]</code>, u is the root of a component,
+  and everything above it on the stack pops off as one SCC. <strong>Kosaraju's</strong> is the easier one to
+  memorize: DFS once recording finish times, reverse every edge, then DFS again in decreasing finish order — each
+  second-pass tree is exactly one SCC. Both are O(V+E); Kosaraju costs two passes, Tarjan one.
+</p>
+<div class="note">
+  <strong>The condensation trick.</strong> Contract each SCC to a single super-node and the resulting graph — the
+  <em>condensation</em> — is always a DAG (a cycle between two super-nodes would merge them into one SCC).
+  That means everything from section 1 applies to <em>any</em> directed graph after one O(V+E) preprocessing pass:
+  "condense, then topo-sort, then DP over the DAG" is the standard shape for hard directed-graph problems (2-SAT is
+  the famous production example). Find Eventual Safe States, worked below, is secretly this: safe nodes are the ones
+  whose condensation super-node reaches only terminal super-nodes.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

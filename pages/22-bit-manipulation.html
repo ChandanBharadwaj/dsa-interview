@@ -89,6 +89,29 @@
   <code>&gt;&gt;&gt;</code>; it exists in Java precisely because Java lacks unsigned ints.
 </div>
 
+<p>
+  Two more Java sharp edges that senior interviewers poke at. First, <strong>shift counts are masked</strong>:
+  for an <code>int</code>, only the low 5 bits of the shift amount are used (6 bits for <code>long</code>), so
+  <code>x &lt;&lt; 32 == x</code> — not 0 — and <code>1 &lt;&lt; 40</code> is really <code>1 &lt;&lt; 8</code>
+  (this is the Pitfalls entry below, mechanized: the JLS mandates the masking, and it mirrors what x86's shift
+  instructions do in hardware, so the JIT can emit them directly). Second, <strong>everything narrower than int is
+  promoted before any bit op</strong>: <code>byte</code>, <code>short</code>, and <code>char</code> operands widen
+  to <code>int</code> first — with sign extension for the signed types. So <code>(byte) 0xFF &gt;&gt;&gt; 1</code>
+  is not 127: the byte sign-extends to int −1, and the unsigned shift produces 2³¹−1. Mask first —
+  <code>(b &amp; 0xFF)</code> — whenever bytes enter bit logic; you'll find that idiom in every hash function and
+  I/O codec in the JDK.
+</p>
+<div class="warn">
+  <strong>The compound-assignment trap.</strong> <code>byte b = -1; b = (byte)(b &gt;&gt;&gt; 1);</code> requires
+  that visible cast — but <code>b &gt;&gt;&gt;= 1;</code> compiles without one, because compound assignment
+  <em>inserts an invisible narrowing cast</em>. The result: b promotes to int −1, shifts to 2³¹−1, and the hidden
+  cast keeps only the low byte <code>0xFF</code> — so after <code>b &gt;&gt;&gt;= 1</code>, b is <em>still −1</em>.
+  An unsigned shift that provably changes nothing. If byte-level bit twiddling ever misbehaves, suspect promotion
+  before you suspect your logic. (One bonus internals fact: the <code>Integer</code>/<code>Long</code> bit methods
+  in the tip below aren't just fast library code — HotSpot treats them as <em>intrinsics</em>, replacing the whole
+  method call with the single instruction, so there isn't even call overhead to worry about.)
+</div>
+
 <h3>3. The trick bag — each with its one-line why</h3>
 <div class="tablewrap">
 <table>
@@ -155,6 +178,63 @@
   </svg>
   <div class="anim-caption"></div>
   <div class="anim-controls"></div>
+</div>
+
+<p>
+  The table's one-line "why"s deserve a real derivation once — they're two-line proofs, and producing them is what
+  separates "memorized the trick" from "owns two's complement". Take <code>x &amp; (-x)</code>. Write x as
+  <code>A 1 0…0</code>: arbitrary high bits A, then the <em>lowest set bit</em>, then k zeros. Negation is
+  <code>~x + 1</code>: flipping gives <code>Ā 0 1…1</code>, and adding 1 ripples through those trailing 1s to yield
+  <code>Ā 1 0…0</code>. Now compare the two: the high bits are exact complements (AND → 0), the trailing zeros are
+  zeros in both — and <em>both</em> have a 1 at exactly the lowest-set-bit position. So <code>x &amp; -x</code>
+  keeps precisely that bit. The same picture proves <code>x &amp; (x-1)</code>: subtracting 1 borrows through the
+  k trailing zeros, turning <code>A 1 0…0</code> into <code>A 0 1…1</code> — the high bits A are untouched, so the
+  AND erases exactly the lowest 1 and nothing else. And that's why Kernighan's loop (animated above) is
+  <strong>O(popcount)</strong>, not O(32): each iteration removes exactly one set bit, guaranteed.
+</p>
+<div class="note">
+  <strong>Two graduate-level one-liners.</strong> XOR is addition without carries — addition in GF(2) — which is
+  why the "every element appears twice except…" family is secretly linear algebra: the array's XOR is one linear
+  equation, and Single Number III (worked below) solves a system of two unknowns by projecting onto a bit where
+  they differ. And <strong>Gray code</strong> is a single expression: <code>g = i ^ (i &gt;&gt; 1)</code> maps
+  0,1,2,3,… to a sequence in which consecutive values differ in exactly one bit — the intended answer to LC 89,
+  and the encoding rotary encoders and Karnaugh maps use precisely because one-bit transitions can't glitch.
+</div>
+
+<h3>4. The bitset: a long[] as a 64-lane boolean engine</h3>
+<p>
+  The trick bag scales up. A <code>long[]</code> (or <code>java.util.BitSet</code>, from the table above) treats
+  each word as 64 booleans, and each bitwise op becomes <strong>64 boolean operations in one instruction</strong>.
+  That constant factor of 64 turns several "too slow" algorithms into comfortably passing ones, and it's the
+  machinery behind three cross-references elsewhere in this book: sieve storage at scale
+  (<a href="23-math-geometry.html">page 23</a>), AND-ing adjacency rows for transitive closure in O(V³/64)
+  (<a href="17-shortest-paths.html">page 17</a>), and shift-based DP over reachable sums:
+</p>
+<p class="code-title">Subset-sum reachability — O(n · target / 64) with a shifted OR</p>
+<pre class="code"><code>// bits[j] == 1  ⇔  some subset sums to j. Adding element x shifts the whole
+// reachable-set left by x and ORs it in: 64 DP cells updated per operation.
+long[] bits = new long[target / 64 + 1];
+bits[0] = 1L;                                  // sum 0 is reachable (empty subset)
+for (int x : nums) {                           // assumes 1 &lt;= x &lt; 64 for the word math
+    for (int w = bits.length - 1; w &gt;= 0; w--) {          // high -&gt; low: 0/1-knapsack order
+        long shifted = bits[w] &lt;&lt; x;                      // in-word part of the shift
+        if (w &gt; 0) shifted |= bits[w - 1] &gt;&gt;&gt; (64 - x);   // bits carried across the word seam
+        bits[w] |= shifted;
+    }
+}
+boolean reachable = ((bits[target / 64] &gt;&gt;&gt; (target % 64)) &amp; 1) == 1;</code></pre>
+<p>
+  Compare with the boolean-array knapsack DP on <a href="19-dp-2d.html">page 19</a>: identical recurrence,
+  identical O(n·target) bit-operations — but 64 of them execute per cycle, which routinely turns a two-second
+  time-limit-exceeded into 40 ms. The word-seam handling (<code>&gt;&gt;&gt; (64 − x)</code>) is the fiddly part;
+  in an interview, naming <code>BitSet</code> and describing "shift the reachable set and OR it in" usually earns
+  the point without hand-writing the carry.
+</p>
+<div class="tip">
+  <strong>Reflex.</strong> Whenever a DP or graph state is "a set of booleans indexed 0..n" and the transition is a
+  shift, OR, or AND of whole rows, a bitset divides the running time by 64 for ten lines of code. And if n ≤ 64,
+  skip the array entirely: one <code>long</code> <em>is</em> the state — hashable and comparable as a plain number,
+  which is exactly what bitmask DP exploits (<a href="20-dp-advanced.html">page 20</a>).
 </div>
 
 <!-- ============================================================ -->

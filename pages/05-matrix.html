@@ -132,6 +132,17 @@
   <div class="anim-controls"></div>
 </div>
 
+<div class="tip">
+  <strong>Direction arrays scale; hand-rolled ifs don't.</strong> The <code>DIRS</code> idiom (Template 1
+  below) generalizes with zero new logic: 8 directions for Game-of-Life neighbors (add the four diagonals, or
+  loop <code>dr,dc ∈ {−1,0,1}</code> skipping (0,0)), the 8 knight moves as one array for chess-style
+  problems. Keep the discipline uniform: compute <code>nr,nc</code>, bounds-check <em>before</em> any access,
+  never inline the arithmetic into the array subscript. And when the "grid" has coordinates up to 10⁹ but only
+  a few thousand occupied cells, don't build it — <strong>coordinate compression</strong> maps the distinct
+  row and column values to their sorted ranks and runs the same algorithms on the small compressed grid,
+  turning an impossible allocation into an m×n one.
+</div>
+
 <h3>3. Rotation = transpose + reverse</h3>
 <p>
   Rotating an n×n matrix 90° clockwise looks like it needs careful four-way cycles. There's a two-step identity that's
@@ -139,6 +150,27 @@
   <strong>reverse each row</strong> (flip left/right). Two operations you can each verify independently in seconds,
   composing into the rotation. Counter-clockwise? Transpose, then reverse each <em>column</em>. This
   "decompose into two trivially-checkable transforms" move is worth remembering beyond matrices.
+</p>
+<p>
+  There's a clean piece of math underneath that makes every variant derivable instead of memorized. The
+  symmetries of a square form the <strong>dihedral group D₄</strong>: four rotations (0°, 90°, 180°, 270°)
+  and four reflections (horizontal, vertical, two diagonals) — eight transforms, closed under composition.
+  The classical fact doing the work here: <em>composing two reflections gives a rotation</em> (by twice the
+  angle between the mirror axes). Transpose is the reflection across the main diagonal; reversing every row is
+  the reflection across the vertical axis; the axes sit 45° apart, so their composition is the 90° rotation.
+  In coordinates: transpose sends (r,&nbsp;c)&nbsp;→&nbsp;(c,&nbsp;r), row-reverse sends
+  (r,&nbsp;c)&nbsp;→&nbsp;(r,&nbsp;n−1−c); chained, (r,&nbsp;c)&nbsp;→&nbsp;(c,&nbsp;n−1−r) — exactly the
+  clockwise-rotation formula, derived rather than recalled.
+</p>
+<p>
+  This turns "which recipe was it again?" into a 20-second derivation under pressure: pick any two mirrors,
+  compose their coordinate maps, and <strong>trace one asymmetric cell</strong> — (0,&nbsp;1) is ideal, since
+  (0,&nbsp;0) sits on too many axes to disambiguate — to confirm the direction. So 180° = reverse rows +
+  reverse columns (two parallel-ish axes 90° apart, no transpose involved), counter-clockwise = transpose +
+  reverse columns, and the anti-diagonal reflection = full rotation + transpose. Order matters — reflections
+  don't commute (D₄ is non-abelian), which is exactly why "reverse rows then transpose" gives counter-clockwise
+  while "transpose then reverse rows" gives clockwise. Each composition is still two O(n²)/O(1)-space passes;
+  you're choosing <em>which</em> two, not paying more.
 </p>
 
 <h3>4. In-place state encoding: mutating without destroying your input</h3>
@@ -160,6 +192,50 @@
   O(m·n) memory. The in-place versions prove you can reason about <em>read-after-write hazards</em>, the same class of
   bug behind concurrent-update production incidents. Offer the copy solution first for correctness, then volunteer
   the in-place refinement.
+</div>
+
+<p>
+  Both escapes are instances of one invariant worth stating as a rule: <strong>an overwrite is safe only while
+  every reader that still needs the old value can recover it</strong>. So don't store the new state — store an
+  <em>encoding of the (old, new) pair</em>, and decode in a final commit pass once all readers are done. Game
+  of Life's two bits make the pair explicit (bit 0 old, bit 1 new — four states, all distinguishable, old
+  always recoverable via <code>&amp; 1</code>). Sign-marking, the trick from Find All Numbers Disappeared
+  (<a href="01-arrays-hashing.html">page 01</a>), encodes (old value, seen-flag) as
+  (<code>Math.abs(x)</code>, sign bit). Set Matrix Zeroes is the degenerate case where the borrowed header
+  cells' old values are squirreled into two booleans <em>before</em> the overwriting starts. The
+  precondition every one of these depends on: the cell's value range leaves <strong>spare capacity</strong> —
+  non-negative values leave the sign bit free, 0/1 cells leave 30 bits free. If the domain already uses every
+  representable value, in-place encoding is genuinely impossible and the honest answer is the O(m·n) copy;
+  recognizing <em>that</em> is worth as much as the trick itself.
+</p>
+
+<h3>5. How a Java 2D array actually sits in memory</h3>
+<p class="lead">
+  <code>int[][]</code> is not a rectangular block. It's an array of <em>references</em>, each pointing to an
+  independent row array — m+1 separate heap objects for an m×n grid, and nothing forces the rows to be
+  adjacent (or even the same length: jagged arrays are legal, which is why <code>m[0].length</code> is a
+  convention, not a guarantee). Every <code>m[r][c]</code> is two dereferences: row pointer, then element.
+</p>
+<p>
+  Within one row, though, elements are contiguous — and that's where the performance cliff lives. Memory
+  arrives in ~64-byte <strong>cache lines</strong> (16 ints), and the prefetcher streams further lines when it
+  sees a sequential walk. Row-major iteration (<code>r</code> outer, <code>c</code> inner) rides both effects
+  and runs near memory bandwidth. Column-major iteration touches one element per row object per step —
+  potentially a cache miss <em>every access</em>, and on grids too large for cache the same O(m·n) loop runs
+  several-fold slower on identical work. Big-O sees no difference; the hardware very much does. Hence the
+  iteration discipline: row-outer always, unless the algorithm forces column order — and when it does
+  (transpose, matrix multiply), production code processes the matrix in <strong>tiles</strong> — small blocks
+  that fit in cache, doing all the column-order work per block while it's resident. That one-line idea is the
+  heart of every serious BLAS/GPU matmul kernel (the tiling card above), and mentioning it when an
+  interviewer asks "why is your transpose slow?" is a strong systems signal.
+</p>
+<div class="note">
+  <strong>Java internals worth quoting.</strong> <code>new int[1_000_000][2]</code> allocates a million tiny
+  row objects — each with its own ~16-byte object header — while <code>new int[2][1_000_000]</code> allocates
+  three. Same element count, wildly different footprint and locality. When a hot 2D structure hurts, the
+  standard fix is manual flattening: one <code>int[m * n]</code> indexed as <code>a[r * n + c]</code> — a
+  single contiguous object, one dereference per access, and the layout trick Reshape the Matrix (below)
+  teaches as <code>k ↔ (k / n, k % n)</code>.
 </div>
 
 <!-- ============================================================ -->

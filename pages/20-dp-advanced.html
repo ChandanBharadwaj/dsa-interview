@@ -114,6 +114,24 @@
   same "condition on the last move" trick.
 </div>
 
+<p>
+  <strong>Why the template iterates by length.</strong> dp[l][r] reads dp[l][k] and dp[k][r] — both strictly
+  <em>shorter</em> ranges — so "all lengths 2, then 3, then 4…" is a topological order of the dependency DAG
+  (<a href="18-dp-1d.html">page 18</a>'s picture, applied to ranges). A naive "for l, for r" sweep asks for
+  sub-ranges that don't exist yet. The l-descending/r-ascending order used by Longest Palindromic Subsequence on
+  <a href="19-dp-2d.html">page 19</a> is also a valid topological order — but length-order is the one that never
+  surprises you, and the one to reach for under pressure.
+</p>
+<p>
+  One named tool to recognize (not reproduce): <strong>Knuth's optimization</strong>. For interval recurrences of
+  the shape dp[l][r] = min over k of dp[l][k] + dp[k][r] + w(l, r) — additive merge costs like matrix-chain or
+  merging stones, <em>not</em> Burst Balloons' multiplicative score — if the cost w satisfies the
+  <strong>quadrangle inequality</strong> (w(a,c) + w(b,d) ≤ w(a,d) + w(b,c) for a ≤ b ≤ c ≤ d), then the optimal
+  split point is monotone: opt[l][r−1] ≤ opt[l][r] ≤ opt[l+1][r]. Scanning k only between those two bounds
+  telescopes the total work from O(n³) to O(n²). In an interview, naming the condition and the speedup is full
+  credit; deriving it is a competitive-programming party trick.
+</p>
+
 <h3>3. Bitmask DP — when the state is a subset (n ≤ ~20)</h3>
 <p>
   An <code>int</code> is 32 flags (<a href="22-bit-manipulation.html">page 22</a>): bit i set = "item i already used".
@@ -129,12 +147,85 @@ for (int mask = 0; mask &lt;= full; mask++) // enumerate every subset
         // dp[next] = best(dp[next], dp[mask] + cost of adding i)
     }</code></pre>
 
+<p>
+  The harder bitmask problems (Partition to K Subsets done as pure DP, "split into groups minimizing…") need to
+  iterate over the <strong>submasks of a mask</strong> — every way to carve one group out of the remaining
+  items. There is a beautiful idiom for that:
+</p>
+<p class="code-title">Submask enumeration — every non-empty submask of m, largest to smallest</p>
+<pre class="code"><code>for (int sub = m; sub &gt; 0; sub = (sub - 1) &amp; m) {
+    // use sub: it is a subset of m's set bits
+}
+// (append sub = 0 manually if the empty subset matters)</code></pre>
+<p>
+  Why it works: <code>sub - 1</code> clears sub's lowest set bit and sets every bit below it; AND-ing with
+  <code>m</code> throws away the bits m doesn't own — landing exactly on the next-smaller submask, with no skips.
+  The total cost over <em>all</em> masks looks scary but is <strong>Σ 3ⁿ</strong>, and the proof is one line of
+  binomial theorem: a mask with k set bits has 2ᵏ submasks, so the total is Σₖ C(n,k)·2ᵏ = (1+2)ⁿ = 3ⁿ.
+  Equivalently: each of the n elements independently ends up in one of three states — outside m, in m but not in
+  sub, or in sub. For n ≤ 20, 3ⁿ ≈ 3.5·10⁹ is the ceiling of feasibility; the trick is knowing the budget is 3ⁿ,
+  not 4ⁿ (which a naive "all pairs of masks" loop would cost).
+</p>
+<div class="note">
+  <strong>SOS DP (sum over subsets), the name to know.</strong> Computing f[m] = Σ over all submasks s of m of
+  a[s] for <em>every</em> m does not need the 3ⁿ loop: process one bit dimension at a time — for each bit i, for
+  each mask with bit i set, add f[mask without bit i] into f[mask] — and the whole family is done in O(n·2ⁿ).
+  It is an n-dimensional prefix sum, the same inclusion-exclusion machinery as
+  <a href="04-prefix-sum.html">page 04</a>'s 2D version with n dimensions of length 2. Rare in interviews, but
+  "that's sum-over-subsets, O(n·2ⁿ)" is a strong sentence when a bitmask problem aggregates over submasks.
+</div>
+
 <h3>4. Tree DP — when the input is a tree</h3>
 <p>
   Run the bottom-up pattern from <a href="11-trees.html">page 11</a>: post-order DFS where each node returns a small
   array of answers for its subtree — one per "state of this node" (robbed / not robbed). The parent combines
   children's answers in O(1). It's House Robber's rob/skip choice, walked over a tree instead of a row.
 </p>
+
+<p>
+  <strong>Rerooting — every node's answer in O(n).</strong> The post-order pass answers questions about one root.
+  Some problems ask for the answer with <em>every</em> node as root (Sum of Distances in Tree, LC 834); running
+  the DP n times is O(n²), and <strong>rerooting</strong> gets it in two passes. Pass 1 (post-order, leaves up):
+  compute <code>down[v]</code> — the answer restricted to v's subtree — exactly as above. Pass 2 (pre-order, root
+  down): compute <code>up[v]</code> — the answer for everything <em>outside</em> v's subtree — from the parent:
+  take <code>up[parent]</code>, add <code>down[parent]</code> with v's own contribution subtracted out, then
+  adjust for the edge between them. Each node's full answer is <code>combine(down[v], up[v])</code>. The mental
+  model: when the root slides across an edge from p to v, v's subtree stops paying the edge cost and the rest of
+  the tree starts paying it — the two-pass structure just makes that O(1) delta explicit per edge. The technique
+  requires the combine step to be "subtractable" or at least recomputable without v — the same invertibility
+  question that separated Fenwick trees from segment trees on <a href="24-advanced-structures.html">page 24</a>.
+</p>
+
+<h3>5. The optimization gallery — names, triggers, one-line mechanics</h3>
+<p class="lead">
+  A senior loop rarely asks you to reproduce these; it asks whether you <em>recognize</em> the shapes. For each:
+  the recurrence pattern that triggers it, the tool, and the speedup — that sentence is the deliverable.
+</p>
+<ul>
+  <li><strong>Monotonic-deque optimization.</strong> Trigger: dp[i] = best of dp[j] over a <em>sliding window</em>
+    j ∈ [i−k, i−1], plus a term depending only on i. The inner max is a sliding-window maximum — the deque from
+    <a href="03-sliding-window.html">page 03</a> answers it in amortized O(1), collapsing O(n·k) to O(n).
+    Clean specimen: Jump Game VI.</li>
+  <li><strong>Convex hull trick / Li Chao tree.</strong> Trigger: dp[i] = min over j of
+    (slope(j) · x(i) + intercept(j)) — a <em>cross-term between i and j</em>. Each previous state is a line;
+    querying is "lowest line at x". If slopes and queries are monotone, a deque maintains the lower envelope in
+    amortized O(1); otherwise a Li Chao segment tree gives O(log n) per line and query. O(n²) → O(n log n).</li>
+  <li><strong>Divide-and-conquer optimization.</strong> Trigger: dp[i][j] = min over k of dp[i−1][k] + cost(k, j),
+    with the optimal k monotone non-decreasing in j (quadrangle-type costs again). Solve the middle j, then
+    recurse left and right with narrowed k-ranges: O(k·n²) → O(k·n log n). Typical home: "partition an array into
+    k contiguous groups minimizing total cost".</li>
+  <li><strong>Knuth optimization</strong> — §2's interval-DP member of the same monotonicity family, O(n³) → O(n²).</li>
+</ul>
+
+<div class="note">
+  <strong>Digit DP in one paragraph.</strong> "How many integers in [0, N] have property P?" (digit sum
+  divisible by k, no repeated digit, contains no '4'…) — walk N's decimal digits left to right carrying two
+  things: the property's running state (a sum mod k, a seen-digits bitmask) and a <strong>tight flag</strong> —
+  are we still gluing to N's prefix (next digit capped at N's digit) or already strictly below it (next digit
+  free, 0–9)? Memoize on (position, state) for the non-tight case only; the tight path is unique per prefix, so
+  it never blows up. Answer range queries as f(B) − f(A−1). Cost O(digits × states × 10) — twenty-ish digits
+  even for N up to 10¹⁸, which is precisely the constraint that signals digit DP.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

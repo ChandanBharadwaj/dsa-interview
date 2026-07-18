@@ -82,6 +82,35 @@ for (int[] e : edges) {
 </table>
 </div>
 
+<p>
+  Two more representations complete the senior-level picture. The <strong>edge list</strong> — literally the input's
+  <code>int[][] edges</code>, untouched — sounds too lazy to count, but it's exactly what Kruskal's MST wants:
+  <a href="17-shortest-paths.html">page 17</a> sorts it by weight and never needs a neighbor lookup at all. And at
+  production scale, the ArrayList-of-ArrayLists idiom above hides a real cost: every inner list is a separate heap
+  object full of boxed <code>Integer</code>s scattered across memory. The fix is <strong>CSR (compressed sparse
+  row)</strong> — pack all neighbors into one flat <code>int[]</code>, plus an offset array saying where each node's
+  slice begins:
+</p>
+
+<p class="code-title">CSR — the whole graph in two flat arrays (cache-friendly, zero boxing)</p>
+<pre class="code"><code>// Neighbors of u live in nbr[offset[u] .. offset[u+1]) — built with one counting pass.
+int[] offset = new int[n + 1];      // offset[n] == total directed edge count
+int[] nbr    = new int[m];          // every adjacency slice, back to back
+for (int i = offset[u]; i &lt; offset[u + 1]; i++) {
+    int v = nbr[i];                 // u's neighbors are CONTIGUOUS in memory —
+    // ...                          // the hardware prefetcher streams them; no pointer-chasing
+}</code></pre>
+
+<p>
+  Same O(V+E) space asymptotically, but contiguous: BFS over CSR can run several times faster than over object lists
+  purely from cache behavior — the same hardware argument that sinks <code>LinkedList</code> on
+  <a href="08-linked-lists.html">page 08</a>. Finally, note that the best representation is sometimes
+  <strong>none at all</strong>: in Word Ladder (worked below), Snakes and Ladders, or a sliding-puzzle state space,
+  neighbors are <em>generated on demand</em> ("what states can one move produce?") and the graph is never
+  materialized. Such <strong>implicit graphs</strong> can be astronomically large — BFS only ever pays for the part
+  it actually visits.
+</p>
+
 <h3>2. BFS — explore in expanding waves</h3>
 <p>
   Breadth-first search uses a <strong>queue</strong>: visit the start, then everything 1 edge away, then 2 edges away…
@@ -113,6 +142,25 @@ for (int[] e : edges) {
   </svg>
   <div class="anim-caption"></div>
   <div class="anim-controls"></div>
+</div>
+
+<p>
+  Why is first-arrival-is-shortest actually <em>true</em>? The induction is worth being able to say out loud.
+  <strong>Invariant:</strong> at every moment the queue holds nodes of at most two consecutive distances — some d's,
+  then some (d+1)'s — in non-decreasing order. It holds at the start (just the source, distance 0), and it survives
+  every step: polling a distance-d node appends only distance-(d+1) discoveries, behind any remaining d's and earlier
+  (d+1)'s. So the queue processes nodes in sorted distance order, and a node's first discovery happens via a
+  predecessor at exactly one less than its true distance — no earlier arrival is possible (each hop adds one edge),
+  and no later one gets to claim it. Thirty seconds in an interview, and it's the exact argument Dijkstra generalizes
+  with a priority queue on <a href="17-shortest-paths.html">page 17</a>.
+</p>
+<div class="note">
+  <strong>What visited-on-poll actually costs.</strong> Marking on dequeue (and skipping already-visited polls) can
+  still return correct distances — the first poll of each node still happens in distance order. The damage is
+  resource blowup: without the on-enqueue claim, a node can enter the queue <em>once per incoming edge</em>, so the
+  queue holds O(E) entries instead of O(V) — on a dense graph that's O(V²) memory and wasted work, and if you're
+  counting layers with the frozen-layer trick, duplicate entries inflate the layers and corrupt distances too.
+  Claim-on-enqueue costs one line and removes the entire failure class.
 </div>
 
 <h3>3. DFS — explore one path to the end, then backtrack</h3>
@@ -149,6 +197,22 @@ for (int[] e : edges) {
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  DFS carries more structure than the code lets on. Stamp each node with a <strong>discovery time</strong> when the
+  recursion enters it and a <strong>finish time</strong> when it returns, and every node's lifetime becomes an
+  interval — and any two intervals are either nested or completely disjoint, never partially overlapping (recursion
+  opens and closes like brackets; this is the "parenthesis structure"). Those timestamps classify every edge the
+  traversal meets: <strong>tree edges</strong> discover new nodes; a <strong>back edge</strong> points at an ancestor
+  whose interval is still open — and <em>a directed graph has a cycle if and only if some DFS finds a back edge</em>.
+  That equivalence is the engine behind three-color cycle detection and DFS topological sort on
+  <a href="16-graphs-advanced.html">page 16</a>, and discovery times are the raw material of Tarjan's low-link
+  algorithms for bridges and strongly connected components there. (Directed graphs also produce forward and cross
+  edges; undirected DFS only ever yields tree and back edges — a simplification worth quoting.) One practical caveat
+  before leaning on recursive DFS at scale: recursion nests as deep as the longest path, and the JVM's default stack
+  holds only ~10⁴ frames (<a href="09-stacks-queues.html">page 09</a>) — at 10⁵-node scale, know the
+  explicit-<code>ArrayDeque</code> rewrite cold.
+</p>
+
 <h3>4. Grids are graphs</h3>
 <p>
   A 2D grid is an <em>implicit</em> graph: each cell is a node; its up/down/left/right neighbors are its edges.
@@ -162,6 +226,32 @@ for (int[] e : edges) {
   When spreading starts from <em>many</em> places at once (all rotten oranges, all ocean-border cells), seed the queue
   with <strong>every source before starting</strong>. BFS then computes distance-to-<em>nearest</em>-source for every
   node in one pass — no need to run BFS per source.
+</p>
+
+<h3>6. Bidirectional BFS and 0-1 BFS: two upgrades to know by name</h3>
+<p class="lead">
+  Plain BFS explores a ball around the source; when you also know the <em>target</em>, or when edges cost 0 or 1,
+  two small twists buy dramatic speedups.
+</p>
+<p>
+  <strong>Bidirectional BFS.</strong> If each node has roughly b neighbors ("branching factor") and the target sits
+  d edges away, one-directional BFS touches on the order of b<sup>d</sup> nodes. Search from <em>both ends</em> and
+  each side only needs to reach depth d/2 before the frontiers touch: about 2·b<sup>d/2</sup> nodes — the square root
+  of the work. For Word Ladder with b ≈ 100 and d ≈ 10, that's the difference between 10²⁰ and 2·10¹⁰. The mechanics:
+  keep two visited maps and two frontiers; each round, <strong>expand whichever frontier is smaller</strong> (swap
+  references — this is what keeps both balls small), generate its next layer whole, and the moment a generated node
+  already sits in the <em>other</em> side's visited map, the answer is steps-from-start + steps-from-end. Two
+  preconditions to state before using it: you must know the target explicitly (no "any exit" goals), and edges must
+  be traversable backwards — undirected, or a directed graph whose reverse adjacency you can build.
+</p>
+<p>
+  <strong>0-1 BFS.</strong> When edge weights are exactly 0 or 1 ("stepping is free, breaking a wall costs 1"),
+  plain BFS is wrong — layers no longer equal cost — but a full Dijkstra is overkill. Run BFS on an
+  <code>ArrayDeque</code> used at both ends: relaxing a <strong>0-edge</strong> pushes the neighbor at the
+  <em>front</em> (same distance — it belongs to the current wave), a <strong>1-edge</strong> pushes at the
+  <em>back</em>. The deque stays sorted by distance with at most two distinct values in it at once — the same
+  invariant as the BFS proof in section 2 — so you get Dijkstra's answer in O(V+E), no heap, no log factor. It's the
+  first rung of the weighted-graph ladder that <a href="17-shortest-paths.html">page 17</a> climbs.
 </p>
 
 <!-- ============================================================ -->

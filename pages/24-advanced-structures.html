@@ -105,6 +105,28 @@
   skeleton is identical for any associative merge (sum, min, max, gcd).
 </p>
 
+<p>
+  <strong>Lazy propagation — when the updates are ranges too.</strong> "Add 5 to <em>every</em> element of
+  [l..r]" naively touches O(n) leaves. The lazy trick: when an update fully covers a node's segment, record the
+  pending change in a parallel <code>lazy[]</code> slot at that node and <em>stop descending</em>. The invariant
+  that keeps this honest: <strong>a node's cached value is correct assuming every pending update strictly above
+  it has been applied</strong> — each lazy slot is work owed to the whole subtree beneath it. Any later operation
+  that must pass through a lazy node first <em>pushes down</em>: applies the pending update to both children
+  (their values and their lazy slots) and clears its own. Since any range decomposes into O(log n) fully-covered
+  nodes, range update and range query are both worst-case O(log n). The push-down composition rule is where the
+  bugs live — "add then assign" is not "assign then add" — so state the invariant before writing it.
+</p>
+<p>
+  Two more segment-tree facts that upgrade an answer. The <strong>iterative bottom-up form</strong>: store the n
+  leaves at <code>tree[n..2n)</code>, parents at <code>i/2</code>; update climbs from a leaf, query walks two
+  cursors <code>l+n</code> and <code>r+n</code> inward — half the memory (2n vs 4n), no recursion, and the version
+  people type when speed matters. And the <strong>segment tree over values</strong>: index the tree by element
+  <em>value</em> instead of array position — after <em>coordinate compression</em> (sort the distinct values,
+  replace each by its rank) if values are large — and store counts. "How many elements seen so far are &lt; x"
+  becomes a prefix query, which is the standard online machine for counting inversions and for
+  count-of-smaller-after-self problems.
+</p>
+
 <h3>2. Fenwick / Binary Indexed Tree: the lightweight cousin</h3>
 <p>
   For sum-like operations that are <em>invertible</em> (you can subtract), the Fenwick tree does the same job
@@ -114,6 +136,29 @@
   <code>prefix(r) − prefix(l−1)</code>, exactly like page 04. Reach for a segment tree only when the operation
   can't be inverted (min/max) or you need fancier queries.
 </p>
+
+<p>
+  <strong>Why <code>i &amp; -i</code> is the right stride — the ownership picture.</strong> Two's complement makes
+  <code>-i</code> flip every bit above i's lowest set bit, so <code>i &amp; -i</code> isolates that bit
+  (<a href="22-bit-manipulation.html">page 22</a> derives it). Now grant slot i ownership of exactly the
+  <code>i &amp; -i</code> elements ending at i. Because any i is a sum of distinct powers of two, every prefix
+  [1..i] splits into disjoint owned chunks that mirror i's binary digits: prefix(13), with 13 = 1101₂ = 8+4+1,
+  is slot 13 (1 element) + slot 12 (4 elements) + slot 8 (8 elements) — and "strip the lowest set bit" walks
+  precisely that decomposition, O(log n) hops. <strong>Binary decomposition of the index <em>is</em> the
+  decomposition of the prefix.</strong> The update walk (keep <em>adding</em> the lowest set bit) is the same
+  picture read the other way: it visits exactly the slots whose owned chunk covers the changed position. The
+  slots form an implicit forest — the query walk's next stop, <code>i − (i &amp; -i)</code>, acts as a parent
+  pointer — which is why ~10 lines of loops behave like a tree with none of a tree's pointers.
+</p>
+<div class="tip">
+  <strong>Range update, point query — the difference-array flip.</strong> Build the Fenwick over the
+  <em>difference array</em> (<a href="04-prefix-sum.html">page 04</a>'s trick) and the two operations swap roles:
+  "add d to [l..r]" becomes two point updates (+d at l, −d at r+1), and reading element i becomes a prefix sum.
+  Same ten lines, inverted semantics. (Range update <em>and</em> range query together takes two Fenwick trees and
+  a small identity — know that it exists rather than memorizing it.) A <strong>2D Fenwick</strong> is simply the
+  two walks nested — an outer loop striding rows, an inner one striding columns — for O(log² n) rectangle sums
+  on a mutable grid.
+</div>
 
 <h3>3. TreeMap patterns: nearest-neighbor lookups</h3>
 <p>
@@ -193,6 +238,19 @@ class LruViaLinkedHashMap extends LinkedHashMap&lt;Integer, Integer&gt; {
         return size() &gt; capacity;        // auto-evict after each put
     }
 }</code></pre>
+
+<p>
+  <strong>The production follow-up: what breaks under concurrency.</strong> The LRU design's quiet weakness is
+  that even <code>get()</code> <em>writes</em> — every read reorders the list — so a lock must guard reads too,
+  and a synchronized LRU serializes all traffic through the list head. <code>ConcurrentHashMap</code> offers
+  contended O(1) lookups but knows nothing about recency. Production caches (Caffeine on the JVM is the reference
+  point) therefore keep the hash table concurrent and make <em>recency approximate</em>: accesses are appended to
+  small lock-free ring buffers and drained in batches onto the policy's list, and eviction runs
+  <strong>W-TinyLFU</strong> — a compact frequency sketch gating admission into a segmented LRU, so one-hit-wonder
+  keys never displace proven residents. The interview sentence: "exact LRU under contention bottlenecks on the
+  list; real caches batch recency updates and approximate the policy" — then note the same idea in Redis, whose
+  <code>allkeys-lru</code> samples candidates rather than maintaining a perfect list.
+</p>
 
 <h3>5. Quick tour of the rest of the arsenal</h3>
 <ul>

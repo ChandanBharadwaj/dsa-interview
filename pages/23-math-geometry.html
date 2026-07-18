@@ -66,6 +66,29 @@
 <pre class="code"><code>static long gcd(long a, long b) {
     return b == 0 ? a : gcd(b, a % b);   // when b hits 0, a holds the answer
 }</code></pre>
+<p>
+  Both halves of that "why" have one-line proofs worth owning. <em>Correctness:</em> if d divides a and b, it
+  divides a − qb = a mod b; conversely, if d divides b and a mod b, it divides qb + (a mod b) = a. So the pairs
+  (a, b) and (b, a mod b) share <em>exactly the same</em> common divisors — hence the same greatest one.
+  <em>Speed:</em> the worst case is consecutive <strong>Fibonacci numbers</strong>: gcd(F(k+1), F(k)) retreats
+  exactly one Fibonacci index per step, and no input shrinks slower — that's <strong>Lamé's theorem</strong>
+  (1844), arguably the first algorithm-analysis result ever published. Since Fibonacci numbers grow like φᵏ, the
+  step count is at most ~log_φ(min) ≈ 1.44·log₂(min): O(log min(a,b)) with tiny constants.
+</p>
+<p>
+  The <strong>extended Euclidean algorithm</strong> runs the same loop but carries coefficients back up the
+  recursion, producing x and y with <strong>ax + by = gcd(a, b)</strong> — Bézout's identity. That equation is the
+  master key to modular division: if gcd(a, m) = 1, then ax + my = 1 means <strong>ax ≡ 1 (mod m)</strong>, so x is
+  a's modular inverse — and it exists precisely when a and m are coprime. This is how you divide when the modulus
+  <em>isn't prime</em> (Fermat's trick in §3 needs a prime); the same identity powers Chinese-remainder
+  reconstruction and RSA key generation.
+</p>
+<p class="code-title">Extended Euclid — returns {g, x, y} with a·x + b·y = g</p>
+<pre class="code"><code>static long[] egcd(long a, long b) {
+    if (b == 0) return new long[]{a, 1, 0};       // a·1 + b·0 = a = gcd
+    long[] r = egcd(b, a % b);                    // g = b·x' + (a mod b)·y'
+    return new long[]{r[0], r[2], r[1] - (a / b) * r[2]};   // rewrite in terms of a and b
+}</code></pre>
 
 <h3>2. Primes — trial division vs the sieve</h3>
 <p>
@@ -83,6 +106,26 @@
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  Where does <strong>O(n log log n)</strong> come from? The total crossing work is n/2 + n/3 + n/5 + n/7 + … —
+  n times the sum of reciprocals <em>of primes only</em>. The full harmonic series would give ln n; restricted to
+  primes it sums to roughly <strong>ln ln n</strong> (Mertens' theorem). For n = 10⁹, ln ln n ≈ 3 — the sieve is
+  "linear times three", which is why it feels linear in practice. Two scaling upgrades worth naming: the
+  <strong>segmented sieve</strong> finds primes in a window [L, R] with R far past array range — sieve the primes
+  up to √R once, then cross out their multiples block by block, using O(√R + window) memory instead of O(R). And
+  storing the flags in a bitset (<a href="22-bit-manipulation.html">page 22</a>) cuts memory 8× versus
+  <code>boolean[]</code> — often the difference between staying in cache and not.
+</p>
+<div class="note">
+  <strong>Primality at 64 bits: Miller–Rabin, deterministically.</strong> Trial division dies near n ≈ 10¹⁸
+  (a billion loop iterations). The <strong>Miller–Rabin</strong> test asks whether a base a "witnesses" that n is
+  composite; a random base misses with probability under 1/4 per round. The senior fact: for 64-bit inputs you
+  don't even need randomness — a <em>fixed</em> set of bases (the first twelve primes, 2 through 37, is a proven
+  choice) classifies every 64-bit integer correctly. Each round is O(log n) multiplications via powMod (§4), so
+  the whole test runs in microseconds where trial division would take minutes. The complete interview answer to
+  primality: <em>sieve for many small numbers, deterministic Miller–Rabin for a few large ones.</em>
+</div>
+
 <h3>3. Modular arithmetic — surviving "answer mod 10⁹+7"</h3>
 <p>
   Counting problems overflow <code>long</code> almost immediately, so answers are requested modulo a large prime.
@@ -94,6 +137,33 @@
 long sum = (a + b) % MOD;               // a, b already reduced
 long prod = (a * b) % MOD;              // a, b are longs — the product fits
 long diff = ((a - b) % MOD + MOD) % MOD; // Java % keeps sign of the dividend!</code></pre>
+<p>
+  Division is the missing rule — and mod a <em>prime</em> p, dividing by a means multiplying by
+  <strong>a^(p−2)</strong>. Why: <strong>Fermat's little theorem</strong> says a^(p−1) ≡ 1 (mod p) whenever p
+  doesn't divide a. The proof sketch is worth having ready: the values a·1, a·2, …, a·(p−1) are pairwise distinct
+  mod p (if a·i ≡ a·j then p divides a·(i−j), impossible for a prime that divides neither factor) — so they're a
+  <em>permutation</em> of 1..p−1. Multiply each set together, cancel the common (p−1)!, and a^(p−1) ≡ 1 remains.
+  Then a · a^(p−2) ≡ 1, so <strong>a^(p−2) — one powMod call — is the inverse</strong>. (Non-prime modulus:
+  extended Euclid from §1.)
+</p>
+<p class="code-title">The nCr pipeline — precompute factorials once, answer C(n, k) in O(1)</p>
+<pre class="code"><code>long[] fact = new long[N + 1], invFact = new long[N + 1];
+fact[0] = 1;
+for (int i = 1; i &lt;= N; i++) fact[i] = fact[i - 1] * i % MOD;
+invFact[N] = powMod(fact[N], MOD - 2, MOD);          // ONE Fermat inverse...
+for (int i = N; i &gt; 0; i--)
+    invFact[i - 1] = invFact[i] * i % MOD;           // ...unrolls into all N of them
+
+long nCk = fact[n] * invFact[k] % MOD * invFact[n - k] % MOD;   // O(1) per query</code></pre>
+<p>
+  This O(N)-build / O(1)-query pipeline is what combinatorial DPs quietly assume — the lattice-path closed form
+  C(m+n−2, m−1) on <a href="19-dp-2d.html">page 19</a> is one call into it, versus O(n²) for the Pascal table
+  below. Overflow discipline: with MOD ≈ 10⁹ every reduced factor is under 2³⁰, so any <em>two-factor</em> product
+  fits a long — but reduce with <code>% MOD</code> after each multiplication, never after two. If the modulus
+  itself were 64-bit, <code>a * b</code> would overflow <code>long</code>, and you'd need
+  <code>Math.multiplyHigh</code>-style mulmod or <code>BigInteger</code> — knowing that boundary exists is the
+  senior point.
+</p>
 
 <h3>4. Fast exponentiation — xⁿ in O(log n)</h3>
 <p>
@@ -101,6 +171,13 @@ long diff = ((a - b) % MOD + MOD) % MOD; // Java % keeps sign of the dividend!</
   exponent's bits (page 22!), squaring the base each step, multiplying it in when the bit is 1. This is also how
   RSA computes mod-exponents on 2048-bit numbers — the same 15-line loop.
 </p>
+<div class="note">
+  <strong>Fast power generalizes: matrix exponentiation.</strong> The powMod loop never uses the fact that its
+  operands are numbers — any <em>associative</em> multiply works. Substitute 2×2 matrices and you can raise the
+  Fibonacci step matrix [[1,1],[1,0]] to the n-th power in O(log n) matrix multiplications: F(10¹⁸) mod p in about
+  60 small multiplies. Any k-term linear recurrence becomes a k×k matrix power the same way — the standard escape
+  hatch when a 1-D DP (<a href="18-dp-1d.html">page 18</a>) meets n up to 10¹⁸, far beyond any table you could fill.
+</div>
 
 <h3>5. Randomized algorithms — the two that get asked</h3>
 <p>
@@ -110,6 +187,27 @@ long diff = ((a - b) % MOD + MOD) % MOD; // Java % keeps sign of the dividend!</
   <strong>Reservoir sampling:</strong> pick a uniform random item from a stream of unknown length in O(1) space —
   keep the k-th item with probability 1/k. Proof sketch: item i survives with (1/i)·(i/(i+1))·…·((n−1)/n) = 1/n. ∎
 </p>
+<p>
+  Both proofs are short enough to give in full, and interviewers do ask. <strong>Fisher-Yates, by induction:</strong>
+  position n−1 receives each of the n elements with probability exactly 1/n (one uniform pick). Conditioned on that
+  choice, the remaining n−1 elements face the identical, smaller problem — by induction every arrangement of them
+  is equally likely, so each full permutation has probability 1/n · 1/(n−1) · … · 1/2 = 1/n!. Equivalently, a
+  counting argument: the algorithm makes n·(n−1)·…·2 = n! distinct random-choice sequences, and each yields a
+  <em>different</em> permutation — a bijection, hence uniform. <strong>Reservoir sampling (general k), by
+  induction:</strong> assume after i items each seen item sits in the reservoir with probability k/i. Item i+1 is
+  admitted with probability k/(i+1); an incumbent is evicted only if item i+1 is admitted <em>and</em> lands on its
+  slot — probability k/(i+1) · 1/k = 1/(i+1) — so it survives with k/i · i/(i+1) = k/(i+1). The invariant rolls
+  forward, and at the stream's end every item was retained with probability k/n. ∎
+</p>
+<p class="code-title">Spot the bug — the classic biased shuffle (name the flaw in one sentence)</p>
+<pre class="code"><code>for (int i = 0; i &lt; n; i++) {
+    int j = rand.nextInt(n);          // BUG: bound must be i + 1, not n
+    swap(a, i, j);
+}
+// Why it's biased: this run makes n^n equally likely choice sequences, which must
+// land on n! permutations — and n! does not divide n^n. Concretely at n = 3:
+// 27 sequences over 6 permutations, so some permutations occur 5 times, others 4.
+// The [0..i] bound produces exactly n! sequences, one per permutation — uniform.</code></pre>
 
 <h3>6. Geometry-lite — intervals per axis</h3>
 <p>
@@ -117,6 +215,25 @@ long diff = ((a - b) % MOD + MOD) % MOD; // Java % keeps sign of the dividend!</
   their y-intervals overlap — reuse <a href="21-greedy-intervals.html">page 21</a>'s interval logic per axis
   (<code>a.left &lt; b.right &amp;&amp; b.left &lt; a.right</code>). Circle vs point: compare <em>squared</em>
   distances (<code>dx*dx + dy*dy &lt;= r*r</code>) — no <code>sqrt</code>, no floating-point drama.
+</p>
+<p>
+  When an interview does go one step deeper into geometry, a single primitive covers nearly everything: the
+  <strong>cross product / orientation test</strong>. For points O, A, B, the sign of
+  <code>cross = (A.x−O.x)·(B.y−O.y) − (A.y−O.y)·(B.x−O.x)</code> tells you whether the path O→A→B turns left
+  (positive), turns right (negative), or is collinear (zero). Computed in <code>long</code> on integer coordinates
+  it is <em>exact</em> — no epsilon, no rounding — which is why serious geometry code avoids slopes and angles
+  entirely (Max Points on a Line, worked below, dodges doubles with gcd-reduced fractions for the same reason).
+  Segment intersection, "which side of the line?", polygon area (the shoelace formula is just a sum of crosses),
+  and point-in-polygon tests all reduce to reading this one sign. O(1) each, all integer arithmetic.
+</p>
+<p>
+  The flagship application to know by name: <strong>convex hull by monotone chain</strong> (Andrew's algorithm).
+  Sort the points by x, then y — O(n log n), <a href="06-sorting.html">page 06</a> — then sweep left-to-right
+  building the lower hull on a stack: push each point, and while the last three make a non-left turn
+  (cross ≤ 0), pop the middle one. Sweep right-to-left the same way for the upper hull and concatenate. The stack
+  discipline is exactly the monotonic stack of <a href="09-stacks-queues.html">page 09</a>: every point is pushed
+  and popped at most once, so the sweep is O(n) after the sort. If a "smallest enclosing fence / perimeter"
+  problem ever appears, this is the tool — and the orientation test above is its entire inner loop.
 </p>
 
 <!-- ============================================================ -->

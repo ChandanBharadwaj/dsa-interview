@@ -123,6 +123,45 @@
   you subtract two balances. That subtraction is the whole trick.
 </div>
 
+<p>
+  It's worth knowing <em>exactly</em> which property makes the subtraction legal, because interviewers probe
+  it with follow-ups. Building a prefix array only needs an associative operation — but <em>querying a range
+  by combining two prefixes</em> needs to <strong>cancel the shared head</strong>, and cancellation requires
+  an inverse: for every value a there must be an a⁻¹ with a ∘ a⁻¹ = identity. In algebra terms, the operation
+  must form a <strong>group</strong>, not just a monoid. Addition qualifies (inverse = negation). So does
+  <strong>XOR</strong>, which is its own inverse — giving the second workhorse of this family:
+  <code>pxor[i]</code> = XOR of the first i elements, and the XOR of any range is
+  <code>pxor[j+1] ^ pxor[i]</code>. That one line powers XOR Queries of a Subarray (LC 1310) and several of
+  the bit problems on <a href="22-bit-manipulation.html">page 22</a>. Multiplication <em>almost</em>
+  qualifies — zeros have no inverse, which is precisely why Product of Array Except Self (below) forbids
+  division and works around it with prefix-times-suffix instead.
+</p>
+<p class="code-title">The XOR twin — same skeleton, ^ instead of +</p>
+<pre class="code"><code>int[] pxor = new int[nums.length + 1];        // pxor[0] = 0, the XOR of nothing
+for (int i = 0; i &lt; nums.length; i++)
+    pxor[i + 1] = pxor[i] ^ nums[i];
+
+int rangeXor = pxor[j + 1] ^ pxor[i];         // XOR of nums[i..j]: the head cancels itself</code></pre>
+<p>
+  Now the negative space: <strong>min and max have no inverse</strong>. Knowing that
+  <code>min(prefix)</code> is 3 tells you nothing about the min once the head is removed — information is
+  destroyed, not masked. So there is no "prefix-min subtraction" for range minimum queries; that genuinely
+  harder problem needs a sparse table or segment tree, the O(log n)-per-query machinery of
+  <a href="24-advanced-structures.html">page 24</a>. The litmus test to run in your head: <em>"can I un-apply
+  an element?"</em> Yes → prefix trick; no → tree structures. Saying that sentence when an interviewer swaps
+  "sum" for "min" is the whole point of this paragraph.
+</p>
+<div class="note">
+  <strong>A bonus structure hiding in non-negative data.</strong> If all elements are ≥ 0, the prefix array is
+  <em>non-decreasing</em> — i.e. sorted — and sorted means binary-searchable
+  (<a href="07-binary-search.html">page 07</a>). "Shortest subarray with sum ≥ target over non-negatives"
+  then falls to: for each start i, binary-search the first prefix ≥ <code>prefix[i] + target</code> —
+  O(n log n) without any window reasoning. It also explains the boundary drawn by LC 862 (worked below):
+  negatives destroy the sortedness, the binary search dies with it, and the monotonic deque steps in.
+  Chains of implications like "non-negative ⇒ monotone prefixes ⇒ binary search applies" are exactly the
+  property-spotting that turns hard problems into known ones.
+</div>
+
 <h3>2. Prefix + HashMap: counting subarrays that sum to k</h3>
 <p>
   The follow-up interviewers love: <em>how many</em> subarrays sum to exactly <code>k</code>? Rearranging the range
@@ -139,6 +178,25 @@
   reasons correctly, and the window will silently skip valid answers. The moment a subarray-sum problem allows
   negatives (or asks to <em>count</em> all answers, not find one), drop the window and reach for prefix + HashMap.
 </div>
+
+<p>
+  The same complement-lookup engine runs on <strong>remainders</strong>. A subarray <code>(i..j]</code> sums
+  to a multiple of k exactly when <code>prefix[j] ≡ prefix[i] (mod k)</code> — the difference of two numbers
+  is divisible by k iff they sit in the same <strong>remainder class</strong>. So instead of matching exact
+  prefix values, you bucket prefixes by <code>prefix % k</code> and pair up same-class occurrences; with
+  counts m₀…m₍k₋₁₎ per class, the answer is Σ mᵣ(mᵣ−1)/2 — or, built incrementally, "add how many same-class
+  prefixes came before me" (Subarray Sums Divisible by K, worked below). The classes also hand you a free
+  <strong>pigeonhole theorem</strong> interviewers enjoy: an array of length n ≥ k yields n+1 prefixes
+  (counting the empty one) spread over only k classes, so two must collide — <em>every</em> array of length k
+  contains a nonempty subarray divisible by k. Existence guaranteed before you've looked at a single value.
+</p>
+<p>
+  The Java-specific landmine on this path: <code>%</code> is a <em>remainder</em> after truncated division,
+  so <code>-7 % 3</code> is <code>-1</code>, not <code>2</code> — negative prefixes produce negative "classes"
+  that miss their positive twins in the map. Normalize with <code>((x % k) + k) % k</code> or, since Java 8,
+  <code>Math.floorMod(x, k)</code>. It's a one-character-class bug that fails only on inputs containing
+  negatives, which is exactly what hidden test cases are built from.
+</p>
 
 <h3>3. Difference arrays: prefix sums in reverse</h3>
 <p>
@@ -157,6 +215,33 @@
   (subtract the strip above and the strip to the left; add back the corner you subtracted twice). Computer vision calls
   this an <em>integral image</em>. Worth knowing exists; full 2D drills live with the matrix patterns on
   <a href="05-matrix.html">page 05</a> and beyond.
+</p>
+<p>
+  Don't memorize the four-term formula — <strong>derive it by inclusion–exclusion</strong>, live, in about
+  fifteen seconds. The big prefix rectangle <code>P[r2+1][c2+1]</code> over-counts two strips: the rows above
+  your region and the columns to its left. Subtract each strip (<code>P[r1][c2+1]</code> and
+  <code>P[r2+1][c1]</code>) — but those strips <em>overlap</em> in the top-left corner rectangle, which has
+  now been subtracted twice, so add <code>P[r1][c1]</code> back once. That +, −, −, + sign pattern on the
+  four corners is inclusion–exclusion in its smallest useful form. The build recurrence is the same argument
+  aimed the other way: <code>P[r+1][c+1] = cell + above-rect + left-rect − their overlap</code>. If you can
+  reproduce the drawing, you can reproduce both formulas under pressure.
+</p>
+<p>
+  And the inverse exists here too: the <strong>2D difference array</strong>. To add v to every cell of a
+  rectangle, mark its four corners — the exact mirror image of the query's sign pattern:
+</p>
+<p class="code-title">2D range update in O(1): four corner marks, integrate once at the end</p>
+<pre class="code"><code>// add v to every cell of the rectangle (r1,c1)..(r2,c2)
+diff[r1][c1]         += v;    // start the effect
+diff[r1][c2 + 1]     -= v;    // cancel it right of the region
+diff[r2 + 1][c1]     -= v;    // cancel it below the region
+diff[r2 + 1][c2 + 1] += v;    // both cancels overlap here — add back once
+
+// afterwards: one 2D prefix-sum pass over diff recovers the actual values</code></pre>
+<p>
+  Each of u updates costs O(1); one O(m·n) integration pass (the 2D build recurrence above) settles
+  everything — O(u + m·n) total, versus O(u·m·n) for painting every rectangle cell by cell. Query and update
+  being sign-mirrored adjoints of each other is the elegant bit: the same picture proves both.
 </p>
 
 <!-- ============================================================ -->

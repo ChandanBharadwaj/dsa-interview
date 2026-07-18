@@ -106,6 +106,28 @@
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  For a senior loop, be ready to turn that intuition into a real proof. The template is an
+  <strong>exchange/dominance argument</strong>: name the thing being discarded, and show something still in
+  play <em>dominates</em> it. For Two Sum on sorted input, the invariant is "if an answer pair exists, both
+  its indexes lie in [l, r]". Initially true. When <code>nums[l] + nums[r] &lt; target</code>, index
+  <code>l</code> cannot be the left half of any surviving answer: its largest remaining partner is
+  <code>nums[r]</code> (indexes above r were each discarded only after being proven too big for everything
+  that remained — including <code>l</code>), and even that partner falls short. So <code>l++</code> preserves
+  the invariant; the symmetric case preserves it too, and the loop must eventually land on the answer.
+  Induction over at most n steps, each justified — that's the whole proof.
+</p>
+<p>
+  Container With Most Water runs the same argument without sortedness. When
+  <code>height[l] &lt; height[r]</code>, the shorter left wall is <em>dominated</em>: any container that keeps
+  wall l but uses a nearer right wall has strictly smaller width and a water level still capped by
+  <code>min</code> at that same short wall — so its area can't exceed the one just measured. Every pair
+  involving wall l is therefore covered by the current measurement, and <code>l++</code> discards nothing that
+  could win. This "each step retires one element with a one-line dominance proof" pattern is exactly the
+  reasoning style greedy algorithms demand on <a href="21-greedy-intervals.html">page 21</a> — two pointers is
+  where you practice it cheaply.
+</p>
+
 <h3>2. Read/write pointers: editing in place</h3>
 <p>
   The second flavor has both pointers moving <em>left to right</em>: a fast <strong>read</strong> pointer
@@ -116,6 +138,17 @@
   garbage collectors slide live objects over dead ones.
 </p>
 
+<div class="note">
+  <strong>Stability comes free — but only in this variant.</strong> Read/write compaction copies keepers
+  leftward <em>in scan order</em>, so survivors keep their relative order — the operation is
+  <strong>stable</strong>. The tempting alternative for "remove element" — swap the doomed element with the
+  last one and shrink the length — is also O(1) per removal but <em>scrambles</em> order (unstable). Both are
+  correct when the problem doesn't care; only compaction is correct when it does (Move Zeroes explicitly
+  requires preserved order). The same stable-vs-unstable fork reappears at full scale in sorting on
+  <a href="06-sorting.html">page 06</a>: stable TimSort for objects, unstable dual-pivot quicksort for
+  primitives.
+</div>
+
 <h3>3. Fast &amp; slow pointers (preview)</h3>
 <p>
   A third variant runs both pointers in the same direction at different <em>speeds</em> — fast moves two
@@ -123,12 +156,63 @@
   algorithm). It needs linked-list mechanics first, so the full treatment lives in
   <a href="08-linked-lists.html">08 · Linked Lists</a>; just file it under the same family for now.
 </p>
+<p>
+  The one piece of math worth carrying in your head now: <em>why must they meet?</em> Once both pointers are
+  inside a cycle of length λ, the gap between them shrinks by exactly one per step (fast gains one on slow),
+  so they collide within λ steps — no skipping past each other. And when they meet, slow has walked some
+  distance d while fast walked 2d over the same route, so <code>2d ≡ d (mod λ)</code>, i.e.
+  <strong>d is a multiple of the cycle length</strong>. That innocuous congruence is the entire engine behind
+  phase 2 of cycle-entrance finding (reset one pointer to the head, walk both at speed 1, they meet at the
+  entrance) — the full derivation is on <a href="08-linked-lists.html">page 08</a>, and Find the Duplicate
+  Number below uses it verbatim. If an interviewer asks for alternatives, the name to know is
+  <strong>Brent's algorithm</strong>: same O(1) space, the fast pointer teleports in powers of two, and it's
+  ~36% fewer steps in practice.
+</p>
 
 <div class="tip">
   <strong>Unsorted data?</strong> Converging pointers need order to justify the discard. If the input
   isn't sorted, either sort first (paying O(n log n) — fine when you'd sort anyway, as in 3Sum) or go
   back to page 01's HashMap.
 </div>
+
+<h3>4. Partition schemes: Lomuto, Hoare, and the Dutch national flag</h3>
+<p class="lead">
+  The third industrial-strength use of two pointers is <strong>partitioning</strong>: rearrange an array
+  around a pivot in one pass, in place. It's the beating heart of quicksort and quickselect
+  (<a href="06-sorting.html">page 06</a>), and interviewers use it to probe whether you can state an invariant
+  and keep it true through swaps.
+</p>
+<ul>
+  <li><strong>Lomuto</strong> is the read/write template wearing a pivot: a boundary pointer <code>i</code>
+    maintains "everything in <code>[lo..i)</code> is &lt; pivot", a scan pointer <code>j</code> examines each
+    element, and small elements swap into the boundary. Simple to prove, one direction of travel — but it
+    performs roughly n/2 swaps on average (three times Hoare's count) and, crucially, degrades to O(n²) on
+    arrays of all-equal keys, because every element lands on one side.</li>
+  <li><strong>Hoare</strong> is the converging template: pointers walk inward from both ends, each skipping
+    elements already on the correct side, and swap only when both find misplaced elements — about n/6 swaps
+    on average, and all-equal keys still produce balanced splits. The classic gotcha: it guarantees only a
+    partition point, <em>not</em> that the pivot sits at its final index, so the recursion bounds differ from
+    Lomuto's.</li>
+  <li><strong>Dutch national flag</strong> (Dijkstra) partitions into <em>three</em> regions —
+    &lt;, ==, &gt; — with two boundaries and one scanner, and is the direct answer to Sort Colors (LC 75) as
+    well as the fix for Lomuto's duplicate problem: 3-way quicksort recurses only on the &lt; and &gt;
+    regions, so duplicate-heavy inputs drop to O(n · #distinct values).</li>
+</ul>
+<p class="code-title">Dutch national flag — one pass, three regions · O(n) time, O(1) space</p>
+<pre class="code"><code>// Invariant: [0..low) == 0s, [low..mid) == 1s, [mid..high] unknown, (high..] == 2s
+int low = 0, mid = 0, high = arr.length - 1;
+while (mid &lt;= high) {
+    if (arr[mid] == 0)      swap(arr, low++, mid++);  // 0 joins the left block
+    else if (arr[mid] == 2) swap(arr, mid, high--);   // 2 goes right; mid stays —
+    else                    mid++;                    //   the swapped-in value is unread!
+}</code></pre>
+<p>
+  Note what all three schemes give up: <strong>stability</strong>. Swaps fling elements across arbitrary
+  distances, so equal keys end up in scrambled order — the reason quicksort-based
+  <code>Arrays.sort(int[])</code> is fine for primitives (equal ints are indistinguishable) but objects get
+  TimSort instead. And the <code>mid</code>-stays-put detail after the high swap is the classic live-coding
+  bug: the element swapped down from the top has never been examined.
+</p>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>
