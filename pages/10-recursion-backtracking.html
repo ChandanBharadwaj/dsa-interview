@@ -99,6 +99,29 @@ long factorial(int n) {
   so there is nothing to cache: exponential really is the answer.
 </div>
 
+<p>
+  For divide-and-conquer recursions the tree gives you something even better: a <strong>master-theorem-lite</strong> you
+  can run in your head. Write the recurrence as <code>T(n) = a·T(n/b) + f(n)</code> — a branches, each on an input b
+  times smaller, plus <code>f(n)</code> local work — and ask one question: <em>as you walk down the tree, does the total
+  work per level shrink, stay flat, or grow?</em> Three regimes cover every interview case:
+</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Regime</th><th>Per-level work</th><th>Total</th><th>Example from this site</th></tr>
+  <tr><td><strong>Root-heavy</strong></td><td>shrinks geometrically going down</td><td>O(f(n)) — the root's work dominates</td><td>quickselect: <code>T(n)=T(n/2)+O(n)</code> → n + n/2 + n/4 + … = O(n) (<a href="06-sorting.html">page 06</a>)</td></tr>
+  <tr><td><strong>Balanced</strong></td><td>every level costs the same</td><td>f(n) × (number of levels)</td><td>merge sort: <code>T(n)=2T(n/2)+O(n)</code> → n work on each of log n levels = O(n log n)</td></tr>
+  <tr><td><strong>Leaf-heavy</strong></td><td>grows going down; leaves dominate</td><td>O(number of leaves)</td><td>tree traversal: <code>T(n)=2T(n/2)+O(1)</code> → the ~n leaves outweigh everything = O(n)</td></tr>
+</table>
+</div>
+<p>
+  Binary search is the degenerate balanced case — one branch, O(1) per level, log n levels ⇒ O(log n)
+  (<a href="07-binary-search.html">page 07</a>). The formal Master Theorem just compares <code>f(n)</code> against
+  <code>n^(log_b a)</code> (the leaf count) to decide the regime; in an interview, drawing three levels of the tree and
+  eyeballing whether the sum is geometric-decreasing, flat, or geometric-increasing is faster and earns the same credit —
+  and unlike the memorized theorem, it also handles uneven splits like <code>T(n) = T(n−1) + O(n) = O(n²)</code>, the
+  recurrence behind worst-case quicksort.
+</p>
+
 <h3>3. Converting recursion to iteration</h3>
 <p>
   Any recursion can become a loop with an explicit stack — push what you would have passed as parameters, pop instead of
@@ -106,6 +129,20 @@ long factorial(int n) {
   the JVM's ~10⁴ default frames. Tail-call-style recursions (one call, last statement) convert even easier: a plain
   <code>while</code> loop. Java does <em>not</em> optimize tail calls — worth saying in interviews.
 </p>
+
+<div class="note">
+  <strong>Why Java refuses to optimize tail calls — the internals answer.</strong> A tail call is a recursive call whose
+  result is returned unchanged; a compiler could reuse the current stack frame instead of pushing a new one, turning
+  O(n) stack into O(1). Functional languages (Scheme, Scala's <code>@tailrec</code>, Kotlin's <code>tailrec</code>) do
+  exactly this — but the JVM itself doesn't, and <code>javac</code> won't either, largely because parts of the platform
+  depend on <em>seeing every frame</em>: exception stack traces, <code>StackWalker</code>, and historically
+  caller-sensitive security checks all assume frames aren't silently collapsed. (Scala and Kotlin only manage it by
+  compiling <em>self</em>-recursion into a loop before the JVM sees it.) In current JDKs the practical workarounds are:
+  rewrite as a loop, use the explicit-stack conversion above, or — the functional-programming party trick — a
+  <strong>trampoline</strong>: the method returns a <code>Supplier</code> describing the next step instead of calling
+  itself, and a flat <code>while</code> loop keeps invoking suppliers until a real value appears. Depth becomes heap,
+  not stack. In interviews the explicit stack is the expected answer; naming the trampoline is a bonus flourish.
+</div>
 
 <h3>4. Backtracking = DFS over the tree of choices</h3>
 <p>
@@ -203,6 +240,50 @@ long factorial(int n) {
   <tr><td>N-Queens</td><td>which column gets the queen in row r</td><td>sets of taken columns &amp; both diagonals</td><td>solutions only (heavy pruning)</td></tr>
   <tr><td>Word search / grid DFS</td><td>which neighbor cell continues the word</td><td>visited marks on the grid</td><td>found / not found</td></tr>
 </table>
+</div>
+
+<p>
+  When an interviewer asks the inevitable <em>"can you do better than exponential?"</em>, the senior answer is an
+  <strong>output-sensitive lower bound</strong>: no algorithm can run faster than the time it takes to <em>write its own
+  output</em>. Subsets has 2ⁿ answers averaging n/2 elements each, so merely emitting them costs Ω(n·2ⁿ) — your
+  O(n·2ⁿ) backtracking is optimal, not lazy. Permutations must write n! orderings of n elements: Ω(n·n!), matched by the
+  <code>used[]</code> template. The same logic caps Letter Combinations at Ω(n·4ⁿ). This is a genuinely different kind of
+  argument from the comparison lower bounds on <a href="06-sorting.html">page 06</a>: it needs no model of computation at
+  all, just counting the answer. The corollary is the real interview skill — the moment the problem stops asking for
+  <em>all</em> solutions and starts asking for a <em>count</em> or a <em>best</em>, the output shrinks to one number, the
+  lower bound evaporates, and you should be hunting for the polynomial DP (<a href="18-dp-1d.html">page 18</a>).
+</p>
+
+<h3>6. Pruning as a science: fail first, break symmetry, bound the branch</h3>
+<p class="lead">
+  Every backtracking solution on this page prunes <em>somehow</em> — but constraint-solver folklore turns pruning from an
+  ad-hoc trick into three named, reusable principles. Interviewers rarely require them; naming them is how you sound like
+  someone who has shipped a solver.
+</p>
+<ul>
+  <li><strong>Fail-first ordering.</strong> When you may choose <em>which</em> decision to make next (not just which
+  value to try), pick the <em>most constrained</em> one — the Sudoku cell with the fewest legal digits, the variable with
+  the smallest domain. It sounds backwards, but a variable with 2 options either fails fast (killing the subtree near the
+  root, where subtrees are huge) or is forced (no branching at all). Failing at depth 3 prunes exponentially more than
+  failing at depth 30. Real Sudoku solvers get their thousand-fold speedups almost entirely from this rule plus bitmask
+  candidate sets.</li>
+  <li><strong>Symmetry breaking.</strong> If solutions come in symmetric families, force one representative and multiply
+  at the end. N-Queens boards are mirror-symmetric: restrict the first row's queen to the left half of the board
+  (columns 0..n/2), count, double — n odd needs one careful middle column. You explore half the tree for the same
+  answer. Any "arrangements up to rotation/reflection" problem hides the same 2× to 8× gift.</li>
+  <li><strong>Branch-and-bound.</strong> For <em>optimization</em> ("cheapest tour", "max value"), carry the best complete
+  answer found so far, and at every node compute an optimistic bound on the best this subtree could possibly achieve
+  (e.g. remaining capacity × best value density). Bound ≤ current best ⇒ abandon the subtree without visiting it. This is
+  exactly what SQL planners do to join orders (see the systems cards below) — and the quality of the bound, not the
+  search order, is what separates toy solvers from real ones.</li>
+</ul>
+<div class="tip">
+  <strong>Know when you've left backtracking country.</strong> Pruning shrinks the tree but the leaves stay distinct.
+  The moment two different paths reach the <em>same residual subproblem</em> — same index, same remaining budget, same
+  mask — the tree has repeats, and caching beats pruning: that's memoized DP. The litmus test: can you describe the
+  subtree's answer purely by a small state tuple, ignoring <em>how</em> you got there? Yes ⇒ pages
+  <a href="18-dp-1d.html">18</a>/<a href="20-dp-advanced.html">20</a> (bitmask DP is literally "backtracking over
+  subsets, cached"). No — because the path itself is the answer — ⇒ you're staying exponential, so prune harder.
 </div>
 
 <!-- ============================================================ -->
