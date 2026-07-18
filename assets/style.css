@@ -1,6 +1,6 @@
 /* ============================================================
    DSA Interview Runbook — shared design system
-   Light/dark via prefers-color-scheme. No external dependencies.
+   Always-light theme. No external dependencies.
    ============================================================ */
 
 :root {
@@ -30,36 +30,6 @@
   --svg-node-frontier: #f59e0b;
   --svg-stroke: #64748b;
   --svg-label: #1a2233;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1120;
-    --bg-card: #131c2e;
-    --bg-code: #0a0f1c;
-    --bg-inset: #1a2438;
-    --text: #e4e9f2;
-    --text-soft: #94a3b8;
-    --text-code: #dce3ee;
-    --accent: #60a5fa;
-    --accent-soft: #1e3a5f;
-    --border: #263450;
-    --green: #4ade80;
-    --green-soft: #14351f;
-    --amber: #fbbf24;
-    --amber-soft: #3a2c0a;
-    --red: #f87171;
-    --red-soft: #3b1414;
-    --purple: #a78bfa;
-    --purple-soft: #2a1f47;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
-    --svg-node: #334155;
-    --svg-node-active: #60a5fa;
-    --svg-node-done: #4ade80;
-    --svg-node-frontier: #fbbf24;
-    --svg-stroke: #64748b;
-    --svg-label: #e4e9f2;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -374,4 +344,38 @@ details.sol .sol-body { padding: 4px 18px 16px; }
   font-size: 0.85em;
   background: var(--bg-inset);
   font-family: ui-monospace, Menlo, monospace;
+}
+
+/* ---------- mobile (small screens) ---------- */
+.problems .prob a.t { overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  body { font-size: 15.5px; }
+  .wrap { padding: 0 13px 60px; }
+  h1 { font-size: 1.55rem; margin-top: 24px; }
+  h2 { font-size: 1.25rem; margin-top: 36px; }
+  h3 { font-size: 1.08rem; }
+  .subtitle, .lead { font-size: 1rem; }
+  .hero { padding: 28px 0 8px; }
+  .hero h1 { font-size: 1.8rem; }
+
+  header.site { padding: 9px 0; }
+  header.site nav { gap: 11px; }
+  header.site a { font-size: 0.85rem; }
+
+  .card { padding: 14px 14px; }
+  .note, .tip, .warn, .why { padding: 12px 13px; }
+  .anim { padding: 10px; }
+  .anim-caption { font-size: 0.87rem; min-height: 56px; }
+  .anim-controls { gap: 6px; }
+  .anim-controls button { padding: 6px 10px; font-size: 0.8rem; }
+  .anim-controls .step-ind { flex-basis: 100%; text-align: right; margin-left: 0; }
+
+  pre.code { padding: 12px 13px; font-size: 0.76rem; border-radius: 10px; }
+  th, td { padding: 8px 10px; }
+  table { font-size: 0.86rem; }
+
+  .pager a { min-width: 100%; }
+  .topic-card { padding: 12px 12px; gap: 10px; }
+  .toc { columns: 1; }
 }
