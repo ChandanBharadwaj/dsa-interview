@@ -49,13 +49,7 @@
   <li><a href="22-bit-manipulation.html">22 · Bit Manipulation</a> — <code>i &amp; -i</code> powers the Fenwick tree.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you meet a cost contract?</strong> "All ops O(1)" is a spec, not a suggestion — they watch whether you notice when a naive choice breaks it.</li>
-  <li><strong>Can you compose structures?</strong> One structure finds things fast, another orders them fast; the skill is wiring two together without corrupting either.</li>
-  <li><strong>Pointer hygiene under pressure:</strong> the manual doubly linked list in LRU is a live test of the page-08 skills — sentinels, unlink, relink.</li>
-  <li><strong>Do you know your JDK?</strong> Mentioning <code>LinkedHashMap</code>'s access order or <code>TreeMap.floorEntry</code> at the right moment is a strong senior signal.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the design-question arsenal — LRU Cache is a top-3 interview question, and composing structures for O(1) ops is the core skill.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -342,11 +336,9 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/design-hit-counter/">Design Hit Counter</a></span>
-    <span class="hint">Count hits in the last 300 s: a queue (or ring buffer) of timestamps — a sliding window (page 03) wearing a design costume.</span></div>
   <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/insert-delete-getrandom-o1/">Insert Delete GetRandom O(1)</a></span>
     <span class="hint">Array for random access + map value→index; delete by swapping with the last element.</span></div>
   <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/my-calendar-i/">My Calendar I</a></span>
@@ -362,7 +354,7 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </div>
 
 <details class="sol">
-  <summary>★ Worked: LRU Cache — the flagship (LC 146)</summary>
+  <summary><span class="badge medium">medium</span> LRU Cache — LeetCode 146 (the flagship)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> build a fixed-capacity key→value cache where <code>get</code> and <code>put</code> run in O(1) and the least-recently-used entry is evicted on overflow.</p>
     <p><strong>Idea:</strong> a HashMap maps each key to a node in a doubly linked list ordered by recency.
@@ -441,7 +433,7 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Insert Delete GetRandom O(1) (LC 380)</summary>
+  <summary><span class="badge medium">medium</span> Insert Delete GetRandom O(1) — LeetCode 380</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> a set supporting <code>insert</code>, <code>remove</code> and <code>getRandom</code> (uniform) all in average O(1).</p>
     <p><strong>Idea:</strong> uniform randomness needs dense integer indexing → ArrayList; O(1) removal needs to
@@ -485,7 +477,7 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Range Sum Query — Mutable, via Fenwick tree (LC 307)</summary>
+  <summary><span class="badge medium">medium</span> Range Sum Query — Mutable — LeetCode 307 (Fenwick tree)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> support <code>update(index, val)</code> and <code>sumRange(left, right)</code> on an array, both fast.</p>
     <p><strong>Idea:</strong> a Fenwick tree keeps partial sums so that both a prefix query and a point update
@@ -531,7 +523,7 @@ m.floorEntry(x);   // same but returns the (key, value) pair
 </details>
 
 <details class="sol">
-  <summary>★ Worked: My Calendar I (LC 729)</summary>
+  <summary><span class="badge medium">medium</span> My Calendar I — LeetCode 729 (TreeMap neighbors)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> accept a booking [start, end) only if it overlaps no previously accepted booking.</p>
     <p><strong>Idea:</strong> keep bookings in a TreeMap keyed by start. A candidate can only collide with two
@@ -559,8 +551,170 @@ m.floorEntry(x);   // same but returns the (key, value) pair
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Design Hit Counter — LeetCode 362</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count hits in the past 5 minutes (300 seconds): <code>hit(t)</code>
+    records a hit at timestamp t, <code>getHits(t)</code> returns hits in <code>(t−300, t]</code>.
+    Timestamps arrive in non-decreasing order.</p>
+    <p><strong>Example.</strong> hit(1), hit(2), hit(3) → getHits(4) = 3; hit(300) → getHits(300) = 4;
+    getHits(301) = 3 (the hit at t=1 expired).</p>
+
+    <p class="code-title">Variation 1 — queue of timestamps (sliding-window log) · O(1) amortized, memory ∝ hits</p>
+<pre class="code"><code>public class HitCounterQueue {
+    private final Deque&lt;Integer&gt; hits = new ArrayDeque&lt;&gt;();
+
+    public void hit(int timestamp) { hits.offer(timestamp); }
+
+    public int getHits(int timestamp) {
+        // Evict everything older than the window (page 03's sliding log)
+        while (!hits.isEmpty() &amp;&amp; hits.peek() &lt;= timestamp - 300)
+            hits.poll();
+        return hits.size();
+    }
+}</code></pre>
+
+    <p class="code-title">Variation 2 — 300 circular buckets · O(1), memory O(300) regardless of traffic</p>
+<pre class="code"><code>public class HitCounter {
+    // One bucket per second of the window. times[i] remembers WHICH second
+    // the bucket currently represents, so stale buckets self-invalidate.
+    private final int[] times = new int[300];
+    private final int[] counts = new int[300];
+
+    public void hit(int timestamp) {
+        int i = timestamp % 300;             // this second's bucket
+        if (times[i] != timestamp) {         // bucket still holds an OLD second
+            times[i] = timestamp;            // claim it for the current second
+            counts[i] = 0;
+        }
+        counts[i]++;
+    }
+
+    public int getHits(int timestamp) {
+        int total = 0;
+        for (int i = 0; i &lt; 300; i++)
+            if (timestamp - times[i] &lt; 300)  // bucket's second is inside the window
+                total += counts[i];
+        return total;
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The queue is exact but grows with traffic; the circular buckets cap memory
+    at the window size by trading per-hit storage for per-second aggregation — precisely the
+    sliding-window-log vs sliding-window-counter trade in production rate limiters (Redis, Envoy).
+    "Millions of hits per second?" → buckets. Mirror: <code>code/24-advanced-structures/HitCounter.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Time Based Key-Value Store — LeetCode 981</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> <code>set(key, value, timestamp)</code> stores a value version;
+    <code>get(key, timestamp)</code> returns the value with the largest timestamp ≤ the query ("" if none).
+    Set timestamps are strictly increasing per key.</p>
+    <p><strong>Example.</strong> set("foo","bar",1); get("foo",1) → "bar"; get("foo",3) → "bar";
+    set("foo","bar2",4); get("foo",4) → "bar2"; get("foo",3) → "bar" still.</p>
+    <p class="code-title">Per-key version list + floor binary search · set O(1), get O(log n)</p>
+<pre class="code"><code>public class TimeMap {
+    // key -&gt; its versions, appended in timestamp order (so each list is
+    // ALREADY SORTED — that's what makes binary search legal).
+    private final Map&lt;String, List&lt;int[]&gt;&gt; times = new HashMap&lt;&gt;();   // {timestamp}
+    private final Map&lt;String, List&lt;String&gt;&gt; vals = new HashMap&lt;&gt;();
+
+    public void set(String key, String value, int timestamp) {
+        times.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;()).add(new int[]{timestamp});
+        vals.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;()).add(value);
+    }
+
+    public String get(String key, int timestamp) {
+        List&lt;int[]&gt; ts = times.get(key);
+        if (ts == null) return "";
+        // Floor search: LAST index with ts[i] &lt;= timestamp.
+        int lo = 0, hi = ts.size() - 1, ans = -1;
+        while (lo &lt;= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (ts.get(mid)[0] &lt;= timestamp) {
+                ans = mid;                   // candidate; maybe a later one fits too
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return ans == -1 ? "" : vals.get(key).get(ans);
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> "Latest version at or before time T" is a <em>floor</em> query — binary
+    search on the append-only (hence sorted) version list, or equivalently
+    <code>TreeMap.floorEntry</code> per key. This is MVCC in miniature: versioned KV stores
+    (etcd, DynamoDB point-in-time reads) answer exactly this query shape.
+    Mirror: <code>code/24-advanced-structures/TimeMap.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> LFU Cache — LeetCode 460</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Like LRU, but evict the <em>least frequently used</em> key; ties break
+    by least-recent use. <code>get</code> and <code>put</code> must both be O(1).</p>
+    <p><strong>Example.</strong> capacity 2: put(1,1), put(2,2), get(1) → 1 makes key 1's count 2;
+    put(3,3) evicts key 2 (count 1 &lt; 2); get(2) → −1.</p>
+    <p class="code-title">Frequency buckets of LinkedHashSets + a minFreq pointer · all ops O(1)</p>
+<pre class="code"><code>public class LFUCache {
+    private final int capacity;
+    private final Map&lt;Integer, Integer&gt; values = new HashMap&lt;&gt;();
+    private final Map&lt;Integer, Integer&gt; freq = new HashMap&lt;&gt;();   // key -&gt; use count
+    // freq -&gt; keys with that count, in LRU order (LinkedHashSet keeps
+    // insertion order, giving us the recency tie-break for free).
+    private final Map&lt;Integer, LinkedHashSet&lt;Integer&gt;&gt; buckets = new HashMap&lt;&gt;();
+    private int minFreq = 0;              // smallest frequency present in the cache
+
+    public LFUCache(int capacity) { this.capacity = capacity; }
+
+    public int get(int key) {
+        if (!values.containsKey(key)) return -1;
+        touch(key);                       // bump its frequency
+        return values.get(key);
+    }
+
+    public void put(int key, int value) {
+        if (capacity == 0) return;
+        if (values.containsKey(key)) {    // update existing: new value + bump
+            values.put(key, value);
+            touch(key);
+            return;
+        }
+        if (values.size() == capacity) {
+            // Evict: the LRU member of the minimum-frequency bucket.
+            int evict = buckets.get(minFreq).iterator().next();  // oldest inserted
+            buckets.get(minFreq).remove(evict);
+            values.remove(evict);
+            freq.remove(evict);
+        }
+        values.put(key, value);
+        freq.put(key, 1);
+        buckets.computeIfAbsent(1, k -&gt; new LinkedHashSet&lt;&gt;()).add(key);
+        minFreq = 1;                      // a brand-new key resets the floor
+    }
+
+    // Move key from bucket f to bucket f+1, maintaining minFreq.
+    private void touch(int key) {
+        int f = freq.get(key);
+        buckets.get(f).remove(key);
+        // If that emptied the minimum bucket, the floor rises by exactly 1
+        if (f == minFreq &amp;&amp; buckets.get(f).isEmpty()) minFreq++;
+        freq.put(key, f + 1);
+        buckets.computeIfAbsent(f + 1, k -&gt; new LinkedHashSet&lt;&gt;()).add(key);
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> LFU = LRU's structure one level up: instead of one recency list, keep one
+    per frequency, plus a <code>minFreq</code> floor. The subtle invariant: <code>minFreq</code> only ever
+    rises by 1 on a bump (the touched key came <em>from</em> the min bucket) and resets to 1 on inserts —
+    that's why no scan for the new minimum is needed. Redis offers exactly this policy as
+    <code>allkeys-lfu</code>. Mirror: <code>code/24-advanced-structures/LFUCache.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Store the key inside the LRU node.</strong> The #1 LRU bug: you evict <code>tail.prev</code> and then can't remove its map entry because the node only held a value.</li>
   <li><strong>Use sentinel head/tail nodes.</strong> Without them, linking at an empty/one-element list needs four special cases; with them, <code>unlink</code>/<code>linkFront</code> are branch-free.</li>

@@ -46,13 +46,7 @@
   <li><a href="09-stacks-queues.html">09 · Stacks &amp; Queues</a> — recursion literally runs on a stack; you'll convert between the two.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you define the base case first?</strong> Most broken recursive code fails at "when do we stop", not at the clever part.</li>
-  <li><strong>Do you trust the recursive call?</strong> Seniors state "assume <code>f(n-1)</code> returns the right answer" and build on it; juniors try to trace every frame and drown.</li>
-  <li><strong>Can you count the work?</strong> Reading O(n·2ⁿ) or O(n·n!) off a recursion tree, unprompted, is a strong signal.</li>
-  <li><strong>Is your state restored?</strong> Forgetting the un-choose step (or sharing a mutated list) is the classic backtracking bug — interviewers watch for it.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the gateway skill for trees, graphs, and DP — the choose/explore/un-choose template with the right pruning is what gets tested.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -299,160 +293,315 @@ while (!stack.isEmpty()) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/subsets/">Subsets</a></span>
-    <span class="hint">One include/exclude decision per element; leaves of the decision tree are the answer. The canonical first backtracking problem.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/permutations/">Permutations</a></span>
-    <span class="hint">Order matters, so every unused element is a candidate for the next slot — track them with a <code>used[]</code> array.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/letter-combinations-of-a-phone-number/">Letter Combinations of a Phone Number</a></span>
-    <span class="hint">One decision per digit, candidates = that digit's letters. Pure choose/explore/un-choose with a StringBuilder.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/combination-sum/">Combination Sum</a></span>
-    <span class="hint">Start-index pattern kills duplicate orderings; pass <code>i</code> (not <code>i+1</code>) to allow reuse; sort + break to prune.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/word-search/">Word Search</a></span>
-    <span class="hint">Grid DFS from each cell; mark the cell visited (mutate the board), recurse into 4 neighbors, restore on the way out.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/palindrome-partitioning/">Palindrome Partitioning</a></span>
-    <span class="hint">Decision = where the next cut ends; only recurse if the prefix piece is a palindrome (that check IS the pruning).</span></div>
-  <div class="prob"><span class="badge hard">hard</span> <span class="t"><a href="https://leetcode.com/problems/n-queens/">N-Queens</a></span>
-    <span class="hint">One queen per row; O(1) conflict checks via three sets — columns, r+c diagonals, r−c diagonals. See the walkthrough below.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough. Every solution is the choose → explore → un-choose template with different
+decisions and prunes.</p>
 
 <details class="sol">
-  <summary>Worked solution: Subsets (LeetCode 78)</summary>
+  <summary><span class="badge medium">medium</span> Subsets — LeetCode 78</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given distinct integers, return every possible subset (the power set).</p>
-    <p><strong>Idea:</strong> walk the elements left to right; for each one make two recursive calls — one that excludes
-    it and one that includes it. When you've decided all n elements, the current path is exactly one subset. This is the
-    decision tree from the animation above; the code is a depth-first walk of it.</p>
-<p class="code-title">code/10-recursion-backtracking/Subsets.java</p>
-<pre class="code"><code>// LeetCode 78. Return ALL subsets (the power set) of a set of distinct ints.
-public static List&lt;List&lt;Integer&gt;&gt; subsets(int[] nums) {
-    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
-    // path = the choices made so far on the way down one branch
-    backtrack(nums, 0, new ArrayList&lt;&gt;(), result);
-    return result;
+    <p><strong>The problem.</strong> Return <em>all</em> subsets (the power set) of an array of distinct
+    integers, in any order.</p>
+    <p><strong>Example.</strong> <code>[1,2,3]</code> →
+    <code>[[],[1],[2],[3],[1,2],[1,3],[2,3],[1,2,3]]</code> — 2³ = 8 subsets.</p>
+
+    <p class="code-title">Variation 1 — include/exclude recursion (the decision tree) · O(n·2ⁿ)</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; subsets(int[] nums) {
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    dfs(nums, 0, new ArrayList&lt;&gt;(), res);
+    return res;
 }
 
-private static void backtrack(int[] nums, int i, List&lt;Integer&gt; path,
-                              List&lt;List&lt;Integer&gt;&gt; result) {
-    // Base case: we have made a decision for EVERY element -&gt; path is one
-    // complete subset. Copy it (path itself keeps mutating afterwards!).
-    if (i == nums.length) {
-        result.add(new ArrayList&lt;&gt;(path));
-        return;
+// One decision per index: is nums[i] in this subset or not?
+private static void dfs(int[] nums, int i, List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; res) {
+    if (i == nums.length) {                  // decided for every element:
+        res.add(new ArrayList&lt;&gt;(path));      // the path IS one subset — COPY it
+        return;                              // (the path keeps mutating after this)
     }
-    // Branch 1: EXCLUDE nums[i]. No state change, just move on.
-    backtrack(nums, i + 1, path, result);
-
-    // Branch 2: INCLUDE nums[i].
-    path.add(nums[i]);                  // choose
-    backtrack(nums, i + 1, path, result); // explore
-    path.remove(path.size() - 1);       // un-choose: restore state for caller
+    // Branch 1: exclude nums[i]
+    dfs(nums, i + 1, path, res);
+    // Branch 2: include nums[i]
+    path.add(nums[i]);                       // choose
+    dfs(nums, i + 1, path, res);             // explore
+    path.remove(path.size() - 1);            // un-choose — restore for the caller
 }</code></pre>
-    <p><strong>Complexity:</strong> 2ⁿ leaves, each copied in O(n) → <strong>time O(n·2ⁿ)</strong>;
-    <strong>space O(n)</strong> for the recursion depth and path (output not counted).</p>
+
+    <p class="code-title">Variation 2 — iterative doubling · same complexity, no recursion</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; subsetsIterative(int[] nums) {
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    res.add(new ArrayList&lt;&gt;());              // start with the empty subset
+    for (int x : nums) {
+        // Each new element doubles the collection: every existing subset
+        // spawns a copy that additionally contains x.
+        int size = res.size();
+        for (int k = 0; k &lt; size; k++) {
+            List&lt;Integer&gt; copy = new ArrayList&lt;&gt;(res.get(k));
+            copy.add(x);
+            res.add(copy);
+        }
+    }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The recursive version teaches the template (and the crucial
+    <em>copy-at-the-leaf</em>: forgetting <code>new ArrayList&lt;&gt;(path)</code> fills the answer with
+    aliases of one mutating list). The doubling version shows the same 2ⁿ growth without a stack — and a
+    bitmask version (page 22) enumerates masks 0..2ⁿ−1 directly.
+    Mirror: <code>code/10-recursion-backtracking/Subsets.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Permutations (LeetCode 46)</summary>
+  <summary><span class="badge medium">medium</span> Permutations — LeetCode 46</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given distinct integers, return every possible ordering of them.</p>
-    <p><strong>Idea:</strong> build the answer slot by slot. Because order matters, the candidates for the next slot are
-    <em>all elements not yet placed</em> — not just "later" ones. A <code>boolean[] used</code> marks what the current
-    branch has consumed; un-choosing clears the mark so sibling branches can use that element.</p>
-<p class="code-title">code/10-recursion-backtracking/Permutations.java</p>
-<pre class="code"><code>// LeetCode 46. Return ALL orderings of an array of distinct ints.
-public static List&lt;List&lt;Integer&gt;&gt; permute(int[] nums) {
-    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
-    // used[j] = "nums[j] is already placed somewhere in the current path"
-    backtrack(nums, new boolean[nums.length], new ArrayList&lt;&gt;(), result);
-    return result;
+    <p><strong>The problem.</strong> Return all orderings (permutations) of an array of distinct integers.</p>
+    <p><strong>Example.</strong> <code>[1,2,3]</code> →
+    <code>[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]</code> — 3! = 6 orderings.</p>
+    <p class="code-title">Slot-by-slot with a used[] array · O(n·n!)</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; permute(int[] nums) {
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    dfs(nums, new boolean[nums.length], new ArrayList&lt;&gt;(), res);
+    return res;
 }
 
-private static void backtrack(int[] nums, boolean[] used, List&lt;Integer&gt; path,
-                              List&lt;List&lt;Integer&gt;&gt; result) {
-    // Base case: every slot is filled -&gt; path is one complete permutation.
-    if (path.size() == nums.length) {
-        result.add(new ArrayList&lt;&gt;(path)); // copy — path keeps mutating
+// Decision per level: which UNUSED element fills the next slot?
+private static void dfs(int[] nums, boolean[] used, List&lt;Integer&gt; path,
+                        List&lt;List&lt;Integer&gt;&gt; res) {
+    if (path.size() == nums.length) {        // every slot filled
+        res.add(new ArrayList&lt;&gt;(path));      // copy the finished ordering
         return;
     }
-    // Unlike subsets, EVERY still-unused element is a candidate for the
-    // next slot (order matters, so we don't restrict to "later" indices).
-    for (int j = 0; j &lt; nums.length; j++) {
-        if (used[j]) continue;      // prune: already placed in this branch
-        used[j] = true;             // choose nums[j] for the current slot
-        path.add(nums[j]);
-        backtrack(nums, used, path, result);   // explore deeper
-        path.remove(path.size() - 1);          // un-choose (mirror order!)
-        used[j] = false;
+    for (int i = 0; i &lt; nums.length; i++) {
+        if (used[i]) continue;               // already placed earlier in this path
+        used[i] = true;                      // choose
+        path.add(nums[i]);
+        dfs(nums, used, path, res);          // explore
+        path.remove(path.size() - 1);        // un-choose — BOTH bookkeeping pieces
+        used[i] = false;                     //   must be restored symmetrically
     }
 }</code></pre>
-    <p><strong>Complexity:</strong> n! leaves, O(n) copy each → <strong>time O(n·n!)</strong>;
-    <strong>space O(n)</strong> for recursion depth, path and <code>used</code>.</p>
+    <p><strong>Takeaway.</strong> Subsets asked include/exclude per element (2ⁿ leaves); permutations ask
+    "who fills the next slot" among the unused (n! leaves). The <code>used[]</code> array is the standard
+    device when order matters. For inputs <em>with duplicates</em> (LC 47): sort first, and skip
+    <code>nums[i]</code> when it equals <code>nums[i−1]</code> and <code>used[i−1]</code> is false —
+    that one guard removes duplicate orderings.
+    Mirror: <code>code/10-recursion-backtracking/Permutations.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Combination Sum (LeetCode 39)</summary>
+  <summary><span class="badge medium">medium</span> Letter Combinations of a Phone Number — LeetCode 17</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> distinct candidates, unlimited reuse of each — return all unique
-    combinations that sum to a target.</p>
-    <p><strong>Idea:</strong> the danger is producing [2,3] and [3,2] as "different" answers. The fix is the
-    <em>start-index</em> pattern: at each level only consider candidates from index <code>start</code> onward, so
-    combinations are always generated in non-decreasing candidate order. Reuse is allowed by recursing with <code>i</code>
-    rather than <code>i+1</code>. Sorting first lets us <code>break</code> the instant a candidate exceeds what's left —
-    real pruning.</p>
-<p class="code-title">code/10-recursion-backtracking/CombinationSum.java</p>
-<pre class="code"><code>// LeetCode 39. Distinct candidates, each usable UNLIMITED times.
-// Return all unique combinations summing to target.
-public static List&lt;List&lt;Integer&gt;&gt; combinationSum(int[] candidates, int target) {
-    List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
-    Arrays.sort(candidates);   // lets us break early once a candidate exceeds what's left
-    backtrack(candidates, 0, target, new ArrayList&lt;&gt;(), result);
-    return result;
+    <p><strong>The problem.</strong> Given digits 2–9, return every letter string those digits could spell on
+    a phone keypad (2=abc, 3=def, …, 9=wxyz).</p>
+    <p><strong>Example.</strong> <code>"23"</code> →
+    <code>["ad","ae","af","bd","be","bf","cd","ce","cf"]</code>. <code>""</code> → <code>[]</code>.</p>
+    <p class="code-title">One decision per digit · O(n·4ⁿ)</p>
+<pre class="code"><code>private static final String[] KEYS = {
+    "", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"
+};
+
+public static List&lt;String&gt; letterCombinations(String digits) {
+    List&lt;String&gt; res = new ArrayList&lt;&gt;();
+    if (digits.isEmpty()) return res;        // spec: empty input -&gt; empty list
+    build(digits, 0, new StringBuilder(), res);
+    return res;
 }
 
-private static void backtrack(int[] cand, int start, int remaining,
-                              List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; result) {
-    // Base case: we spent the target exactly -&gt; path is a valid combination.
-    if (remaining == 0) {
-        result.add(new ArrayList&lt;&gt;(path));
+private static void build(String digits, int i, StringBuilder sb, List&lt;String&gt; res) {
+    if (i == digits.length()) {              // one letter chosen per digit — done
+        res.add(sb.toString());
         return;
     }
-    // Only consider candidates from `start` onward. This is THE trick that
-    // avoids duplicates: [2,3] and [3,2] can never both appear, because once
-    // we move past 2 we never pick it again.
+    // Candidates for this level = the letters on the current digit's key
+    for (char c : KEYS[digits.charAt(i) - '0'].toCharArray()) {
+        sb.append(c);                        // choose
+        build(digits, i + 1, sb, res);       // explore the next digit
+        sb.deleteCharAt(sb.length() - 1);    // un-choose
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The cleanest possible instance of the template: level = digit position,
+    candidates = the key's letters, no pruning needed because every path is valid. Output size (up to 4ⁿ) is
+    the complexity floor — no algorithm beats the size of its own answer.
+    Mirror: <code>code/10-recursion-backtracking/LetterCombinations.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Combination Sum — LeetCode 39</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given distinct positive candidates and a target, return all unique
+    combinations summing to target. The <em>same candidate may be reused</em> any number of times; two
+    combinations are the same if they use the same multiset of numbers.</p>
+    <p><strong>Example.</strong> <code>candidates=[2,3,6,7], target=7</code> →
+    <code>[[2,2,3],[7]]</code>. <code>candidates=[2], target=1</code> → <code>[]</code>.</p>
+    <p class="code-title">Start-index pattern + sort-and-break pruning · exponential worst case</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; combinationSum(int[] candidates, int target) {
+    Arrays.sort(candidates);                 // enables the break-prune below
+    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+    dfs(candidates, 0, target, new ArrayList&lt;&gt;(), res);
+    return res;
+}
+
+private static void dfs(int[] cand, int start, int remain,
+                        List&lt;Integer&gt; path, List&lt;List&lt;Integer&gt;&gt; res) {
+    if (remain == 0) {                       // hit the target exactly
+        res.add(new ArrayList&lt;&gt;(path));
+        return;
+    }
     for (int i = start; i &lt; cand.length; i++) {
-        if (cand[i] &gt; remaining) break; // prune: sorted, so the rest are bigger too
-        path.add(cand[i]);              // choose
-        // pass `i`, NOT `i + 1`: same element may be reused (unlimited supply)
-        backtrack(cand, i, remaining - cand[i], path, result);
-        path.remove(path.size() - 1);   // un-choose
+        if (cand[i] &gt; remain) break;         // sorted: everything after is bigger — prune
+        path.add(cand[i]);                   // choose
+        // Pass i, NOT i+1: the same candidate may be reused.
+        // Passing start at all is what kills duplicate ORDERINGS:
+        // [2,3] can form, [3,2] can never form (3's branch can't go back to 2).
+        dfs(cand, i, remain - cand[i], path, res);
+        path.remove(path.size() - 1);        // un-choose
     }
 }</code></pre>
-    <p><strong>Complexity:</strong> exponential in the worst case — roughly O(nᵀ/ᵐ) branches where m is the smallest
-    candidate; <strong>space O(target/m)</strong> recursion depth. Honest answer in interviews: "exponential, bounded by
-    the pruning".</p>
+    <p><strong>Takeaway.</strong> Two dials control the whole combination family:
+    pass <code>i</code> → reuse allowed (this problem); pass <code>i+1</code> → each element used once
+    (Combination Sum II, which also needs a same-level duplicate skip); and the start index itself enforces
+    "combinations, not permutations". Memorize the dials, not the problems.
+    Mirror: <code>code/10-recursion-backtracking/CombinationSum.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Hint-level walkthrough: N-Queens (LeetCode 51)</summary>
+  <summary><span class="badge medium">medium</span> Word Search — LeetCode 79</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> place n queens on an n×n board so none attack another; return all boards.</p>
-    <p><strong>The insight chain:</strong> (1) exactly one queen per row → recursion depth = row number, one decision
-    (the column) per level. (2) A placement conflicts iff its column, its ↘ diagonal (constant r−c), or its ↙ diagonal
-    (constant r+c) is already taken — so keep three <code>HashSet&lt;Integer&gt;</code>s (or boolean arrays) and conflict
-    checks are O(1). (3) Choose = add col, r−c, r+c to the sets and place the queen; un-choose = remove all three.
-    Pruning is savage here: most branches die within a few rows, which is why n=9 (352,696-node full tree in theory)
-    solves instantly. This is the template you'd reuse for Sudoku solvers.</p>
+    <p><strong>The problem.</strong> Does <code>word</code> exist in the grid as a path of adjacent cells
+    (up/down/left/right), using each cell at most once?</p>
+    <p><strong>Example.</strong> Board <code>[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]</code>:
+    "ABCCED" → true; "SEE" → true; "ABCB" → false (would reuse the B).</p>
+    <p class="code-title">Grid DFS with mark-and-restore · O(m·n·4^L)</p>
+<pre class="code"><code>public static boolean exist(char[][] board, String word) {
+    for (int r = 0; r &lt; board.length; r++)
+        for (int c = 0; c &lt; board[0].length; c++)
+            if (dfs(board, word, r, c, 0)) return true;   // try every starting cell
+    return false;
+}
+
+private static boolean dfs(char[][] b, String w, int r, int c, int i) {
+    if (i == w.length()) return true;        // matched every character
+    if (r &lt; 0 || r &gt;= b.length || c &lt; 0 || c &gt;= b[0].length
+            || b[r][c] != w.charAt(i))       // off-grid, wrong letter, or visited
+        return false;
+
+    char saved = b[r][c];
+    b[r][c] = '#';                           // choose: mark visited IN the board itself
+    boolean found = dfs(b, w, r + 1, c, i + 1)   // explore all four directions;
+                 || dfs(b, w, r - 1, c, i + 1)   // || short-circuits on success
+                 || dfs(b, w, r, c + 1, i + 1)
+                 || dfs(b, w, r, c - 1, i + 1);
+    b[r][c] = saved;                         // un-choose: restore for other paths
+    return found;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Backtracking on a grid: the "visited" marker lives in the board
+    (<code>'#'</code>) and is restored on the way out — mark/restore <em>is</em> choose/un-choose. Note how
+    the wrong-letter check doubles as the visited check. Word Search II (many words at once) upgrades this
+    with a trie so all words share one DFS (<a href="13-tries.html">page 13</a>).
+    Mirror: <code>code/10-recursion-backtracking/WordSearch.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Palindrome Partitioning — LeetCode 131</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Split <code>s</code> into pieces so every piece is a palindrome; return
+    all such partitions.</p>
+    <p><strong>Example.</strong> <code>"aab"</code> → <code>[["a","a","b"],["aa","b"]]</code>.
+    <code>"a"</code> → <code>[["a"]]</code>.</p>
+    <p class="code-title">Decision = where the next piece ends; palindrome check = the prune · O(n·2ⁿ) worst</p>
+<pre class="code"><code>public static List&lt;List&lt;String&gt;&gt; partition(String s) {
+    List&lt;List&lt;String&gt;&gt; res = new ArrayList&lt;&gt;();
+    dfs(s, 0, new ArrayList&lt;&gt;(), res);
+    return res;
+}
+
+private static void dfs(String s, int start, List&lt;String&gt; path, List&lt;List&lt;String&gt;&gt; res) {
+    if (start == s.length()) {               // the whole string is consumed —
+        res.add(new ArrayList&lt;&gt;(path));      // path holds one valid partition
+        return;
+    }
+    for (int end = start + 1; end &lt;= s.length(); end++) {
+        String piece = s.substring(start, end);
+        if (!isPalindrome(piece)) continue;  // prune: never extend an invalid piece
+        path.add(piece);                     // choose this cut
+        dfs(s, end, path, res);              // partition the rest
+        path.remove(path.size() - 1);        // un-choose
+    }
+}
+
+private static boolean isPalindrome(String p) {   // two pointers, page 02
+    for (int l = 0, r = p.length() - 1; l &lt; r; l++, r--)
+        if (p.charAt(l) != p.charAt(r)) return false;
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The decision isn't per-character — it's "where does the current piece
+    end?", and the palindrome test prunes before recursing. A precomputed isPalindrome DP table
+    (<a href="19-dp-2d.html">page 19</a>) turns the O(n) check into O(1) — a classic
+    backtracking-plus-DP hybrid.
+    Mirror: <code>code/10-recursion-backtracking/PalindromePartitioning.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> N-Queens — LeetCode 51</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Place n queens on an n×n chessboard so no two attack each other (queens
+    attack along rows, columns, and diagonals). Return every distinct board.</p>
+    <p><strong>Example.</strong> n=4 → 2 solutions, e.g. <code>[".Q..","...Q","Q...","..Q."]</code>.
+    n=1 → <code>[["Q"]]</code>.</p>
+    <p class="code-title">One queen per row + three conflict sets · pruned exponential</p>
+<pre class="code"><code>public static List&lt;List&lt;String&gt;&gt; solveNQueens(int n) {
+    List&lt;List&lt;String&gt;&gt; res = new ArrayList&lt;&gt;();
+    // The three ways queens attack, each reduced to one number:
+    Set&lt;Integer&gt; cols = new HashSet&lt;&gt;();     // column index
+    Set&lt;Integer&gt; diag1 = new HashSet&lt;&gt;();    // r - c is constant on ↘ diagonals
+    Set&lt;Integer&gt; diag2 = new HashSet&lt;&gt;();    // r + c is constant on ↙ diagonals
+    int[] queenCol = new int[n];              // queenCol[r] = column of row r's queen
+    place(0, n, cols, diag1, diag2, queenCol, res);
+    return res;
+}
+
+private static void place(int r, int n, Set&lt;Integer&gt; cols, Set&lt;Integer&gt; d1,
+                          Set&lt;Integer&gt; d2, int[] queenCol, List&lt;List&lt;String&gt;&gt; res) {
+    if (r == n) {                             // a queen safely placed in every row
+        res.add(render(queenCol, n));
+        return;
+    }
+    for (int c = 0; c &lt; n; c++) {
+        // O(1) conflict check thanks to the three sets
+        if (cols.contains(c) || d1.contains(r - c) || d2.contains(r + c)) continue;
+        cols.add(c); d1.add(r - c); d2.add(r + c);   // choose (all three!)
+        queenCol[r] = c;
+        place(r + 1, n, cols, d1, d2, queenCol, res); // explore the next row
+        cols.remove(c); d1.remove(r - c); d2.remove(r + c);  // un-choose symmetrically
+    }
+}
+
+private static List&lt;String&gt; render(int[] queenCol, int n) {
+    List&lt;String&gt; board = new ArrayList&lt;&gt;();
+    for (int r = 0; r &lt; n; r++) {
+        char[] row = new char[n];
+        Arrays.fill(row, '.');
+        row[queenCol[r]] = 'Q';
+        board.add(new String(row));
+    }
+    return board;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Three ideas compound: (1) one queen per row makes the recursion depth =
+    row, one decision per level; (2) each diagonal is identified by a single number (r−c or r+c), so
+    conflicts are set lookups, not board scans; (3) the pruning is savage — most branches die within a few
+    rows, which is why n=9 solves instantly despite a theoretic 9⁹ tree. The same
+    constraint-set structure drives Sudoku Solver (LC 37).
+    Mirror: <code>code/10-recursion-backtracking/NQueens.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong><code>result.add(path)</code> without copying</strong> — the #1 bug. Every stored reference points at the same list, which unwinds to empty. Always <code>new ArrayList&lt;&gt;(path)</code> at the base case.</li>
   <li><strong>Un-choose must mirror choose exactly.</strong> Two mutations in (add to path, set <code>used</code>) means two mutations out, in reverse order. Write both lines before writing the recursive call.</li>

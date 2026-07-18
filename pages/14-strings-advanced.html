@@ -47,13 +47,7 @@
   <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — count arrays and hashing intuition.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you reach for expand-around-center</strong> on palindrome questions instead of brute-forcing all O(n²) substrings with an O(n) check each?</li>
-  <li><strong>Do you know Java string costs?</strong> <code>substring</code>, <code>+=</code> in loops, <code>charAt</code> — cheap-looking calls with real prices.</li>
-  <li><strong>Can you explain a linear-time matcher?</strong> Nobody expects KMP typed flawlessly from memory; they expect you to explain the LPS idea and why the text pointer never backs up.</li>
-  <li><strong>Are you honest about hashing?</strong> Rabin-Karp answers "probably equal" — verifying on hash hits shows you understand collisions.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> palindromes appear constantly; KMP and rolling hashes are the advanced-string differentiators.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -271,187 +265,279 @@ for (int i = 0, j = 0; i &lt; n; i++) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <span class="t"><a href="https://leetcode.com/problems/valid-palindrome/">Valid Palindrome</a></span>
-    <span class="hint">Two pointers converging, skipping non-alphanumerics (<a href="02-two-pointers.html">page 02</a>) — the warm-up for every palindrome question.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <span class="t"><a href="https://leetcode.com/problems/repeated-substring-pattern/">Repeated Substring Pattern</a></span>
-    <span class="hint">Elegant LPS one-liner: with k = lps[n-1], the answer is k &gt; 0 and n % (n−k) == 0. (Or the trick: s appears inside (s+s) minus its ends.)</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/string-compression/">String Compression</a></span>
-    <span class="hint">Read/write two pointers over a char[], in place — careful with multi-digit counts. Pure implementation discipline.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/longest-palindromic-substring/">Longest Palindromic Substring</a></span>
-    <span class="hint">2n−1 centers, expand each; track the best (start, length). Worked below.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <span class="t"><a href="https://leetcode.com/problems/palindromic-substrings/">Palindromic Substrings</a></span>
-    <span class="hint">Same expansion — but ADD ONE per successful ring instead of tracking the max. If you solved the previous one, this is a 3-line diff.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <span class="t"><a href="https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/">Find the Index of the First Occurrence in a String</a></span>
-    <span class="hint">"Implement strStr". Rated easy because naive passes — the interview value is doing it in O(n+m). BOTH linear solutions worked below.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>Worked: Longest Palindromic Substring (LeetCode 5)</summary>
+  <summary><span class="badge easy">easy</span> Valid Palindrome — LeetCode 125</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return the longest contiguous palindrome inside s (n ≤ 1000).</p>
-    <p><strong>Idea.</strong> Try every center — each of the n characters (odd palindromes) and each of the n−1 gaps
-    (even palindromes) — and expand outward while the ends agree. Track the best length seen and recover the start index
-    from center and length. The expansion helper returns just the length, keeping the arithmetic in one place.</p>
-    <p class="code-title">code/14-strings-advanced/LongestPalindromicSubstring.java</p>
-    <pre class="code"><code>// LeetCode 5 — Longest Palindromic Substring
-// Expand-around-center: every palindrome has a center — either one char
-// (odd length) or the gap between two chars (even length). There are
-// only 2n-1 centers, and expanding each costs at most O(n) -&gt; O(n^2)
-// total with O(1) extra space. This is THE interview-expected solution.
-public class LongestPalindromicSubstring {
-
-    public static String longestPalindrome(String s) {
-        if (s == null || s.isEmpty()) return "";
-        int bestStart = 0, bestLen = 1; // any single char is a palindrome
-        for (int center = 0; center &lt; s.length(); center++) {
-            // Odd-length palindromes: center is the single char at `center`.
-            int odd = expand(s, center, center);
-            // Even-length: center is the GAP between center and center+1.
-            int even = expand(s, center, center + 1);
-            int len = Math.max(odd, even);
-            if (len &gt; bestLen) {
-                bestLen = len;
-                // Recover the start index from the center and the length.
-                bestStart = center - (len - 1) / 2;
-            }
-        }
-        return s.substring(bestStart, bestStart + bestLen);
-    }
-
-    // Grow outward while the two ends match; return the palindrome length.
-    private static int expand(String s, int l, int r) {
-        while (l &gt;= 0 &amp;&amp; r &lt; s.length() &amp;&amp; s.charAt(l) == s.charAt(r)) {
-            l--; // step the left end outward
-            r++; // step the right end outward
-        }
-        // The loop overshot by one on each side: length = (r-1)-(l+1)+1.
-        return r - l - 1;
-    }
-}</code></pre>
-    <p><strong>Complexity:</strong> O(n²) time (2n−1 centers × O(n) expansion), O(1) extra space (the final substring copy aside). Fine for n ≤ 1000; mention Manacher's O(n) exists.</p>
+    <p><strong>The problem.</strong> After dropping non-alphanumerics and lowercasing, does the string read
+    the same both ways?</p>
+    <p><strong>Example.</strong> <code>"A man, a plan, a canal: Panama"</code> → true.</p>
+    <p>Fully worked (reverse-and-compare vs converging pointers) on
+    <a href="02-two-pointers.html#problems">page 02</a> — revisit it now as the inward-moving mirror of this
+    page's expand-around-center: the same two-pointer skeleton, run in the opposite direction.
+    Mirror: <code>code/02-two-pointers/ValidPalindrome.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked: Implement strStr with KMP (LeetCode 28)</summary>
+  <summary><span class="badge easy">easy</span> Repeated Substring Pattern — LeetCode 459</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return the index of the first occurrence of needle in haystack, or −1.</p>
-    <p><strong>Idea.</strong> Precompute the needle's LPS array, then walk the haystack once with a matched-count j.
-    On mismatch, drop j to <code>lps[j-1]</code> — the longest prefix of the needle that's still consistent with what we
-    just read — and try again <em>without moving i back</em>. When j reaches the needle's length, the match started at
-    <code>i - m + 1</code>. The LPS builder is the same loop matching the needle against itself.</p>
-    <p class="code-title">code/14-strings-advanced/StrStrKMP.java</p>
-    <pre class="code"><code>// LeetCode 28 — Find the Index of the First Occurrence in a String
-// KMP version: O(n + m) worst case. The LPS table ("longest proper
-// prefix that is also a suffix") tells us, on a mismatch, how much of
-// what we already matched is REUSABLE — so the text pointer i never
-// moves backwards.
-public class StrStrKMP {
+    <p><strong>The problem.</strong> Can the string be built by repeating some substring of it two or more
+    times?</p>
+    <p><strong>Example.</strong> <code>"abab"</code> → true ("ab" × 2). <code>"aba"</code> → false.
+    <code>"abcabcabc"</code> → true ("abc" × 3).</p>
 
-    public static int strStr(String haystack, String needle) {
-        int n = haystack.length(), m = needle.length();
-        if (m == 0) return 0;
-        int[] lps = buildLps(needle);
-        int j = 0; // how many pattern chars are currently matched
-        for (int i = 0; i &lt; n; i++) {           // i NEVER decreases
-            // On mismatch, fall back through the LPS chain: keep the
-            // longest matched prefix that is still consistent.
-            while (j &gt; 0 &amp;&amp; haystack.charAt(i) != needle.charAt(j))
-                j = lps[j - 1];
-            if (haystack.charAt(i) == needle.charAt(j)) j++; // extend match
-            if (j == m) return i - m + 1;       // full match; return its start
-        }
-        return -1; // pattern never fully matched
+    <p class="code-title">Variation 1 — try every divisor length · O(n · d(n))</p>
+<pre class="code"><code>public static boolean repeatedSubstringPatternBrute(String s) {
+    int n = s.length();
+    for (int len = 1; len &lt;= n / 2; len++) {
+        if (n % len != 0) continue;              // must tile the string exactly
+        String unit = s.substring(0, len);
+        boolean ok = true;
+        for (int i = len; i &lt; n &amp;&amp; ok; i += len)
+            ok = s.regionMatches(i, unit, 0, len);   // compare each tile
+        if (ok) return true;
     }
-
-    // lps[i] = length of the longest proper prefix of needle[0..i] that
-    // is ALSO a suffix of it. Built with the same fall-back trick.
-    static int[] buildLps(String p) {
-        int[] lps = new int[p.length()];
-        int len = 0;                       // current matched prefix length
-        for (int i = 1; i &lt; p.length(); i++) {
-            while (len &gt; 0 &amp;&amp; p.charAt(i) != p.charAt(len))
-                len = lps[len - 1];        // shrink to the next-best prefix
-            if (p.charAt(i) == p.charAt(len)) len++; // prefix grows by one
-            lps[i] = len;
-        }
-        return lps;
-    }
+    return false;
 }</code></pre>
-    <p><strong>Complexity:</strong> O(n + m) time guaranteed — i only moves forward, and j's fall-backs are bounded by its rises. O(m) space for LPS.</p>
+
+    <p class="code-title">Variation 2 — the doubling trick · O(n) with a linear strStr</p>
+<pre class="code"><code>public static boolean repeatedSubstringPattern(String s) {
+    // Slick fact: s is periodic  &lt;=&gt;  s appears inside (s+s) with both
+    // endpoints strictly inside — i.e. at an index other than 0 and n.
+    // Chopping the first and last character removes those trivial hits.
+    String doubled = (s + s).substring(1, 2 * s.length() - 1);
+    return doubled.contains(s);   // use KMP-strStr for a guaranteed O(n)
+}</code></pre>
+    <p><strong>Takeaway.</strong> Why the trick works: if s = u repeated k≥2 times, then s+s contains s
+    starting at |u| (an interior index). Conversely an interior occurrence forces a period that divides n.
+    A third route: LPS from KMP — s is periodic iff <code>n % (n − lps[n−1]) == 0</code> with
+    <code>lps[n−1] &gt; 0</code>; the LPS table literally encodes the period.
+    Mirror: <code>code/14-strings-advanced/RepeatedSubstringPattern.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked: Implement strStr with Rabin-Karp (LeetCode 28, alternative)</summary>
+  <summary><span class="badge medium">medium</span> String Compression — LeetCode 443</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> same problem — now with a rolling hash instead of a prefix table.</p>
-    <p><strong>Idea.</strong> Hash the needle and the first m-character window of the haystack. Slide the window one
-    character at a time, updating the hash in O(1): subtract the departing character's contribution (it carries weight
-    B<sup>m−1</sup>), multiply by B, add the arriving character — all mod a large prime. When window hash equals target
-    hash, verify with a real character comparison (<code>regionMatches</code>) because collisions are possible.</p>
-    <p class="code-title">code/14-strings-advanced/StrStrRabinKarp.java</p>
-    <pre class="code"><code>// LeetCode 28 again — Rabin-Karp version.
-// Polynomial rolling hash: after hashing the first window, every next
-// m-length window of the text is hashed in O(1) (remove left char, add
-// right char). Compare hashes; verify char-by-char on a hash hit,
-// because hashes CAN collide. Expected O(n + m).
-public class StrStrRabinKarp {
+    <p><strong>The problem.</strong> Compress runs in place: <code>['a','a','b','b','c','c','c']</code>
+    becomes <code>['a','2','b','2','c','3']</code>; runs of length 1 get no count; counts ≥ 10 are written
+    digit by digit. Return the new length; use O(1) extra space.</p>
+    <p><strong>Example.</strong> <code>[a,a,b,b,c,c,c]</code> → 6, array starts <code>a2b2c3</code>.
+    <code>[a]</code> → 1. <code>[a,b,b,b,b,b,b,b,b,b,b,b,b]</code> → 4 (<code>a,b,1,2</code>).</p>
+    <p class="code-title">Read/write pointers over runs · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int compress(char[] chars) {
+    int write = 0;                            // where the next output char goes
+    int read = 0;                             // start of the current run
+    while (read &lt; chars.length) {
+        char c = chars[read];
+        int runEnd = read;
+        while (runEnd &lt; chars.length &amp;&amp; chars[runEnd] == c)
+            runEnd++;                         // find the end of this run
+        int runLen = runEnd - read;
 
-    public static int strStr(String haystack, String needle) {
-        int n = haystack.length(), m = needle.length();
-        if (m == 0) return 0;
-        if (m &gt; n) return -1;
-
-        final long MOD = 1_000_000_007L; // large prime keeps collisions rare
-        final long BASE = 31;            // treat chars as digits in base 31
-
-        // Highest power of BASE inside a window: BASE^(m-1) mod MOD.
-        long pow = 1;
-        for (int i = 0; i &lt; m - 1; i++) pow = pow * BASE % MOD;
-
-        // Hash of the needle and of the first text window.
-        long target = 0, window = 0;
-        for (int i = 0; i &lt; m; i++) {
-            target = (target * BASE + needle.charAt(i)) % MOD;
-            window = (window * BASE + haystack.charAt(i)) % MOD;
+        chars[write++] = c;                   // every run writes its character
+        if (runLen &gt; 1) {                     // runs of 1 write NO count
+            // Counts &gt;= 10 are written digit by digit, in order
+            for (char d : String.valueOf(runLen).toCharArray())
+                chars[write++] = d;
         }
+        read = runEnd;                        // jump to the next run
+    }
+    return write;                             // compressed length
+}</code></pre>
+    <p><strong>Takeaway.</strong> Run-length encoding with page 02's read/write pointers. It's safe to write
+    into the array being read because the compressed form of a run is never longer than the run itself
+    (a 1-char run writes 1 char; longer runs shrink or break even). This tiny algorithm is real: RLE is
+    inside PNG filtering, fax encoding, and columnar database compression.
+    Mirror: <code>code/14-strings-advanced/StringCompression.java</code>.</p>
+  </div>
+</details>
 
-        for (int start = 0; ; start++) {
-            // Hashes equal? Verify for real — collisions are possible.
-            if (window == target
-                    &amp;&amp; haystack.regionMatches(start, needle, 0, m))
-                return start;
-            if (start + m &gt;= n) return -1; // no window left to slide into
-            // Roll: remove the leftmost char, shift, append the next char.
-            long out = haystack.charAt(start) * pow % MOD;
-            window = (window - out + MOD) % MOD;  // +MOD avoids going negative
-            window = (window * BASE + haystack.charAt(start + m)) % MOD;
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Longest Palindromic Substring — LeetCode 5</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the longest contiguous palindrome inside s (n up to 1000; any
+    one answer if several tie).</p>
+    <p><strong>Example.</strong> <code>"babad"</code> → <code>"bab"</code> (or "aba").
+    <code>"cbbd"</code> → <code>"bb"</code>.</p>
+
+    <p class="code-title">Variation 1 — check every substring · O(n³), the baseline to beat</p>
+<pre class="code"><code>// For each of the O(n^2) substrings, an O(n) palindrome check.
+// Fine for explaining WHAT we optimize: the checks repeat massive work —
+// "bab" being a palindrome already tells you a lot about "xbabx".</code></pre>
+
+    <p class="code-title">Variation 2 — expand around every center (the expected answer) · O(n²), O(1) space</p>
+<pre class="code"><code>public static String longestPalindrome(String s) {
+    if (s == null || s.isEmpty()) return "";
+    int bestStart = 0, bestLen = 1; // any single char is a palindrome
+    for (int center = 0; center &lt; s.length(); center++) {
+        // Odd-length palindromes: center is the single char at `center`.
+        int odd = expand(s, center, center);
+        // Even-length: center is the GAP between center and center+1.
+        int even = expand(s, center, center + 1);
+        int len = Math.max(odd, even);
+        if (len &gt; bestLen) {
+            bestLen = len;
+            // Recover the start index from the center and the length.
+            bestStart = center - (len - 1) / 2;
         }
     }
+    return s.substring(bestStart, bestStart + bestLen);
+}
+
+// Grow outward while the two ends match; return the palindrome length.
+private static int expand(String s, int l, int r) {
+    while (l &gt;= 0 &amp;&amp; r &lt; s.length() &amp;&amp; s.charAt(l) == s.charAt(r)) {
+        l--; // step the left end outward
+        r++; // step the right end outward
+    }
+    // The loop overshot by one on each side: length = (r-1)-(l+1)+1.
+    return r - l - 1;
 }</code></pre>
-    <p><strong>Complexity:</strong> expected O(n + m) time — each verification is O(m) but triggers only on hash hits, which are rare with a good modulus; degenerate worst case O(n·m). O(1) space. Note the <code>+ MOD</code> before <code>% MOD</code>: Java's remainder can be negative after subtraction.</p>
+    <p><strong>Takeaway.</strong> Every palindrome has a center — one character (odd length) or a gap (even
+    length) — so 2n−1 expansions cover everything. Forgetting the even centers (finding "aba" but never
+    "abba") is <em>the</em> classic bug. Manacher's algorithm does O(n) but is rarely expected — name it,
+    don't derive it. Mirror: <code>code/14-strings-advanced/LongestPalindromicSubstring.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Palindromic Substrings — LeetCode 647</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count all palindromic substrings (occurrences count separately even with
+    equal text).</p>
+    <p><strong>Example.</strong> <code>"abc"</code> → 3 ("a","b","c"). <code>"aaa"</code> → 6
+    ("a"×3, "aa"×2, "aaa").</p>
+    <p class="code-title">Same expansion, counting instead of maximizing · O(n²), O(1) space</p>
+<pre class="code"><code>public static int countSubstrings(String s) {
+    int count = 0;
+    for (int center = 0; center &lt; s.length(); center++) {
+        count += countFrom(s, center, center);     // odd-length palindromes
+        count += countFrom(s, center, center + 1); // even-length palindromes
+    }
+    return count;
+}
+
+// Each successful expansion step IS one more palindrome — count them all.
+private static int countFrom(String s, int l, int r) {
+    int count = 0;
+    while (l &gt;= 0 &amp;&amp; r &lt; s.length() &amp;&amp; s.charAt(l) == s.charAt(r)) {
+        count++;                                   // s[l..r] is a palindrome
+        l--;
+        r++;
+    }
+    return count;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Identical engine to LC 5, different bookkeeping: instead of tracking the
+    longest, every step outward registers one palindrome. When two problems share an engine, learn the
+    engine — the pairing here (maximize vs count) is a pattern you'll see again with DP tables.
+    Mirror: <code>code/14-strings-advanced/PalindromicSubstrings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Find the Index of the First Occurrence (strStr) — LeetCode 28</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the index of the first occurrence of <code>needle</code> in
+    <code>haystack</code>, or −1. This is <code>indexOf</code>, implemented three ways.</p>
+    <p><strong>Example.</strong> <code>haystack="sadbutsad", needle="sad"</code> → <code>0</code>.
+    <code>haystack="leetcode", needle="leeto"</code> → <code>-1</code>.</p>
+
+    <p class="code-title">Variation 1 — naive sliding compare · O(n·m)</p>
+<pre class="code"><code>public static int strStrNaive(String haystack, String needle) {
+    int n = haystack.length(), m = needle.length();
+    for (int start = 0; start + m &lt;= n; start++)
+        if (haystack.regionMatches(start, needle, 0, m))  // O(m) compare
+            return start;
+    return -1;
+}</code></pre>
+    <p>The waste: after matching "abcab…" and failing, the naive scan restarts from scratch one position
+    over, re-reading characters it has already seen. Both fixes below avoid re-reading the text.</p>
+
+    <p class="code-title">Variation 2 — KMP: reuse matched prefixes · O(n+m) guaranteed</p>
+<pre class="code"><code>public static int strStr(String haystack, String needle) {
+    int n = haystack.length(), m = needle.length();
+    if (m == 0) return 0;
+    int[] lps = buildLps(needle);
+    int j = 0; // how many pattern chars are currently matched
+    for (int i = 0; i &lt; n; i++) {           // i NEVER decreases
+        // On mismatch, fall back through the LPS chain: keep the
+        // longest matched prefix that is still consistent.
+        while (j &gt; 0 &amp;&amp; haystack.charAt(i) != needle.charAt(j))
+            j = lps[j - 1];
+        if (haystack.charAt(i) == needle.charAt(j)) j++; // extend match
+        if (j == m) return i - m + 1;       // full match; return its start
+    }
+    return -1; // pattern never fully matched
+}
+
+// lps[i] = length of the longest proper prefix of needle[0..i] that
+// is ALSO a suffix of it. Built with the same fall-back trick.
+static int[] buildLps(String p) {
+    int[] lps = new int[p.length()];
+    int len = 0;                       // current matched prefix length
+    for (int i = 1; i &lt; p.length(); i++) {
+        while (len &gt; 0 &amp;&amp; p.charAt(i) != p.charAt(len))
+            len = lps[len - 1];        // shrink to the next-best prefix
+        if (p.charAt(i) == p.charAt(len)) len++; // prefix grows by one
+        lps[i] = len;
+    }
+    return lps;
+}</code></pre>
+
+    <p class="code-title">Variation 3 — Rabin-Karp: rolling hash · expected O(n+m)</p>
+<pre class="code"><code>public static int strStrRabinKarp(String haystack, String needle) {
+    int n = haystack.length(), m = needle.length();
+    if (m == 0) return 0;
+    if (m &gt; n) return -1;
+
+    final long MOD = 1_000_000_007L; // large prime keeps collisions rare
+    final long BASE = 31;            // treat chars as digits in base 31
+
+    // Highest power of BASE inside a window: BASE^(m-1) mod MOD.
+    long pow = 1;
+    for (int i = 0; i &lt; m - 1; i++) pow = pow * BASE % MOD;
+
+    // Hash of the needle and of the first text window.
+    long target = 0, window = 0;
+    for (int i = 0; i &lt; m; i++) {
+        target = (target * BASE + needle.charAt(i)) % MOD;
+        window = (window * BASE + haystack.charAt(i)) % MOD;
+    }
+
+    for (int start = 0; ; start++) {
+        // Hashes equal? Verify for real — collisions are possible.
+        if (window == target
+                &amp;&amp; haystack.regionMatches(start, needle, 0, m))
+            return start;
+        if (start + m &gt;= n) return -1; // no window left to slide into
+        // Roll: remove the leftmost char, shift, append the next char.
+        long out = haystack.charAt(start) * pow % MOD;
+        window = (window - out + MOD) % MOD;  // +MOD avoids going negative
+        window = (window * BASE + haystack.charAt(start + m)) % MOD;
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Three philosophies: naive re-reads the text; KMP remembers structure
+    <em>about the pattern</em> (the LPS table) so the text pointer never backs up; Rabin-Karp summarizes
+    windows as numbers so comparisons are O(1) until a hash hit demands verification. KMP wins on guaranteed
+    bounds; rolling hashes win on flexibility (multiple patterns at once, 2D grids, chunking in rsync).
+    Mirrors: <code>code/14-strings-advanced/StrStrKMP.java</code> and <code>StrStrRabinKarp.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Missing even-length centers</strong> — expanding only from (i, i) finds <code>aba</code> but never <code>abba</code>. Always run both (i, i) and (i, i+1).</li>
   <li><strong>"Proper" prefix means strictly shorter.</strong> lps of <code>"aaaa"</code> is [0,1,2,3], never 4 — the whole string doesn't count as its own prefix. Get this wrong and KMP loops forever.</li>
   <li><strong>Negative mods:</strong> in Java <code>(a - b) % MOD</code> can be negative — write <code>((a - b) % MOD + MOD) % MOD</code>. This bug is invisible until a hash silently mismatches.</li>
   <li><strong>Hash arithmetic overflows int fast:</strong> B·hash exceeds 2³¹ after a couple of characters. Use <code>long</code> throughout and reduce mod M at every step, not once at the end.</li>
-  <li><strong>Palindromic <em>substring</em> ≠ <em>subsequence</em>.</strong> Substring is contiguous (this page); subsequence allows gaps and is a DP problem (<a href="19-dp-2d.html">page 19</a>). Confirm which one before solving.</li>
-  <li><strong>Don't oversell hashing:</strong> say "expected O(n+m), and I verify on hash equality since collisions exist." Claiming certainty from a hash match is exactly the mistake the follow-up question is fishing for.</li>
+  <li><strong>Palindromic <em>substring</em> ≠ <em>subsequence</em>.</strong> Substring is contiguous (this page); subsequence allows gaps and is a DP problem (<a href="19-dp-2d.html">page 19</a>). Check which one the problem means.</li>
+  <li><strong>Don't oversell hashing:</strong> say "expected O(n+m), and I verify on hash equality since collisions exist."</li>
 </ul>
 
 <nav class="pager">

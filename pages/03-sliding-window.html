@@ -46,13 +46,7 @@
   <li><a href="02-two-pointers.html">02 · Two Pointers</a> — a window is two pointers moving the <em>same</em> direction; the discard reasoning carries over.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you recognize "contiguous"?</strong> That single word is the trigger; subsequences (non-contiguous) are a different topic (DP, page 18).</li>
-  <li><strong>Can you state the window invariant?</strong> "My window always satisfies P; I expand until P breaks, shrink until it holds" — say it explicitly.</li>
-  <li><strong>O(1) updates:</strong> adding/removing one element must not trigger a recount of the window.</li>
-  <li><strong>The amortized argument:</strong> why a loop-in-a-loop is still O(n) — each pointer only moves forward.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> asked constantly for strings and subarrays; the skill tested is maintaining window state in O(1) per step.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -244,38 +238,123 @@ for (int right = 0; right &lt; n; right++) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock/">Best Time to Buy and Sell Stock</a>
-    <span class="hint">A degenerate window: track min price so far; best profit = price − minSoFar at each step.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/maximum-average-subarray-i/">Maximum Average Subarray I</a>
-    <span class="hint">Fixed window: seed sum of first k, then <code>sum += a[i] − a[i−k]</code>.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/longest-substring-without-repeating-characters/">Longest Substring Without Repeating Characters</a> ★
-    <span class="hint">Variable window; on a duplicate, jump left past the old occurrence (last-seen index array).</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/permutation-in-string/">Permutation in String</a> ★
-    <span class="hint">Fixed window of size |s1|; compare two <code>int[26]</code> counts as the window slides.</span></div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <a class="t" href="https://leetcode.com/problems/minimum-window-substring/">Minimum Window Substring</a> ★
-    <span class="hint">Shortest-valid template + a <code>required</code> counter so validity is an O(1) check.</span></div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <a class="t" href="https://leetcode.com/problems/sliding-window-maximum/">Sliding Window Maximum</a>
-    <span class="hint">Monotonic deque of indexes, values decreasing; front = current max. Deep-dive in <a href="09-stacks-queues.html">09</a>.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>★ Worked solution — Longest Substring Without Repeating Characters (LeetCode 3, medium)</summary>
+  <summary><span class="badge easy">easy</span> Best Time to Buy and Sell Stock — LeetCode 121</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> length of the longest substring of <code>s</code> containing no
-    repeated character.</p>
-    <p><strong>Idea:</strong> keep a window that is always duplicate-free. Remember each character's last
-    position; when the incoming char was last seen <em>inside</em> the window, snap <code>left</code> to just
-    past that old occurrence — one jump instead of a step-by-step shrink. Measure after every extension.</p>
-<pre class="code"><code>public static int lengthOfLongestSubstring(String s) {
+    <p><strong>The problem.</strong> <code>prices[i]</code> is a stock's price on day i. Pick one day to buy
+    and a <em>later</em> day to sell, maximizing profit. Return the best profit, or 0 if no profitable trade
+    exists.</p>
+    <p><strong>Example.</strong> <code>[7,1,5,3,6,4]</code> → <code>5</code> (buy at 1 on day 1, sell at 6
+    on day 4). <code>[7,6,4,3,1]</code> → <code>0</code> (prices only fall — don't trade).</p>
+
+    <p class="code-title">Variation 1 — brute force: every buy/sell pair · O(n²)</p>
+<pre class="code"><code>public int maxProfitBrute(int[] prices) {
+    int best = 0;
+    for (int buy = 0; buy &lt; prices.length; buy++)
+        for (int sell = buy + 1; sell &lt; prices.length; sell++)
+            best = Math.max(best, prices[sell] - prices[buy]);
+    return best;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — min-so-far in one pass (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public int maxProfit(int[] prices) {
+    int minSoFar = Integer.MAX_VALUE;   // cheapest buy seen up to today
+    int best = 0;
+    for (int p : prices) {
+        minSoFar = Math.min(minSoFar, p);      // today could be the new best buy...
+        best = Math.max(best, p - minSoFar);   // ...or the best sell against the
+    }                                          //    cheapest earlier buy
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The inner loop only ever needed one fact from the past — the minimum price
+    so far — so a single variable replaces it. This "carry a running summary of the left side" move is the
+    degenerate form of a window, and reappears as the space-squeeze trick in DP
+    (<a href="18-dp-1d.html">page 18</a>, where this problem returns as a state machine).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Maximum Average Subarray I — LeetCode 643</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Find the contiguous subarray of <em>exactly</em> length <code>k</code>
+    with the largest average, and return that average.</p>
+    <p><strong>Example.</strong> <code>nums=[1,12,-5,-6,50,3], k=4</code> → <code>12.75</code>
+    (window [12,−5,−6,50] sums to 51; 51/4 = 12.75). <code>nums=[5], k=1</code> → <code>5.0</code>.</p>
+
+    <p class="code-title">Variation 1 — recompute each window's sum · O(n·k)</p>
+<pre class="code"><code>public double findMaxAverageBrute(int[] nums, int k) {
+    double best = Double.NEGATIVE_INFINITY;
+    for (int start = 0; start + k &lt;= nums.length; start++) {
+        long sum = 0;
+        for (int i = start; i &lt; start + k; i++) sum += nums[i];  // k adds per window
+        best = Math.max(best, (double) sum / k);
+    }
+    return best;
+}</code></pre>
+    <p>Adjacent windows share k−1 elements — recounting them all is the waste to eliminate.</p>
+
+    <p class="code-title">Variation 2 — fixed sliding window (optimal) · O(n)</p>
+<pre class="code"><code>public double findMaxAverage(int[] nums, int k) {
+    long sum = 0;
+    for (int i = 0; i &lt; k; i++) sum += nums[i];   // seed: sum of the first window
+    long best = sum;
+    for (int i = k; i &lt; nums.length; i++) {
+        sum += nums[i] - nums[i - k];   // add the entering element, drop the leaving one
+        best = Math.max(best, sum);     // compare SUMS — same k, so same ranking as averages
+    }
+    return (double) best / k;           // divide once at the end
+}</code></pre>
+    <p><strong>Takeaway.</strong> The heart of every fixed-window problem is the O(1) update
+    <code>sum += entering − leaving</code>. Comparing sums instead of averages avoids repeated division and
+    any floating-point drift inside the loop.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Longest Substring Without Repeating Characters — LeetCode 3</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the length of the longest contiguous substring of <code>s</code>
+    in which no character appears twice.</p>
+    <p><strong>Example.</strong> <code>"abcabcbb"</code> → <code>3</code> ("abc").
+    <code>"bbbbb"</code> → <code>1</code>. <code>"pwwkew"</code> → <code>3</code> ("wke" — note "pwke" is a
+    subsequence, not a substring).</p>
+
+    <p class="code-title">Variation 1 — brute force: test every substring · O(n³)</p>
+<pre class="code"><code>public int lengthOfLongestSubstringBrute(String s) {
+    int best = 0;
+    for (int i = 0; i &lt; s.length(); i++)
+        for (int j = i; j &lt; s.length(); j++)         // substring s[i..j]
+            if (allUnique(s, i, j))                  // O(j-i) check
+                best = Math.max(best, j - i + 1);
+    return best;
+}
+private boolean allUnique(String s, int i, int j) {
+    Set&lt;Character&gt; seen = new HashSet&lt;&gt;();
+    for (int k = i; k &lt;= j; k++)
+        if (!seen.add(s.charAt(k))) return false;
+    return true;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — grow/shrink window with a set · O(n), each char enters and leaves once</p>
+<pre class="code"><code>public int lengthOfLongestSubstringSet(String s) {
+    Set&lt;Character&gt; window = new HashSet&lt;&gt;();
+    int best = 0, left = 0;
+    for (int right = 0; right &lt; s.length(); right++) {
+        // Shrink until the incoming char is no longer a duplicate
+        while (window.contains(s.charAt(right)))
+            window.remove(s.charAt(left++));   // evict from the left, one at a time
+        window.add(s.charAt(right));
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}</code></pre>
+
+    <p class="code-title">Variation 3 — last-seen index jump (optimal constants) · O(n), no shrink loop</p>
+<pre class="code"><code>public int lengthOfLongestSubstring(String s) {
     // last[c] = most recent index where character c appeared; -1 = never.
     // An int[128] covers ASCII and beats a HashMap on constant factors.
     int[] last = new int[128];
@@ -297,21 +376,38 @@ for (int right = 0; right &lt; n; right++) {
     }
     return best;
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n) — one pass, <code>left</code> only jumps forward; space O(1) —
-    a fixed 128-slot array. Runnable mirror: <code>code/03-sliding-window/LongestSubstringNoRepeat.java</code>.</p>
+    <p><strong>Takeaway.</strong> Variation 2 is the honest general template (shrink until valid); variation 3
+    notices that "shrink until the duplicate is gone" always lands at the same place — one index past the old
+    occurrence — and jumps there directly. Mirror:
+    <code>code/03-sliding-window/LongestSubstringNoRepeat.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked solution — Permutation in String (LeetCode 567, medium)</summary>
+  <summary><span class="badge medium">medium</span> Permutation in String — LeetCode 567</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> does <code>s2</code> contain any permutation of <code>s1</code>
-    as a contiguous substring?</p>
-    <p><strong>Idea:</strong> a permutation of <code>s1</code> is just some window of length |s1| whose letter
-    counts equal <code>s1</code>'s. So slide a fixed-size window across <code>s2</code>, updating counts by
-    the one char entering and the one leaving, and compare the two 26-slot arrays — an O(26) = O(1) check
-    per slide.</p>
-<pre class="code"><code>public static boolean checkInclusion(String s1, String s2) {
+    <p><strong>The problem.</strong> Return <code>true</code> if <code>s2</code> contains any permutation of
+    <code>s1</code> as a contiguous substring (i.e. some window of <code>s2</code> uses exactly
+    <code>s1</code>'s letters).</p>
+    <p><strong>Example.</strong> <code>s1="ab", s2="eidbaooo"</code> → <code>true</code> (window "ba").
+    <code>s1="ab", s2="eidboaoo"</code> → <code>false</code> (an 'a' and 'b' exist but never adjacent).</p>
+
+    <p class="code-title">Variation 1 — recount every window from scratch · O(n·k)</p>
+<pre class="code"><code>public boolean checkInclusionBrute(String s1, String s2) {
+    int k = s1.length();
+    int[] need = new int[26];
+    for (char c : s1.toCharArray()) need[c - 'a']++;
+    for (int start = 0; start + k &lt;= s2.length(); start++) {
+        int[] window = new int[26];
+        for (int i = start; i &lt; start + k; i++)      // recount k chars per window
+            window[s2.charAt(i) - 'a']++;
+        if (Arrays.equals(window, need)) return true;
+    }
+    return false;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — incremental fixed window (optimal) · O(n)</p>
+<pre class="code"><code>public boolean checkInclusion(String s1, String s2) {
     int k = s1.length();
     if (k &gt; s2.length()) return false;     // can't fit — fail fast
 
@@ -336,22 +432,31 @@ for (int right = 0; right &lt; n; right++) {
     }
     return false;
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n·26) = O(n) for n = |s2|; space O(1) — two fixed arrays.
-    Runnable mirror: <code>code/03-sliding-window/PermutationInString.java</code>.</p>
+    <p><strong>Takeaway.</strong> "Anagram of X somewhere in Y" = "fixed window whose letter counts match X" —
+    a frequency-count problem (<a href="01-arrays-hashing.html">page 01</a>) wearing a window. The identical
+    skeleton solves Find All Anagrams in a String (LC 438); only the return type changes.
+    Mirror: <code>code/03-sliding-window/PermutationInString.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked solution — Minimum Window Substring (LeetCode 76, hard)</summary>
+  <summary><span class="badge hard">hard</span> Minimum Window Substring — LeetCode 76</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> smallest window of <code>s</code> containing every character of
-    <code>t</code> (with multiplicity).</p>
-    <p><strong>Idea:</strong> the shortest-valid template. Expand <code>right</code> until the window covers
-    <code>t</code>, then shrink <code>left</code> while it still does, recording each valid size. The elegant
-    part is the <code>required</code> counter: <code>need[c]</code> goes negative for surplus copies, and
-    <code>required</code> only counts genuinely missing characters — so "is the window valid?" is the O(1)
-    test <code>required == 0</code> rather than a full count comparison.</p>
-<pre class="code"><code>public static String minWindow(String s, String t) {
+    <p><strong>The problem.</strong> Return the <em>smallest</em> window of <code>s</code> that contains every
+    character of <code>t</code>, counting multiplicity (two 'a's in t ⇒ the window needs two 'a's).
+    Empty string if none exists; the answer is guaranteed unique.</p>
+    <p><strong>Example.</strong> <code>s="ADOBECODEBANC", t="ABC"</code> → <code>"BANC"</code>.
+    <code>s="a", t="a"</code> → <code>"a"</code>. <code>s="a", t="aa"</code> → <code>""</code> (only one 'a'
+    available).</p>
+
+    <p class="code-title">Variation 1 — check every start position · O(n²) idea sketch</p>
+<pre class="code"><code>// For each start index, extend right until the window covers t (recounting
+// as you go), record the first valid length. O(n) starts x O(n) extension
+// = O(n^2) — too slow for |s| up to 10^5, but stating it clarifies WHAT
+// the optimal version optimizes: reusing work between adjacent starts.</code></pre>
+
+    <p class="code-title">Variation 2 — expand/shrink with a required counter (optimal) · O(|s| + |t|)</p>
+<pre class="code"><code>public String minWindow(String s, String t) {
     if (t.length() &gt; s.length()) return "";
 
     // need[c] &gt; 0  =&gt; window still owes that many copies of c.
@@ -388,20 +493,75 @@ for (int right = 0; right &lt; n; right++) {
             ? ""
             : s.substring(bestStart, bestStart + bestLen);
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(|s| + |t|) — each pointer sweeps forward once; space O(1) — a
-    fixed 128-slot array. Runnable mirror: <code>code/03-sliding-window/MinimumWindowSubstring.java</code>.</p>
+    <p><strong>Takeaway.</strong> Two ideas carry the whole solution: the shortest-valid template (expand
+    until valid, shrink while valid, record during shrinking) and the <code>required</code> counter that
+    turns "is the window valid?" into an O(1) comparison. Negative counts meaning "surplus" is the subtle
+    part — trace <code>s="aab", t="ab"</code> by hand once and it locks in.
+    Mirror: <code>code/03-sliding-window/MinimumWindowSubstring.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Sliding Window Maximum — LeetCode 239</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A window of fixed size <code>k</code> slides across the array one step at
+    a time. Return the maximum of each window position — an output of length n−k+1.</p>
+    <p><strong>Example.</strong> <code>nums=[1,3,-1,-3,5,3,6,7], k=3</code> →
+    <code>[3,3,5,5,6,7]</code> (windows [1,3,−1] → 3, [3,−1,−3] → 3, [−1,−3,5] → 5, …).</p>
+
+    <p class="code-title">Variation 1 — rescan each window · O(n·k)</p>
+<pre class="code"><code>public int[] maxSlidingWindowBrute(int[] nums, int k) {
+    int n = nums.length;
+    int[] res = new int[n - k + 1];
+    for (int start = 0; start + k &lt;= n; start++) {
+        int mx = nums[start];
+        for (int i = start + 1; i &lt; start + k; i++)   // k-1 comparisons per window
+            mx = Math.max(mx, nums[i]);
+        res[start] = mx;
+    }
+    return res;
+}</code></pre>
+    <p>The max can't be maintained by a simple "+entering −leaving" update — when the current max leaves,
+    you'd have to rescan to find the runner-up. The fix is a structure that remembers the runners-up in order:</p>
+
+    <p class="code-title">Variation 2 — monotonic deque (optimal) · O(n)</p>
+<pre class="code"><code>public int[] maxSlidingWindow(int[] nums, int k) {
+    int n = nums.length;
+    int[] res = new int[n - k + 1];
+    // Deque holds INDEXES; their values are kept strictly decreasing.
+    // Front = index of the current window's maximum.
+    Deque&lt;Integer&gt; dq = new ArrayDeque&lt;&gt;();
+    for (int i = 0; i &lt; n; i++) {
+        // 1. Expire the front if it slid out of the window [i-k+1 .. i]
+        if (!dq.isEmpty() &amp;&amp; dq.peekFirst() &lt;= i - k)
+            dq.pollFirst();
+        // 2. The new value kills every smaller value at the back: they
+        //    are older AND smaller, so they can never be a future max.
+        while (!dq.isEmpty() &amp;&amp; nums[dq.peekLast()] &lt;= nums[i])
+            dq.pollLast();
+        dq.offerLast(i);
+        // 3. Window is complete from i == k-1 on: front is its max
+        if (i &gt;= k - 1)
+            res[i - k + 1] = nums[dq.peekFirst()];
+    }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Each index is pushed once and popped at most once ⇒ O(n) total despite the
+    inner while. The "older and smaller ⇒ useless forever" argument is the monotonic-structure idea in its
+    purest form — the stack version of it powers Daily Temperatures on
+    <a href="09-stacks-queues.html">page 09</a>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Window length is <code>right − left + 1</code></strong> with inclusive pointers. Off-by-one here is the #1 sliding-window bug — write it once, reuse it everywhere.</li>
   <li><strong>Order of operations:</strong> add the new element <em>first</em>, then fix validity, then measure. For shortest-window problems, record the answer <em>before</em> shrinking past validity.</li>
-  <li><strong>"Substring" vs "subsequence":</strong> windows only handle contiguous ranges. If characters may be skipped, you're in DP territory (page 18) — clarify with the interviewer before coding.</li>
-  <li><strong>Negatives kill grow/shrink monotonicity</strong> for sum constraints — switch to prefix sum + HashMap (page 04) and say why.</li>
-  <li><strong>Prefer <code>int[128]</code>/<code>int[26]</code> over <code>HashMap&lt;Character,Integer&gt;</code></strong> when the alphabet is fixed: no boxing, no <code>getOrDefault</code> noise, faster — and mention the assumption ("ASCII input") as you make it.</li>
-  <li><strong>Justify the nested loop:</strong> "left never moves backward, so both pointers advance at most n times — amortized O(n)". Interviewers explicitly listen for this sentence.</li>
+  <li><strong>"Substring" vs "subsequence":</strong> windows only handle contiguous ranges. If characters may be skipped, you're in DP territory (page 18) — check which one the problem means before coding.</li>
+  <li><strong>Negatives kill grow/shrink monotonicity</strong> for sum constraints — switch to prefix sum + HashMap (page 04).</li>
+  <li><strong>Prefer <code>int[128]</code>/<code>int[26]</code> over <code>HashMap&lt;Character,Integer&gt;</code></strong> when the alphabet is fixed: no boxing, no <code>getOrDefault</code> noise, faster (note the assumption: ASCII input).</li>
+  <li><strong>Justify the nested loop:</strong> "left never moves backward, so both pointers advance at most n times — amortized O(n)".</li>
 </ul>
 
 <nav class="pager">

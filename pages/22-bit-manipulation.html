@@ -47,13 +47,7 @@
   <li><a href="01-arrays-hashing.html">01 · Arrays &amp; Hashing</a> — you'll compare bit tricks against HashSet solutions.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you know the canon?</strong> XOR cancellation, <code>x &amp; (x−1)</code>, masks — recognition, not derivation.</li>
-  <li><strong>Java specifics:</strong> the difference between <code>&gt;&gt;</code> and <code>&gt;&gt;&gt;</code>, and why it matters for negative numbers.</li>
-  <li><strong>Can you trade a HashSet for O(1) space</strong> when the domain is small (≤ 32/64 flags)?</li>
-  <li><strong>Edge-case discipline:</strong> 0, negative inputs, <code>Integer.MIN_VALUE</code> — bits punish sloppiness instantly.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> quick screener favorites — the XOR/mask trick bag plus knowing Java's <code>&gt;&gt;&gt;</code>.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -245,12 +239,9 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/single-number/">Single Number</a>
-    <span class="hint">XOR everything: pairs cancel (a^a=0), the loner survives. O(1) space.</span></div>
   <div class="prob"><span class="badge easy">easy</span>
     <a class="t" href="https://leetcode.com/problems/number-of-1-bits/">Number of 1 Bits</a>
     <span class="hint">Kernighan's loop: n &amp;= (n−1) once per set bit. Beware &gt;&gt; vs &gt;&gt;&gt; if you shift instead.</span></div>
@@ -272,7 +263,7 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
 </div>
 
 <details class="sol">
-  <summary>Worked solution — Single Number (XOR cancellation)</summary>
+  <summary><span class="badge easy">easy</span> Single Number — LeetCode 136 (XOR cancellation)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> every element appears exactly twice except one — find it in O(n) time, O(1) space.</p>
     <p><strong>Idea:</strong> the O(1)-space constraint rules out a HashSet, which is the interviewer's way of pointing at
@@ -291,7 +282,7 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Counting Bits (the i &gt;&gt; 1 DP)</summary>
+  <summary><span class="badge easy">easy</span> Counting Bits — LeetCode 338 (the i &gt;&gt; 1 DP)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> for every i in 0..n, output how many 1-bits i has — in O(n) total, not O(n log n).</p>
     <p><strong>Idea:</strong> <code>i &gt;&gt; 1</code> is i with its last bit chopped off — a strictly smaller number whose
@@ -311,7 +302,7 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Missing Number (XOR version)</summary>
+  <summary><span class="badge easy">easy</span> Missing Number — LeetCode 268 (XOR version)</summary>
   <div class="sol-body">
     <p><strong>Problem in one line:</strong> nums contains n distinct numbers from the range 0..n; return the one that's missing.</p>
     <p><strong>Idea:</strong> XOR every index 0..n together with every array value. Each present number equals some index,
@@ -331,8 +322,129 @@ int size     = Integer.bitCount(mask);// the JDK's intrinsic popcount (use in re
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Number of 1 Bits — LeetCode 191</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Count the set bits (1s) in a 32-bit integer's binary representation
+    (the "population count" / Hamming weight).</p>
+    <p><strong>Example.</strong> 11 (<code>1011</code>) → 3. 128 (<code>10000000</code>) → 1.
+    −3 (two's complement <code>111...101</code>) → 31.</p>
+
+    <p class="code-title">Variation 1 — check all 32 positions · always 32 steps</p>
+<pre class="code"><code>public static int hammingWeightScan(int n) {
+    int count = 0;
+    for (int i = 0; i &lt; 32; i++)
+        count += (n &gt;&gt;&gt; i) &amp; 1;      // >>> (unsigned shift): works for negatives too
+    return count;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — Kernighan: clear the lowest set bit (the animation above) · one step per 1-bit</p>
+<pre class="code"><code>public static int hammingWeight(int n) {
+    int count = 0;
+    while (n != 0) {
+        n &amp;= n - 1;    // n-1 flips the lowest 1 and everything under it;
+        count++;       // AND-ing erases exactly that lowest 1
+    }
+    return count;      // loop ran once per set bit — not per bit position
+}</code></pre>
+    <p><strong>Takeaway.</strong> <code>n &amp; (n−1)</code> is the single most useful bit trick — it powers
+    the power-of-two test (<code>n &amp; (n−1) == 0</code>) and Counting Bits below. Guard the loop with
+    <code>!= 0</code>, not <code>&gt; 0</code>: negative inputs are valid bit patterns.
+    (Production code calls <code>Integer.bitCount</code>, which compiles to a hardware POPCNT.)
+    Mirror: <code>code/22-bit-manipulation/NumberOf1Bits.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Reverse Bits — LeetCode 190</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Reverse the 32 bits of an integer: bit 0 swaps with bit 31, bit 1 with
+    bit 30, and so on.</p>
+    <p><strong>Example.</strong> <code>00000010100101000001111010011100</code> →
+    <code>00111001011110000010100101000000</code>.</p>
+    <p class="code-title">Peel from one end, push onto the other · 32 steps</p>
+<pre class="code"><code>public static int reverseBits(int n) {
+    int result = 0;
+    for (int i = 0; i &lt; 32; i++) {
+        result &lt;&lt;= 1;              // make room at the bottom of the output
+        result |= n &amp; 1;           // move n's lowest bit into it
+        n &gt;&gt;&gt;= 1;                  // consume that bit (unsigned shift!)
+    }
+    return result;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The same two-pointer reversal idea as strings, played on bits: take from
+    one end, append to the other. The <code>&gt;&gt;&gt;</code> matters — a signed shift would smear the sign
+    bit across negative inputs. Follow-up worth knowing: for many calls, reverse a byte at a time via a
+    256-entry lookup table. Mirror: <code>code/22-bit-manipulation/ReverseBits.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Sum of Two Integers — LeetCode 371</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Add two integers without ever using <code>+</code> or <code>-</code>.</p>
+    <p><strong>Example.</strong> a=1, b=2 → 3. a=−2, b=3 → 1.</p>
+    <p class="code-title">The half-adder loop: XOR = sum, AND&lt;&lt;1 = carry · ≤32 iterations</p>
+<pre class="code"><code>public static int getSum(int a, int b) {
+    while (b != 0) {
+        int carry = (a &amp; b) &lt;&lt; 1;  // positions where BOTH have 1 generate a
+                                   // carry into the next column
+        a = a ^ b;                 // XOR adds each column, ignoring carries
+        b = carry;                 // now add the carries in — repeat until none
+    }
+    return a;
+}</code></pre>
+    <p><strong>Takeaway.</strong> This is literally how a CPU's adder circuit works: XOR is a half-adder's
+    sum line, AND its carry line, and the loop ripples carries until they vanish (at most 32 rounds).
+    Two's complement makes negatives work for free — no special cases. A neat consequence:
+    subtraction is <code>getSum(a, getSum(~b, 1))</code>, since −b = ~b + 1.
+    Mirror: <code>code/22-bit-manipulation/SumTwoIntegers.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Single Number II — LeetCode 137</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Every element appears exactly <em>three</em> times except one, which
+    appears once. Find it in O(n) time and O(1) space (plain XOR no longer works — triples don't cancel).</p>
+    <p><strong>Example.</strong> <code>[2,2,3,2]</code> → 3. <code>[0,1,0,1,0,1,99]</code> → 99.</p>
+
+    <p class="code-title">Variation 1 — count each bit position mod 3 · 32 passes of logic</p>
+<pre class="code"><code>public static int singleNumberBitCount(int[] nums) {
+    int result = 0;
+    for (int bit = 0; bit &lt; 32; bit++) {
+        int count = 0;
+        for (int x : nums)
+            count += (x &gt;&gt;&gt; bit) &amp; 1;      // how many numbers have this bit set?
+        // Triples contribute multiples of 3; a remainder means the
+        // single number owns this bit.
+        if (count % 3 != 0)
+            result |= 1 &lt;&lt; bit;
+    }
+    return result;                          // works for negatives: bit 31 included
+}</code></pre>
+
+    <p class="code-title">Variation 2 — two-variable state machine (elegant) · one pass</p>
+<pre class="code"><code>public static int singleNumber(int[] nums) {
+    // Per bit position, (twos, ones) counts appearances mod 3:
+    // 00 -&gt; 01 -&gt; 10 -&gt; 00. The update formulas implement that cycle
+    // for all 32 positions in parallel.
+    int ones = 0, twos = 0;
+    for (int x : nums) {
+        ones = (ones ^ x) &amp; ~twos;   // enter `ones` unless already seen twice
+        twos = (twos ^ x) &amp; ~ones;   // enter `twos` when leaving `ones`
+    }
+    return ones;                     // bits seen 3k+1 times = the single number
+}</code></pre>
+    <p><strong>Takeaway.</strong> The generalization of XOR-cancellation: XOR counts bits mod 2; this counts
+    them mod 3 (and mod-k variants follow the same recipe). The bit-count version is the one to derive under
+    pressure; the state machine is the same arithmetic compressed into two registers.
+    Mirror: <code>code/22-bit-manipulation/SingleNumberII.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Precedence bites:</strong> <code>&amp;</code> binds <em>looser</em> than <code>==</code>, so
     <code>x &amp; 1 == 1</code> parses as <code>x &amp; (1 == 1)</code> — a compile error at best. Always parenthesize:

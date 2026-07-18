@@ -48,13 +48,7 @@
   <li><a href="22-bit-manipulation.html">22 · Bits</a> — helpful for the bitmask section (read it after, then revisit)</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li>Can you <strong>name the state in words</strong> before writing code? ("dp[l][r] = best score using only the balloons strictly between l and r")</li>
-  <li>Do you recognize the <strong>family from the input</strong>: phases/modes → state machine; ranges → interval; n ≤ 20 subsets → bitmask; tree input → tree DP?</li>
-  <li>Interval DP's signature move: do you think about the <strong>last</strong> operation, not the first?</li>
-  <li>Can you keep <strong>read-before-write discipline</strong> when rolling states (temporaries for yesterday's values)?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> a senior differentiator — recognizing WHICH advanced family (state machine, interval, bitmask, tree) fits the input is the whole game.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -220,11 +214,9 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/">Best Time to Buy and Sell Stock II</a>
-    <span class="hint">Worked below — two states (hold/free); the gentlest state machine.</span></div>
   <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/">Best Time to Buy and Sell Stock with Cooldown</a>
     <span class="hint">Worked below — the cooldown forces a third state; matches the animation above.</span></div>
   <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/house-robber-iii/">House Robber III</a>
@@ -240,7 +232,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
 </div>
 
 <details class="sol">
-  <summary>Worked solution: Stock II (two-state machine) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Best Time to Buy and Sell Stock II — LeetCode 122 (two-state machine)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Unlimited buy/sell (one share at a time) — maximize profit.</p>
     <p><strong>Idea.</strong> Two states after each day: <code>hold</code> (own a share) and <code>free</code> (don't).
@@ -264,7 +256,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Stock with Cooldown (three-state machine) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Best Time ... with Cooldown — LeetCode 309 (three-state machine)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Same as Stock II, but after selling you must skip a day before buying again.</p>
     <p><strong>Idea.</strong> The cooldown makes "not holding" ambiguous — split it: <code>sold</code> (sold today,
@@ -291,7 +283,7 @@ hold = newHold; sold = newSold; rest = newRest;</code></pre>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: House Robber III (tree DP) — Medium</summary>
+  <summary><span class="badge medium">medium</span> House Robber III — LeetCode 337 (tree DP)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Houses form a binary tree; robbing a node forbids robbing its direct children.
     Maximize the loot.</p>
@@ -321,7 +313,7 @@ private static int[] dfs(TreeNode node) {
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Burst Balloons (interval DP) — Hard</summary>
+  <summary><span class="badge hard">hard</span> Burst Balloons — LeetCode 312 (interval DP)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Bursting balloon i earns <code>nums[left]·nums[i]·nums[right]</code> using its
     <em>current</em> neighbors; balloons then close ranks. Maximize total coins.</p>
@@ -353,15 +345,138 @@ private static int[] dfs(TreeNode node) {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Stone Game — LeetCode 877</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Piles of stones in a row; Alice and Bob alternately take a whole pile
+    from <em>either end</em> (Alice first). Total stones are odd, so no ties. Both play optimally — does
+    Alice win?</p>
+    <p><strong>Example.</strong> <code>[5,3,4,5]</code> → true: Alice can always engineer taking the larger
+    of the two "colors" of positions.</p>
+    <p class="code-title">Interval DP on the score difference · O(n²)</p>
+<pre class="code"><code>public static boolean stoneGame(int[] piles) {
+    int n = piles.length;
+    // dp[l][r] = best score DIFFERENCE (current player minus opponent)
+    // achievable from piles l..r. The "current player" flips implicitly:
+    // whatever the opponent gains from the smaller range counts NEGATIVE.
+    int[][] dp = new int[n][n];
+    for (int l = n - 1; l &gt;= 0; l--) {
+        dp[l][l] = piles[l];                 // one pile: take it, lead by its value
+        for (int r = l + 1; r &lt; n; r++) {
+            // Take left end: gain piles[l], then opponent plays [l+1..r]
+            int takeLeft = piles[l] - dp[l + 1][r];
+            // Take right end: gain piles[r], then opponent plays [l..r-1]
+            int takeRight = piles[r] - dp[l][r - 1];
+            dp[l][r] = Math.max(takeLeft, takeRight);
+        }
+    }
+    return dp[0][n - 1] &gt; 0;                 // Alice leads on the full row
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two ideas in one: interval state (a shrinking range, like Burst Balloons)
+    and the game-theory trick of tracking the <em>difference</em> so one table serves both players — the
+    subtraction is the turn flip. (Fun fact: with even piles Alice can always win by parity, so
+    <code>return true</code> passes — but the DP is what generalizes to Stone Game II/III and odd
+    pile-counts.) Mirror: <code>code/20-dp-advanced/StoneGame.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Partition to K Equal Sum Subsets — LeetCode 698</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Can the array be split into exactly <code>k</code> non-empty subsets
+    with equal sums?</p>
+    <p><strong>Example.</strong> <code>nums=[4,3,2,3,5,2,1], k=4</code> → true: (5), (1,4), (2,3), (2,3) —
+    each sums to 5. <code>nums=[1,2,3,4], k=3</code> → false (10 isn't divisible by 3).</p>
+    <p class="code-title">Fill buckets one at a time with a used-mask · exponential, heavily pruned</p>
+<pre class="code"><code>public static boolean canPartitionKSubsets(int[] nums, int k) {
+    int total = 0;
+    for (int x : nums) total += x;
+    if (total % k != 0) return false;        // must divide evenly
+    int target = total / k;
+    Arrays.sort(nums);                       // ascending; we'll scan from the top
+    if (nums[nums.length - 1] &gt; target) return false;  // one number too big
+
+    // used = bitmask of consumed elements (n &lt;= 16 in the constraints).
+    return fill(nums, new boolean[nums.length], k, 0, 0, target);
+}
+
+// Complete `k` buckets; `sum` is the current bucket's fill, `start` the
+// scan position within the current bucket (avoids permuting choices).
+private static boolean fill(int[] nums, boolean[] used, int k,
+                            int start, int sum, int target) {
+    if (k == 1) return true;                 // last bucket gets the exact remainder
+    if (sum == target)                       // bucket complete — start the next one
+        return fill(nums, used, k - 1, 0, 0, target);
+    for (int i = start; i &lt; nums.length; i++) {
+        if (used[i] || sum + nums[i] &gt; target) continue;
+        // Prune duplicates: an unused equal neighbor already failed here
+        if (i &gt; start &amp;&amp; nums[i] == nums[i - 1] &amp;&amp; !used[i - 1]) continue;
+        used[i] = true;                      // choose
+        if (fill(nums, used, k, i + 1, sum + nums[i], target)) return true;
+        used[i] = false;                     // un-choose
+        if (sum == 0) return false;          // key prune: if this element can't
+                                             // START a bucket, no one can — fail fast
+    }
+    return false;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Backtracking (<a href="10-recursion-backtracking.html">page 10</a>)
+    wearing DP's constraint hat: the n ≤ 16 limit signals the exponential-in-subsets family. The two prunes
+    do all the work — duplicate-skip, and "if a bucket can't even be started with this element, abort". A
+    pure bitmask-DP formulation (dp over 2ⁿ masks) exists too and is worth mentioning; the pruned
+    backtracking is faster in practice. Mirror: <code>code/20-dp-advanced/PartitionKSubsets.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Best Time to Buy and Sell Stock IV — LeetCode 188</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Same stock rules, but at most <code>k</code> complete transactions
+    (buy+sell). Maximize profit.</p>
+    <p><strong>Example.</strong> <code>k=2, prices=[3,2,6,5,0,3]</code> → <code>7</code>
+    (buy 2, sell 6; buy 0, sell 3). <code>k=2, prices=[2,4,1]</code> → <code>2</code>.</p>
+    <p class="code-title">The machine generalized: hold/free per transaction count · O(n·k)</p>
+<pre class="code"><code>public static int maxProfit(int k, int[] prices) {
+    int n = prices.length;
+    if (n == 0 || k == 0) return 0;
+    // k &gt;= n/2 means "effectively unlimited" — collapse to Stock II's greedy
+    // (a transaction needs 2 days, so more than n/2 can never all be used).
+    if (k &gt;= n / 2) {
+        int profit = 0;
+        for (int i = 1; i &lt; n; i++)
+            if (prices[i] &gt; prices[i - 1]) profit += prices[i] - prices[i - 1];
+        return profit;
+    }
+
+    // hold[t] = best cash while holding, having STARTED t transactions.
+    // free[t] = best cash while not holding, having COMPLETED t transactions.
+    int[] hold = new int[k + 1];
+    int[] free = new int[k + 1];
+    Arrays.fill(hold, Integer.MIN_VALUE / 2);   // can't hold before buying
+    for (int p : prices) {
+        for (int t = k; t &gt;= 1; t--) {          // backward: each day adds ≤1 action per t
+            free[t] = Math.max(free[t], hold[t] + p);     // sell: completes transaction t
+            hold[t] = Math.max(hold[t], free[t - 1] - p); // buy: starts transaction t
+        }
+    }
+    return free[k];                              // best with ≤ k completed transactions
+}</code></pre>
+    <p><strong>Takeaway.</strong> Stock II had states {hold, free}; adding "how many transactions so far"
+    multiplies the state space by k+1 — the machine doesn't change, it gets indexed. The k ≥ n/2 collapse to
+    the unlimited case is the expected optimization (without it, huge k wastes O(n·k)). Cooldown, fee, and
+    k-limit are all the same lesson: <em>every rule that changes what's legal becomes a state dimension</em>.
+    Mirror: <code>code/20-dp-advanced/StockIV.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Rolling-state bug:</strong> updating <code>hold</code> before <code>free</code> reads it silently uses <em>today's</em> value. Always compute all new states into temporaries, then assign.</li>
   <li><strong>−∞ sentinels overflow.</strong> <code>Integer.MIN_VALUE + price</code> wraps around; use <code>MIN_VALUE / 2</code> or a <code>long</code>.</li>
   <li><strong>Interval DP loop order matters:</strong> iterate by range <em>length</em>, not by l then r — dp[l][r] needs all shorter sub-ranges already solved.</li>
   <li><strong>Bitmask off-by-ones:</strong> <code>(1 &lt;&lt; n) - 1</code> is "all used"; test membership with <code>(mask &gt;&gt; i &amp; 1) == 1</code>; never shift by ≥ 32 on an int.</li>
   <li><strong>Don't force DP where a mode-less greedy works</strong> (Stock II alone is greedy-able) — but SAY the state-machine version too, since it's what generalizes when the follow-up adds a cooldown or fee.</li>
-  <li><strong>Name states out loud before coding.</strong> "hold means best cash while owning a share" — interviewers score the state definition as heavily as the code.</li>
+  <li><strong>Name states out loud before coding.</strong> "hold means best cash while owning a share".</li>
 </ul>
 
 <nav class="pager">

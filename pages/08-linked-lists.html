@@ -46,13 +46,7 @@
   <li><a href="02-two-pointers.html">02 · Two Pointers</a> — fast/slow was introduced there; here it gets its full treatment.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Reference precision:</strong> can you reorder <code>a.next = b</code> assignments so nothing is lost? (Save before you overwrite.)</li>
-  <li><strong>Edge-case instinct:</strong> empty list, single node, operating on the head — do you handle them by design (dummy node) or by patching?</li>
-  <li><strong>The standard tricks on recall:</strong> reversal, fast/slow middle, cycle detection, dummy-head merging. These are assumed knowledge in later rounds.</li>
-  <li><strong>Can you draw it?</strong> Strong candidates sketch boxes and arrows before coding. Pointer bugs are visible on paper before they're visible in code.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> a screener classic — pointer fluency with dummy heads and fast/slow pairs is the skill under test.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -281,60 +275,17 @@ while (fast != null &amp;&amp; fast.next != null) {   // guard BOTH hops fast wi
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/reverse-linked-list/">Reverse Linked List</a>
-    <span class="hint">The three-pointer loop until it's muscle memory; then do it recursively for the follow-up.</span>
-  </div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/merge-two-sorted-lists/">Merge Two Sorted Lists</a>
-    <span class="hint">Dummy head + take-the-smaller; attach the leftover list whole at the end.</span>
-  </div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/linked-list-cycle/">Linked List Cycle</a>
-    <span class="hint">Floyd's fast/slow — compare nodes with ==, and let fast do all the null checks.</span>
-  </div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/middle-of-the-linked-list/">Middle of the Linked List</a>
-    <span class="hint">Fast moves 2, slow moves 1; when fast stops, slow is the middle — mind the even-length case.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/remove-nth-node-from-end-of-list/">Remove Nth Node From End of List</a>
-    <span class="hint">Two pointers with a fixed n+1 gap from a dummy — one pass, no length count.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/add-two-numbers/">Add Two Numbers</a>
-    <span class="hint">Grade-school addition with a carry; dummy head, loop while either list OR carry remains.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/reorder-list/">Reorder List</a>
-    <span class="hint">Three tricks chained: fast/slow middle → reverse second half → interleave. Practice the decomposition.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/copy-list-with-random-pointer/">Copy List with Random Pointer</a>
-    <span class="hint">HashMap old→new is the clear O(n)-space answer; the interleave A→A'→B→B' gets O(1) space.</span>
-  </div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/linked-list-cycle-ii/">Linked List Cycle II</a>
-    <span class="hint">After the fast/slow meeting, restart one pointer at head; both at speed 1 meet at the cycle start (the math is in the tip above).</span>
-  </div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <a class="t" href="https://leetcode.com/problems/reverse-nodes-in-k-group/">Reverse Nodes in k-Group</a>
-    <span class="hint">Template B applied per block + dummy head + careful stitching of block boundaries. The final pointer-fluency exam.</span>
-  </div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough. All code uses the standard <code>ListNode</code> (val + next).</p>
 
 <details class="sol">
-  <summary>★ Worked: Reverse Linked List (LC 206)</summary>
+  <summary><span class="badge easy">easy</span> Reverse Linked List — LeetCode 206</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> reverse a singly linked list in place; return the new head.</p>
-    <p><strong>Idea:</strong> walk once with three references. <code>prev</code> always heads the already-reversed
-    prefix, <code>curr</code> the untouched suffix. Each iteration: save <code>curr.next</code> (or the flip strands
-    the rest of the list), point <code>curr</code> backwards, then shift both references one node right. The
-    recursive version is the same surgery driven by the call stack — worth knowing because it previews the
-    "trust the recursion" leap of faith trees demand (page 11).</p>
+    <p><strong>The problem.</strong> Reverse a singly linked list in place and return the new head.</p>
+    <p><strong>Example.</strong> <code>1→2→3→4→5</code> → <code>5→4→3→2→1</code>. Empty list → empty list.</p>
+
+    <p class="code-title">Variation 1 — iterative three-pointer flip (the default) · O(n) time, O(1) space</p>
 <pre class="code"><code>// Iterative: walk the list once, flipping each .next backwards.
 public static ListNode reverseList(ListNode head) {
     ListNode prev = null;                  // everything BEFORE curr, already reversed (starts empty)
@@ -346,9 +297,10 @@ public static ListNode reverseList(ListNode head) {
         curr = next;                       // 4. step into the saved remainder
     }
     return prev;                           // curr fell off the end; prev is the new head
-}
+}</code></pre>
 
-// Recursive: trust reverseList(rest) to hand back the reversed tail,
+    <p class="code-title">Variation 2 — recursive · O(n) time, O(n) call-stack space</p>
+<pre class="code"><code>// Recursive: trust reverseRecursive(rest) to hand back the reversed tail,
 // then hook the old head onto the end of it.
 public static ListNode reverseRecursive(ListNode head) {
     if (head == null || head.next == null) return head;   // base: empty or single node is already reversed
@@ -357,19 +309,21 @@ public static ListNode reverseRecursive(ListNode head) {
     head.next = null;                      // I'm the new tail; sever my stale forward link
     return newHead;                        // the new head never changes on the way back up
 }</code></pre>
-    <p><strong>Complexity:</strong> iterative — time O(n), space O(1). Recursive — time O(n), space O(n) for the
-    call stack (say this unprompted!). Runnable version: <code>code/08-linked-lists/ReverseLinkedList.java</code>.</p>
+    <p><strong>Takeaway.</strong> The iterative flip is the single most reused fragment in list problems
+    (Reorder List and k-Group below both embed it). The recursive form costs O(n) stack — worth knowing, and
+    worth knowing <em>why</em> you'd still default to the loop.
+    Mirror: <code>code/08-linked-lists/ReverseLinkedList.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Merge Two Sorted Lists (LC 21)</summary>
+  <summary><span class="badge easy">easy</span> Merge Two Sorted Lists — LeetCode 21</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> splice two sorted lists into one sorted list, reusing the existing nodes.</p>
-    <p><strong>Idea:</strong> exactly the merge step of merge sort (page 06). Keep a <code>tail</code> on the result;
-    repeatedly attach the smaller of the two front nodes and advance that list. The dummy head removes the "which
-    list provides the first node?" special case, and when one list runs dry the other is attached whole — it's
-    already sorted, no loop required.</p>
+    <p><strong>The problem.</strong> Splice two sorted lists into one sorted list, reusing the existing nodes
+    (no new allocations besides an optional dummy).</p>
+    <p><strong>Example.</strong> <code>1→2→4</code> + <code>1→3→4</code> → <code>1→1→2→3→4→4</code>.
+    Both empty → empty.</p>
+    <p class="code-title">Dummy head + take-the-smaller · O(n+m) time, O(1) space</p>
 <pre class="code"><code>public static ListNode mergeTwoLists(ListNode l1, ListNode l2) {
     ListNode dummy = new ListNode(0);      // fake node BEFORE the real head — kills all "is this the first node?" special cases
     ListNode tail = dummy;                 // tail always points at the last node of the merged result
@@ -386,20 +340,100 @@ public static ListNode reverseRecursive(ListNode head) {
     tail.next = (l1 != null) ? l1 : l2;    // one list is empty; the other is sorted — attach it whole (no loop needed)
     return dummy.next;                     // the real head lives just after the dummy
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n + m), space O(1) — nodes are relinked, not copied.
-    Runnable version: <code>code/08-linked-lists/MergeTwoLists.java</code>.</p>
+    <p><strong>Takeaway.</strong> This is merge sort's merge step (<a href="06-sorting.html">page 06</a>) on
+    nodes instead of array slots — attaching the leftover list whole is the O(1) bonus arrays don't get.
+    Merging k lists at once upgrades this with a heap (<a href="12-heaps.html">page 12</a>).
+    Mirror: <code>code/08-linked-lists/MergeTwoLists.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked: Remove Nth Node From End of List (LC 19)</summary>
+  <summary><span class="badge easy">easy</span> Linked List Cycle — LeetCode 141</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> delete the nth node counting from the <em>end</em>, in one pass.</p>
-    <p><strong>Idea:</strong> you can't count from the end of a singly linked list — but you can maintain a fixed
-    <em>gap</em>. Send <code>fast</code> ahead by n+1 nodes, then advance both pointers together; when
-    <code>fast</code> falls off the end, <code>slow</code> is exactly n+1 from the end — i.e. the <em>predecessor</em>
-    of the victim, which is who you need for the bypass. Starting both at a dummy makes "delete the head"
-    (n = length) work with zero extra code.</p>
+    <p><strong>The problem.</strong> Determine whether a linked list contains a cycle (some node's
+    <code>next</code> points back to an earlier node), using O(1) memory.</p>
+    <p><strong>Example.</strong> <code>3→2→0→−4</code> with −4's next pointing back to 2 → <code>true</code>.
+    <code>1→2</code> with no back-link → <code>false</code>.</p>
+
+    <p class="code-title">Variation 1 — seen-set of nodes · O(n) time, O(n) space</p>
+<pre class="code"><code>public static boolean hasCycleSet(ListNode head) {
+    Set&lt;ListNode&gt; seen = new HashSet&lt;&gt;();   // identity of NODES, not values
+    for (ListNode cur = head; cur != null; cur = cur.next)
+        if (!seen.add(cur)) return true;      // revisited the same object -&gt; cycle
+    return false;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — Floyd's fast &amp; slow pointers (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public static boolean hasCycle(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null &amp;&amp; fast.next != null) {   // fast does all the null-checking
+        slow = slow.next;                          // tortoise: 1 step
+        fast = fast.next.next;                     // hare: 2 steps
+        if (slow == fast) return true;             // same OBJECT -&gt; they're stuck in a loop
+    }
+    return false;                                  // fast found the end -&gt; no cycle
+}</code></pre>
+    <p><strong>Takeaway.</strong> Why they must meet: once both are inside the cycle, the gap between them
+    shrinks by exactly 1 each step (fast gains one node per tick), so it reaches 0 in at most cycle-length
+    steps — no jumping over. Compare nodes with <code>==</code> (same object), never <code>equals</code>
+    (duplicate values would lie). Mirror: <code>code/08-linked-lists/LinkedListCycle.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Middle of the Linked List — LeetCode 876</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the middle node of a list; if the length is even, return the
+    <em>second</em> of the two middles.</p>
+    <p><strong>Example.</strong> <code>1→2→3→4→5</code> → node 3. <code>1→2→3→4→5→6</code> → node 4.</p>
+
+    <p class="code-title">Variation 1 — count, then walk half · two passes</p>
+<pre class="code"><code>public static ListNode middleNodeTwoPass(ListNode head) {
+    int n = 0;
+    for (ListNode c = head; c != null; c = c.next) n++;   // pass 1: length
+    ListNode mid = head;
+    for (int i = 0; i &lt; n / 2; i++) mid = mid.next;       // pass 2: walk n/2
+    return mid;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — fast &amp; slow (one pass) · O(n) time, O(1) space</p>
+<pre class="code"><code>public static ListNode middleNode(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null &amp;&amp; fast.next != null) {
+        slow = slow.next;          // 1 step
+        fast = fast.next.next;     // 2 steps — when fast finishes, slow is halfway
+    }
+    return slow;                   // odd length: exact middle; even: second middle
+}</code></pre>
+    <p><strong>Takeaway.</strong> The speed ratio IS the fraction: fast at 2× leaves slow at 1/2. Where slow
+    lands on even lengths depends on the starting offset — <code>fast = head</code> gives the second middle;
+    <code>fast = head.next</code> gives the first (which is what Sort List's split on
+    <a href="06-sorting.html">page 06</a> needs). Trace a 2-node list to see the difference.
+    Mirror: <code>code/08-linked-lists/MiddleOfList.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Remove Nth Node From End — LeetCode 19</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Delete the n-th node counting from the <em>end</em> of the list, in one
+    pass, and return the head.</p>
+    <p><strong>Example.</strong> <code>1→2→3→4→5, n=2</code> → <code>1→2→3→5</code>.
+    <code>1→2, n=2</code> → <code>2</code> (the head itself is deleted).</p>
+
+    <p class="code-title">Variation 1 — count length, then walk to victim − 1 · two passes</p>
+<pre class="code"><code>public static ListNode removeNthTwoPass(ListNode head, int n) {
+    int len = 0;
+    for (ListNode c = head; c != null; c = c.next) len++;
+    ListNode dummy = new ListNode(0);
+    dummy.next = head;
+    ListNode prev = dummy;
+    for (int i = 0; i &lt; len - n; i++) prev = prev.next;  // stop at the predecessor
+    prev.next = prev.next.next;                          // bypass the victim
+    return dummy.next;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — fixed-gap two pointers (one pass) · O(n) time, O(1) space</p>
 <pre class="code"><code>public static ListNode removeNthFromEnd(ListNode head, int n) {
     ListNode dummy = new ListNode(0);      // dummy head: removing the FIRST node becomes a normal case
     dummy.next = head;
@@ -414,20 +448,231 @@ public static ListNode reverseRecursive(ListNode head) {
     slow.next = slow.next.next;            // slow is the predecessor — bypass the victim (GC reclaims it)
     return dummy.next;                     // head may have changed (n == list length) — dummy.next is always right
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n) — one pass; space O(1).
-    Runnable version: <code>code/08-linked-lists/RemoveNthFromEnd.java</code>.</p>
+    <p><strong>Takeaway.</strong> "Count from the end of something you can only walk forward" → maintain a
+    fixed gap. The dummy head converts "delete the head" from a special case into the normal path — reach for
+    it whenever the head might change. Mirror: <code>code/08-linked-lists/RemoveNthFromEnd.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Add Two Numbers — LeetCode 2</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Two non-negative integers are stored as linked lists in <em>reverse</em>
+    order (ones digit first). Add them and return the sum as a list in the same format.</p>
+    <p><strong>Example.</strong> <code>2→4→3</code> (=342) + <code>5→6→4</code> (=465) →
+    <code>7→0→8</code> (=807). <code>9→9</code> + <code>1</code> → <code>0→0→1</code> (99+1=100 — note the
+    extra final digit).</p>
+    <p class="code-title">Grade-school addition with a carry · O(max(n,m))</p>
+<pre class="code"><code>public static ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+    ListNode dummy = new ListNode(0), tail = dummy;
+    int carry = 0;
+    // Keep going while EITHER list has digits OR a carry is pending —
+    // the carry alone can mint one final node (99 + 1 = 100).
+    while (l1 != null || l2 != null || carry != 0) {
+        int sum = carry;
+        if (l1 != null) { sum += l1.val; l1 = l1.next; }   // consume a digit if present
+        if (l2 != null) { sum += l2.val; l2 = l2.next; }
+        tail.next = new ListNode(sum % 10);   // this position's digit
+        carry = sum / 10;                     // 0 or 1, into the next position
+        tail = tail.next;
+    }
+    return dummy.next;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Reverse order is a gift — you start at the ones digit, exactly like manual
+    addition. The three-way loop condition (either list <em>or</em> carry) is the whole difficulty; missing
+    the carry case drops the last digit of 99+1. This is also BigInteger addition in miniature.
+    Mirror: <code>code/08-linked-lists/AddTwoNumbers.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Reorder List — LeetCode 143</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Reorder <code>L0→L1→…→Ln</code> into
+    <code>L0→Ln→L1→Ln−1→L2→…</code> (outside-in interleaving), in place.</p>
+    <p><strong>Example.</strong> <code>1→2→3→4</code> → <code>1→4→2→3</code>.
+    <code>1→2→3→4→5</code> → <code>1→5→2→4→3</code>.</p>
+    <p class="code-title">Three known tricks chained · O(n) time, O(1) space</p>
+<pre class="code"><code>public static void reorderList(ListNode head) {
+    if (head == null || head.next == null) return;
+
+    // Step 1: find the middle (fast/slow) — slow ends at the split point.
+    ListNode slow = head, fast = head;
+    while (fast.next != null &amp;&amp; fast.next.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+    }
+    ListNode second = slow.next;
+    slow.next = null;                      // cut: first half ends at slow
+
+    // Step 2: reverse the second half (the three-pointer flip).
+    ListNode prev = null;
+    while (second != null) {
+        ListNode next = second.next;
+        second.next = prev;
+        prev = second;
+        second = next;
+    }
+    second = prev;                         // head of the reversed back half
+
+    // Step 3: interleave — alternate one node from each half.
+    ListNode first = head;
+    while (second != null) {               // second is the shorter (or equal) half
+        ListNode n1 = first.next, n2 = second.next;   // save both continuations
+        first.next = second;               // L0 -&gt; Ln
+        second.next = n1;                  // Ln -&gt; L1
+        first = n1;                        // advance in the front half
+        second = n2;                       // advance in the back half
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Nothing new is invented here — middle (fast/slow) + reverse (three-pointer)
+    + merge-style interleave, staple-gunned together. Composite list problems almost always decompose into
+    the primitives; practicing the decomposition matters more than memorizing this exact code.
+    Mirror: <code>code/08-linked-lists/ReorderList.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Copy List with Random Pointer — LeetCode 138</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Each node has <code>next</code> plus a <code>random</code> pointer to any
+    node (or null). Deep-copy the list: brand-new nodes whose next/random wiring mirrors the original.</p>
+    <p><strong>Example.</strong> For list <code>7→13→11→10→1</code> with randoms
+    [null, 0, 4, 2, 0], the copy must reproduce the same shape with entirely new nodes.</p>
+
+    <p class="code-title">Variation 1 — HashMap original → clone · O(n) time, O(n) space</p>
+<pre class="code"><code>public static Node copyRandomList(Node head) {
+    // Pass 1: clone every node; map original -&gt; clone
+    Map&lt;Node, Node&gt; map = new HashMap&lt;&gt;();
+    for (Node cur = head; cur != null; cur = cur.next)
+        map.put(cur, new Node(cur.val));
+    // Pass 2: wire the clones using the map as a lookup
+    for (Node cur = head; cur != null; cur = cur.next) {
+        map.get(cur).next   = map.get(cur.next);     // map.get(null) is null — handy
+        map.get(cur).random = map.get(cur.random);
+    }
+    return map.get(head);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — interleave clones A→A'→B→B' · O(n) time, O(1) extra space</p>
+<pre class="code"><code>public static Node copyRandomListInterleaved(Node head) {
+    if (head == null) return null;
+    // Pass 1: insert each clone right AFTER its original: A -&gt; A' -&gt; B -&gt; B' ...
+    for (Node cur = head; cur != null; cur = cur.next.next) {
+        Node clone = new Node(cur.val);
+        clone.next = cur.next;
+        cur.next = clone;
+    }
+    // Pass 2: set randoms — the clone of X.random is X.random.next (its neighbor!)
+    for (Node cur = head; cur != null; cur = cur.next.next)
+        if (cur.random != null)
+            cur.next.random = cur.random.next;
+    // Pass 3: unzip the two lists, restoring the original intact
+    Node newHead = head.next;
+    for (Node cur = head; cur != null; cur = cur.next) {
+        Node clone = cur.next;
+        cur.next = clone.next;                       // restore original's next
+        clone.next = (clone.next != null) ? clone.next.next : null;
+    }
+    return newHead;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The map version is Clone Graph's technique
+    (<a href="15-graphs-basics.html">page 15</a>) on a list. The interleaving replaces the map with
+    <em>position</em>: parking each clone beside its original makes "find the clone of X" a one-step walk.
+    Mirror: <code>code/08-linked-lists/CopyListRandomPointer.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Linked List Cycle II — LeetCode 142</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> If the list has a cycle, return the node where the cycle <em>begins</em>
+    (not just whether one exists); null otherwise. O(1) memory.</p>
+    <p><strong>Example.</strong> <code>3→2→0→−4</code> with −4 linking back to 2 → the node holding 2.</p>
+    <p class="code-title">Floyd phase 2 — reset one pointer to head · O(n) time, O(1) space</p>
+<pre class="code"><code>public static ListNode detectCycle(ListNode head) {
+    // Phase 1: standard fast/slow until they meet inside the cycle.
+    ListNode slow = head, fast = head;
+    while (fast != null &amp;&amp; fast.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+        if (slow == fast) {
+            // Phase 2: restart one pointer at head; walk BOTH at speed 1.
+            // They meet exactly at the cycle's entrance.
+            ListNode p = head;
+            while (p != slow) {
+                p = p.next;
+                slow = slow.next;
+            }
+            return p;
+        }
+    }
+    return null;                           // fast hit the end -&gt; acyclic
+}</code></pre>
+    <p><strong>Takeaway.</strong> The why, in three lines: let the head-to-entrance distance be a, and the
+    meeting point sit b into the cycle (length c). Fast having gone twice slow's distance forces
+    a + b ≡ 0 (mod c) — so walking a more steps from the meeting point lands exactly on the entrance,
+    which is also a steps from the head. Hence two speed-1 pointers, one from each place, collide there.
+    Mirror: <code>code/08-linked-lists/LinkedListCycle.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Reverse Nodes in k-Group — LeetCode 25</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Reverse the list k nodes at a time: the first k nodes get reversed, then
+    the next k, and so on. A final group with fewer than k nodes stays in original order.</p>
+    <p><strong>Example.</strong> <code>1→2→3→4→5, k=2</code> → <code>2→1→4→3→5</code>.
+    <code>1→2→3→4→5, k=3</code> → <code>3→2→1→4→5</code>.</p>
+    <p class="code-title">Reverse per block + careful stitching · O(n) time, O(1) space</p>
+<pre class="code"><code>public static ListNode reverseKGroup(ListNode head, int k) {
+    ListNode dummy = new ListNode(0);
+    dummy.next = head;
+    ListNode groupPrev = dummy;            // node just BEFORE the current group
+
+    while (true) {
+        // 1) Find the k-th node of this group; if fewer than k remain, done.
+        ListNode kth = groupPrev;
+        for (int i = 0; i &lt; k &amp;&amp; kth != null; i++) kth = kth.next;
+        if (kth == null) break;
+        ListNode groupNext = kth.next;     // first node AFTER the group
+
+        // 2) Reverse the group in place. Standard flip, but prev starts at
+        //    groupNext so the group's old head ends up pointing PAST the group.
+        ListNode prev = groupNext;
+        ListNode curr = groupPrev.next;    // group's first node (will become its last)
+        while (curr != groupNext) {
+            ListNode next = curr.next;
+            curr.next = prev;
+            prev = curr;
+            curr = next;
+        }
+
+        // 3) Stitch: groupPrev must now point at the NEW group head (the old kth).
+        ListNode oldGroupHead = groupPrev.next;   // now the group's tail
+        groupPrev.next = kth;
+        groupPrev = oldGroupHead;          // advance: tail of this group precedes the next
+    }
+    return dummy.next;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Everything is the three-pointer flip plus bookkeeping: know where the group
+    starts (<code>groupPrev.next</code>), ends (<code>kth</code>), and what follows
+    (<code>groupNext</code>) <em>before</em> touching any links. Starting <code>prev</code> at
+    <code>groupNext</code> is the elegant move — the reversal lands pre-stitched on one side. This problem is
+    the pointer-fluency final exam; if it flows, lists are done.
+    Mirror: <code>code/08-linked-lists/ReverseKGroup.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Save before you sever.</strong> The canonical bug is <code>curr.next = prev</code> before saving <code>curr.next</code> — the rest of the list is instantly unreachable. Write the save line first, always.</li>
-  <li><strong>Reach for the dummy head by default</strong> whenever the head might change (delete, merge, partition). It converts three edge cases into zero and takes one line. Interviewers notice candidates who deploy it unprompted.</li>
-  <li><strong>Guard fast/slow correctly:</strong> <code>while (fast != null &amp;&amp; fast.next != null)</code> — in that order, or you NPE on even-length lists. And know that where slow stops differs by one between odd and even lengths; trace a 2-node list before claiming done.</li>
+  <li><strong>Reach for the dummy head by default</strong> whenever the head might change (delete, merge, partition). It converts three edge cases into zero and takes one line.</li>
+  <li><strong>Guard fast/slow correctly:</strong> <code>while (fast != null &amp;&amp; fast.next != null)</code> — in that order, or you NPE on even-length lists. And know that where slow stops differs by one between odd and even lengths — trace a 2-node list to check.</li>
   <li><strong>Compare nodes with <code>==</code>, not <code>equals</code>.</strong> Cycle detection asks "is this the same object?" — value equality would false-positive on duplicate values.</li>
-  <li><strong>Recursion depth is real:</strong> a recursive solution on a 10⁵-node list can blow the JVM stack (~10⁴ frames by default). Offer the iterative version and mention this as the reason — easy senior credit.</li>
-  <li><strong>After surgery, check for accidental cycles:</strong> in reorder/reverse-in-parts problems, forgetting to null-terminate the new tail makes printing loop forever. State "and finally the tail's next becomes null" out loud.</li>
+  <li><strong>Recursion depth is real:</strong> a recursive solution on a 10⁵-node list can blow the JVM stack (~10⁴ frames by default). Prefer the iterative version for long lists.</li>
+  <li><strong>After surgery, check for accidental cycles:</strong> in reorder/reverse-in-parts problems, forgetting to null-terminate the new tail makes printing loop forever.</li>
 </ul>
 
 <nav class="pager">

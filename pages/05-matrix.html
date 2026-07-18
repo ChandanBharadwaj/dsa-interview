@@ -48,13 +48,7 @@
   <li><a href="04-prefix-sum.html">04 · Prefix Sum</a> — the 2D prefix table mentioned there is a matrix precompute pattern.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Index discipline under pressure.</strong> Do you confuse <code>matrix[r][c]</code> with <code>matrix[c][r]</code> when the grid isn't square? (Everyone does, once. They're watching for it.)</li>
-  <li><strong>Edge cases:</strong> single row, single column, 1×1, non-square — spiral and rotation bugs live exactly there.</li>
-  <li><strong>Can you avoid the extra O(m·n) copy?</strong> The follow-up is almost always "now do it in place".</li>
-  <li><strong>Mutation-while-reading awareness:</strong> do you notice that overwriting cells you still need to read corrupts the simulation — and can you design an encoding that dodges it?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> a simulation staple — the skill tested is index discipline and safe in-place mutation.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -272,39 +266,63 @@ for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/transpose-matrix/">Transpose Matrix</a>
-    <span class="hint">m×n, so you must build a new n×m — note why in-place only works when square.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/spiral-matrix/">Spiral Matrix</a>
-    <span class="hint">Four boundaries, four walks, two guards for the leftover row/column. Worked below. ★</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/rotate-image/">Rotate Image</a>
-    <span class="hint">Transpose, then reverse each row — two verifiable steps, O(1) space. Worked below. ★</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/set-matrix-zeroes/">Set Matrix Zeroes</a>
-    <span class="hint">Borrow row 0 and column 0 as flag storage; save their own status first. Worked below. ★</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/game-of-life/">Game of Life</a>
-    <span class="hint">Two bits per cell: bit 0 = current, bit 1 = next; neighbors read with <code>&amp; 1</code>, final pass shifts right.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/valid-sudoku/">Valid Sudoku</a>
-    <span class="hint">One pass, three seen-sets per unit; the box index is <code>(r/3)*3 + c/3</code> — pure index discipline plus page-01 hashing.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough.</p>
 
 <details class="sol">
-  <summary>Worked solution — Spiral Matrix (LC 54)</summary>
+  <summary><span class="badge easy">easy</span> Transpose Matrix — LeetCode 867</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return all elements of an m×n matrix in clockwise spiral order.</p>
-    <p><strong>Idea:</strong> keep four fences around the unvisited rectangle. Walk top→, right↓, bottom←, left↑;
-    after each walk, pull that fence inward. The two <code>if</code> guards are the whole difficulty: when the
-    remaining region collapses to a single row (or column), the bottom (or left) walk would re-visit cells the top
-    (or right) walk just consumed — so re-check the fence before walking it.</p>
-<p class="code-title">SpiralMatrix.java</p>
-<pre class="code"><code>public static List&lt;Integer&gt; spiralOrder(int[][] matrix) {
+    <p><strong>The problem.</strong> Return the transpose of an m×n matrix: rows become columns, i.e.
+    <code>result[c][r] = matrix[r][c]</code>.</p>
+    <p><strong>Example.</strong> <code>[[1,2,3],[4,5,6]]</code> (2×3) → <code>[[1,4],[2,5],[3,6]]</code> (3×2).</p>
+    <p class="code-title">Build the n×m result · O(m·n)</p>
+<pre class="code"><code>public int[][] transpose(int[][] matrix) {
+    int m = matrix.length, n = matrix[0].length;
+    int[][] t = new int[n][m];              // dimensions swap: n rows, m columns
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++)
+            t[c][r] = matrix[r][c];         // (r,c) lands at (c,r)
+    return t;
+}</code></pre>
+    <p><strong>Takeaway.</strong> In-place transposition (swapping across the diagonal, no new matrix) is only
+    possible for <em>square</em> matrices — a 2×3 can't hold a 3×2 in the same storage. That square-only
+    in-place swap is exactly step 1 of Rotate Image below.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Spiral Matrix — LeetCode 54</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return all elements of an m×n matrix in clockwise spiral order: across the
+    top, down the right side, back along the bottom, up the left side, then repeat one layer in.</p>
+    <p><strong>Example.</strong> <code>[[1,2,3],[4,5,6],[7,8,9]]</code> → <code>[1,2,3,6,9,8,7,4,5]</code>.
+    <code>[[1,2,3,4],[5,6,7,8],[9,10,11,12]]</code> → <code>[1,2,3,4,8,12,11,10,9,5,6,7]</code>.</p>
+
+    <p class="code-title">Variation 1 — simulate a walker with a visited matrix · O(m·n) time, O(m·n) space</p>
+<pre class="code"><code>public List&lt;Integer&gt; spiralOrderVisited(int[][] matrix) {
+    int m = matrix.length, n = matrix[0].length;
+    boolean[][] seen = new boolean[m][n];
+    int[][] dirs = {{0,1},{1,0},{0,-1},{-1,0}};   // right, down, left, up
+    List&lt;Integer&gt; out = new ArrayList&lt;&gt;();
+    int r = 0, c = 0, d = 0;                      // start top-left heading right
+    for (int i = 0; i &lt; m * n; i++) {
+        out.add(matrix[r][c]);
+        seen[r][c] = true;
+        int nr = r + dirs[d][0], nc = c + dirs[d][1];
+        // Hitting a wall or a visited cell means: turn clockwise
+        if (nr &lt; 0 || nr &gt;= m || nc &lt; 0 || nc &gt;= n || seen[nr][nc]) {
+            d = (d + 1) % 4;
+            nr = r + dirs[d][0]; nc = c + dirs[d][1];
+        }
+        r = nr; c = nc;
+    }
+    return out;
+}</code></pre>
+    <p>Intuitive, but pays O(m·n) memory for the visited matrix. Four shrinking fences need no memory:</p>
+
+    <p class="code-title">Variation 2 — four shrinking boundaries (optimal) · O(m·n) time, O(1) space</p>
+<pre class="code"><code>public List&lt;Integer&gt; spiralOrder(int[][] matrix) {
     List&lt;Integer&gt; out = new ArrayList&lt;&gt;();
     // The unvisited region is always the rectangle [top..bottom] x [left..right].
     int top = 0, bottom = matrix.length - 1;
@@ -331,22 +349,35 @@ for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
     }
     return out;
 }</code></pre>
-    <p><strong>Complexity:</strong> O(m·n) time — each cell visited exactly once — and O(1) extra space beyond the
-    output list.</p>
+    <p><strong>Takeaway.</strong> The two <code>if</code> guards are the entire difficulty: when the remaining
+    region collapses to a single row or column, walks 3 and 4 would re-visit what walks 1 and 2 just consumed.
+    Test your version on a 1×n and an m×1 input — that's where unguarded code breaks.
+    Mirror: <code>code/05-matrix/SpiralMatrix.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Rotate Image (LC 48)</summary>
+  <summary><span class="badge medium">medium</span> Rotate Image — LeetCode 48</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> rotate an n×n matrix 90° clockwise, in place.</p>
-    <p><strong>Idea:</strong> decompose the rotation into transpose (mirror across the main diagonal) followed by
-    reversing each row. Trace one cell to convince yourself: <code>(r, c) → (c, r)</code> by the transpose, then
-    reversing row <code>c</code> sends it to <code>(c, n−1−r)</code> — exactly where a clockwise rotation puts it.
-    The only subtlety is transposing over the <em>upper triangle only</em>; swapping every pair twice would silently
-    restore the original.</p>
-<p class="code-title">RotateImage.java</p>
-<pre class="code"><code>public static void rotate(int[][] m) {
+    <p><strong>The problem.</strong> Rotate an n×n matrix 90° clockwise, <strong>in place</strong> (no second
+    matrix allowed).</p>
+    <p><strong>Example.</strong> <code>[[1,2,3],[4,5,6],[7,8,9]]</code> →
+    <code>[[7,4,1],[8,5,2],[9,6,3]]</code> — the first column (7,4,1 bottom-up) becomes the first row.</p>
+
+    <p class="code-title">Variation 1 — copy into a new matrix · O(n²) time, O(n²) space (breaks the rule)</p>
+<pre class="code"><code>public int[][] rotateCopy(int[][] m) {
+    int n = m.length;
+    int[][] out = new int[n][n];
+    for (int r = 0; r &lt; n; r++)
+        for (int c = 0; c &lt; n; c++)
+            out[c][n - 1 - r] = m[r][c];   // the rotation formula, directly
+    return out;
+}</code></pre>
+    <p>The formula <code>(r, c) → (c, n−1−r)</code> is the whole rotation — the in-place version just
+    reaches it in two mirror steps:</p>
+
+    <p class="code-title">Variation 2 — transpose + reverse rows (optimal) · O(n²) time, O(1) space</p>
+<pre class="code"><code>public void rotate(int[][] m) {
     int n = m.length;
     // Step 1: transpose — mirror across the main diagonal (swap m[r][c] with m[c][r]).
     // Only touch the upper triangle (c &gt; r) or every pair would swap twice (a no-op).
@@ -367,24 +398,38 @@ for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
         }
     }
 }</code></pre>
-    <p><strong>Complexity:</strong> O(n²) time (every cell moved a constant number of times), O(1) extra space.
-    Mention in the interview: for m×n (non-square) a true in-place rotation is impossible since the shape changes —
-    you'd return a new n×m matrix.</p>
+    <p><strong>Takeaway.</strong> Trace one cell: transpose sends (r,c) → (c,r); reversing row c sends it to
+    (c, n−1−r) — the rotation formula from variation 1, achieved with two simple, individually-verifiable
+    mirrors. Counter-clockwise = transpose + reverse each <em>column</em>. For a non-square m×n matrix a true
+    in-place rotation is impossible (the shape itself changes).
+    Mirror: <code>code/05-matrix/RotateImage.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution — Set Matrix Zeroes (LC 73)</summary>
+  <summary><span class="badge medium">medium</span> Set Matrix Zeroes — LeetCode 73</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> if a cell is 0, set its entire row and column to 0 — in place.</p>
-    <p><strong>Idea:</strong> the naive trap is zeroing as you scan, which cascades (freshly-written zeros trigger more
-    zeroing). You need to <em>record</em> which rows/columns are doomed, then apply. Recording in
-    <code>boolean[rows]</code> + <code>boolean[cols]</code> is O(m+n) space; the O(1) refinement stores those flags in
-    row 0 and column 0 themselves — after first noting (in two booleans) whether row 0 / column 0 contained zeros of
-    their own. Order matters: zero the interior first, headers last, or you destroy your flags while they're still
-    being read.</p>
-<p class="code-title">SetMatrixZeroes.java</p>
-<pre class="code"><code>public static void setZeroes(int[][] m) {
+    <p><strong>The problem.</strong> If any cell of the matrix is 0, set its <em>entire row and column</em> to
+    0 — in place. The trap: doing it naively while scanning turns freshly-written zeros into new triggers,
+    zeroing everything.</p>
+    <p><strong>Example.</strong> <code>[[1,1,1],[1,0,1],[1,1,1]]</code> → <code>[[1,0,1],[0,0,0],[1,0,1]]</code>.</p>
+
+    <p class="code-title">Variation 1 — record zero rows/columns in sets · O(m·n) time, O(m+n) space</p>
+<pre class="code"><code>public void setZeroesSets(int[][] m) {
+    Set&lt;Integer&gt; zeroRows = new HashSet&lt;&gt;(), zeroCols = new HashSet&lt;&gt;();
+    for (int r = 0; r &lt; m.length; r++)
+        for (int c = 0; c &lt; m[0].length; c++)
+            if (m[r][c] == 0) { zeroRows.add(r); zeroCols.add(c); }  // pass 1: find
+    for (int r = 0; r &lt; m.length; r++)
+        for (int c = 0; c &lt; m[0].length; c++)
+            if (zeroRows.contains(r) || zeroCols.contains(c))
+                m[r][c] = 0;                                          // pass 2: apply
+}</code></pre>
+    <p>Two separated passes fix the "new zeros trigger more zeros" trap. The follow-up asks for O(1) space —
+    so store the flags <em>inside the matrix itself</em>:</p>
+
+    <p class="code-title">Variation 2 — first row/column as flag storage (optimal) · O(m·n) time, O(1) space</p>
+<pre class="code"><code>public void setZeroes(int[][] m) {
     int rows = m.length, cols = m[0].length;
 
     // Row 0 and column 0 will store the flags, so first remember
@@ -408,13 +453,117 @@ for (int i = 0, j = n - 1; i &lt; j; i++, j--) {
     if (zeroRow0) Arrays.fill(m[0], 0);
     if (zeroCol0) for (int r = 0; r &lt; rows; r++) m[r][0] = 0;
 }</code></pre>
-    <p><strong>Complexity:</strong> O(m·n) time, O(1) extra space (two booleans). In the interview, present the
-    O(m+n) boolean-array version first — it's obviously correct — then offer this as the space refinement.</p>
+    <p><strong>Takeaway.</strong> The order of operations carries the correctness: save row-0/col-0 status →
+    mark flags → zero the interior → zero the borders last. Storing bookkeeping inside data you were going to
+    overwrite anyway is a recurring in-place trick (Game of Life below does it with bits).
+    Mirror: <code>code/05-matrix/SetMatrixZeroes.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Game of Life — LeetCode 289</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Conway's Game of Life: each cell is live (1) or dead (0). All cells update
+    <em>simultaneously</em>: a live cell survives with 2–3 live neighbors (of its 8), dies otherwise; a dead
+    cell becomes live with exactly 3 live neighbors. Compute the next state, in place.</p>
+    <p><strong>Example.</strong> <code>[[0,1,0],[0,0,1],[1,1,1],[0,0,0]]</code> →
+    <code>[[0,0,0],[1,0,1],[0,1,1],[0,1,0]]</code>.</p>
+    <p><strong>The trap.</strong> "Simultaneously" means you cannot overwrite a cell before its neighbors have
+    read its <em>old</em> value.</p>
+
+    <p class="code-title">Variation 1 — copy the board · O(m·n) time, O(m·n) space</p>
+<pre class="code"><code>public void gameOfLifeCopy(int[][] board) {
+    int m = board.length, n = board[0].length;
+    int[][] old = new int[m][n];
+    for (int r = 0; r &lt; m; r++) old[r] = board[r].clone();  // frozen snapshot
+
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++) {
+            int live = countLive(old, r, c);       // read ONLY the snapshot
+            board[r][c] = (old[r][c] == 1)
+                ? ((live == 2 || live == 3) ? 1 : 0)   // survival rule
+                : ((live == 3) ? 1 : 0);               // birth rule
+        }
+}</code></pre>
+
+    <p class="code-title">Variation 2 — two bits per cell (optimal) · O(m·n) time, O(1) space</p>
+<pre class="code"><code>public void gameOfLife(int[][] board) {
+    int m = board.length, n = board[0].length;
+    // Encode BOTH generations in one int:
+    //   bit 0 = current state, bit 1 = next state.
+    // Neighbors read the current state with (value &amp; 1), which stays
+    // intact until the final pass shifts everything right.
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++) {
+            int live = 0;
+            for (int dr = -1; dr &lt;= 1; dr++)
+                for (int dc = -1; dc &lt;= 1; dc++) {
+                    if (dr == 0 &amp;&amp; dc == 0) continue;
+                    int nr = r + dr, nc = c + dc;
+                    if (nr &gt;= 0 &amp;&amp; nr &lt; m &amp;&amp; nc &gt;= 0 &amp;&amp; nc &lt; n)
+                        live += board[nr][nc] &amp; 1;     // old value, always
+                }
+            int cur = board[r][c] &amp; 1;
+            if ((cur == 1 &amp;&amp; (live == 2 || live == 3)) || (cur == 0 &amp;&amp; live == 3))
+                board[r][c] |= 2;                      // set bit 1: alive next gen
+        }
+    // Commit: next generation becomes the current one
+    for (int r = 0; r &lt; m; r++)
+        for (int c = 0; c &lt; n; c++)
+            board[r][c] &gt;&gt;= 1;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The bit encoding keeps old and new state coexisting in one cell — the
+    in-place idea from Set Matrix Zeroes, upgraded with page 22's bit tools. States 0/1/2/3 read as:
+    dead→dead, live→dead, dead→live, live→live.
+    Mirror: <code>code/05-matrix/GameOfLife.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Valid Sudoku — LeetCode 36</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Check whether a partially-filled 9×9 Sudoku board is <em>valid</em>: no
+    digit repeats within any row, any column, or any of the nine 3×3 boxes. Empty cells are '.'. (Valid ≠
+    solvable — you only check the filled cells.)</p>
+    <p><strong>Example.</strong> A board with two '8's in column 0 → <code>false</code>; the classic example
+    board with no conflicts → <code>true</code>.</p>
+
+    <p class="code-title">One pass with three seen-set families · O(81) time, O(81) space</p>
+<pre class="code"><code>public boolean isValidSudoku(char[][] board) {
+    // seen sets: one per row, per column, per 3x3 box
+    Set&lt;Character&gt;[] rows = new HashSet[9];
+    Set&lt;Character&gt;[] cols = new HashSet[9];
+    Set&lt;Character&gt;[] boxes = new HashSet[9];
+    for (int i = 0; i &lt; 9; i++) {
+        rows[i] = new HashSet&lt;&gt;();
+        cols[i] = new HashSet&lt;&gt;();
+        boxes[i] = new HashSet&lt;&gt;();
+    }
+
+    for (int r = 0; r &lt; 9; r++)
+        for (int c = 0; c &lt; 9; c++) {
+            char d = board[r][c];
+            if (d == '.') continue;              // empty cells impose nothing
+            // THE index formula: which 3x3 box does (r,c) belong to?
+            // r/3 picks the band (0..2), c/3 the stack (0..2).
+            int box = (r / 3) * 3 + (c / 3);
+            // add() returns false on a repeat -&gt; immediate conflict
+            if (!rows[r].add(d) || !cols[c].add(d) || !boxes[box].add(d))
+                return false;
+        }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Pure index discipline plus page 01's seen-set: three membership structures
+    updated in a single scan. The box formula <code>(r/3)*3 + c/3</code> is worth memorizing — it reappears in
+    Sudoku Solver (LC 37), where backtracking (<a href="10-recursion-backtracking.html">page 10</a>) fills the
+    board using these same three sets as constraints. A bitmask variant (nine <code>int</code>s per family,
+    page 22) does the same job with no allocations.
+    Mirror: <code>code/05-matrix/ValidSudoku.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong><code>rows = m.length; cols = m[0].length;</code> on line one, always.</strong> Re-deriving dimensions
     mid-function is where <code>r</code>/<code>c</code> swaps sneak in. And trace on a rectangle, never a square.</li>
