@@ -42,13 +42,7 @@
 <h3>Prerequisites</h3>
 <p><a href="00-foundations.html">00 · Foundations</a> — Big-O reflexes, the space-for-time trade, and the Java-collections-to-structure map.</p>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Do you spot the O(n²) → O(n) upgrade?</strong> Writing brute force is fine — <em>staying</em> there is the fail.</li>
-  <li><strong>Can you choose the right key?</strong> Group Anagrams is entirely about inventing a canonical key; Two Sum is about keying on the complement.</li>
-  <li><strong>Do you know your tools honestly?</strong> "HashMap is O(1) <em>average</em>, and Java treeifies long buckets to O(log n)" is a senior answer; "HashMap is O(1)" is a junior one.</li>
-  <li><strong>Edge-case discipline:</strong> duplicates, the empty array, an element pairing with itself.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> the single most-asked category — the core skill tested is spotting the O(n²) → O(n) upgrade and choosing the right map key.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -243,107 +237,294 @@ for (int i = 0; i &lt; nums.length; i++) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/contains-duplicate/">Contains Duplicate</a>
-    <span class="hint">Seen-set warm-up: <code>set.add(x)</code> returning false IS the answer.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/valid-anagram/">Valid Anagram</a>
-    <span class="hint">Frequency counting with <code>int[26]</code>: increment for s, decrement for t, all zeros = anagram.</span></div>
-  <div class="prob"><span class="badge easy">easy</span>
-    <a class="t" href="https://leetcode.com/problems/two-sum/">Two Sum</a> ★
-    <span class="hint">Complement lookup: store value→index, ask for <code>target − x</code> before inserting x.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/group-anagrams/">Group Anagrams</a> ★
-    <span class="hint">Canonical key: 26-count signature (or sorted chars) makes anagrams collide on purpose.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/top-k-frequent-elements/">Top K Frequent Elements</a>
-    <span class="hint">Count with a map, then bucket-by-frequency (index = count) to avoid sorting; heap version on page 12.</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/product-of-array-except-self/">Product of Array Except Self</a>
-    <span class="hint">No hashing at all: prefix products left→right, then a running suffix product right→left (division is banned).</span></div>
-  <div class="prob"><span class="badge medium">medium</span>
-    <a class="t" href="https://leetcode.com/problems/longest-consecutive-sequence/">Longest Consecutive Sequence</a> ★
-    <span class="hint">Seen-set, but only start counting where <code>x−1</code> is absent — that guard is the whole trick.</span></div>
-  <div class="prob"><span class="badge hard">hard</span>
-    <a class="t" href="https://leetcode.com/problems/first-missing-positive/">First Missing Positive</a>
-    <span class="hint">Cyclic sort: swap each value v in 1..n to index v−1, then scan for the first index that disagrees.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Each problem below has the full statement, an example, and every useful solution
+variation from brute force to optimal — read the problem, try it yourself first, then open the walkthrough.</p>
 
 <details class="sol">
-  <summary>★ Worked solution — Two Sum (LeetCode 1, easy)</summary>
+  <summary><span class="badge easy">easy</span> Contains Duplicate — LeetCode 217</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return the indices of the two numbers in <code>nums</code> that add up to <code>target</code> (exactly one answer exists).</p>
-    <p><strong>Idea:</strong> walking the array, each element only needs one question answered: "has my partner
-    <code>target − nums[i]</code> already gone by?" A map from value→index answers that in O(1). Checking
-    <em>before</em> inserting the current element guarantees we never pair an element with itself.</p>
-<pre class="code"><code>public static int[] twoSum(int[] nums, int target) {
+    <p><strong>The problem.</strong> You're given an integer array <code>nums</code>. Return <code>true</code>
+    if any value appears at least twice, and <code>false</code> if every element is distinct.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,1]</code> → <code>true</code> (the 1 repeats).
+    <code>[1,2,3,4]</code> → <code>false</code>. <code>[1,1,1,3,3,4,3,2,4,2]</code> → <code>true</code>.</p>
+
+    <p class="code-title">Variation 1 — brute force: compare every pair · O(n²) time, O(1) space</p>
+<pre class="code"><code>public boolean containsDuplicateBrute(int[] nums) {
+    for (int i = 0; i &lt; nums.length; i++)
+        for (int j = i + 1; j &lt; nums.length; j++)   // every pair (i, j)
+            if (nums[i] == nums[j]) return true;
+    return false;
+}</code></pre>
+    <p>Correct, but 10⁵ elements ⇒ ~10¹⁰ comparisons. The nested loop exists only to answer
+    "have I seen this value before?" — which is exactly what faster structures answer directly.</p>
+
+    <p class="code-title">Variation 2 — sort first: duplicates become neighbors · O(n log n) time, O(1) extra</p>
+<pre class="code"><code>public boolean containsDuplicateSort(int[] nums) {
+    Arrays.sort(nums);                            // duplicates now sit side by side
+    for (int i = 1; i &lt; nums.length; i++)
+        if (nums[i] == nums[i - 1]) return true;  // just compare neighbors
+    return false;
+}</code></pre>
+    <p>Better, and uses no extra memory — but it mutates the input and still pays for a full sort.</p>
+
+    <p class="code-title">Variation 3 — seen-set (optimal) · O(n) time, O(n) space</p>
+<pre class="code"><code>public boolean containsDuplicate(int[] nums) {
+    Set&lt;Integer&gt; seen = new HashSet&lt;&gt;();
+    for (int x : nums)
+        if (!seen.add(x))      // add() returns false if x was already present
+            return true;       // -&gt; x is the duplicate, stop immediately
+    return false;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The three variations are the standard ladder for almost every problem on
+    this page: pairs (n²) → sort (n log n) → hash (n). Time improved at the cost of O(n) memory.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Valid Anagram — LeetCode 242</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given two strings <code>s</code> and <code>t</code>, return
+    <code>true</code> if <code>t</code> is an anagram of <code>s</code> — i.e. it uses exactly the same
+    letters with exactly the same counts, just possibly in a different order.</p>
+    <p><strong>Example.</strong> <code>s="anagram", t="nagaram"</code> → <code>true</code>.
+    <code>s="rat", t="car"</code> → <code>false</code> (c and t differ). Different lengths → always false.</p>
+
+    <p class="code-title">Variation 1 — sort both strings · O(n log n) time</p>
+<pre class="code"><code>public boolean isAnagramSort(String s, String t) {
+    if (s.length() != t.length()) return false;   // cheap early exit
+    char[] a = s.toCharArray(), b = t.toCharArray();
+    Arrays.sort(a);                               // anagrams sort to the
+    Arrays.sort(b);                               // exact same char sequence
+    return Arrays.equals(a, b);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — one count array (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public boolean isAnagram(String s, String t) {
+    if (s.length() != t.length()) return false;
+    int[] count = new int[26];                    // 26 lowercase letters
+    for (int i = 0; i &lt; s.length(); i++) {
+        count[s.charAt(i) - 'a']++;               // +1 for every letter of s
+        count[t.charAt(i) - 'a']--;               // -1 for every letter of t
+    }
+    for (int c : count)
+        if (c != 0) return false;                 // any imbalance -&gt; not an anagram
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The +1/−1 trick folds two frequency maps into one array and one pass.
+    The <code>int[26]</code> works because the constraint says lowercase letters; for full Unicode you'd
+    fall back to a <code>HashMap&lt;Character,Integer&gt;</code> — same idea, bigger key space.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Two Sum — LeetCode 1</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given an array <code>nums</code> and an integer <code>target</code>,
+    return the <em>indices</em> of the two different elements that add up to <code>target</code>. Exactly one
+    answer exists, and you may not use the same element twice.</p>
+    <p><strong>Example.</strong> <code>nums=[2,7,11,15], target=9</code> → <code>[0,1]</code> because
+    2 + 7 = 9. <code>nums=[3,2,4], target=6</code> → <code>[1,2]</code> (2+4 — note NOT [0,0]: the single
+    3 can't be used twice).</p>
+
+    <p class="code-title">Variation 1 — brute force: try every pair · O(n²) time, O(1) space</p>
+<pre class="code"><code>public int[] twoSumBrute(int[] nums, int target) {
+    for (int i = 0; i &lt; nums.length; i++)
+        for (int j = i + 1; j &lt; nums.length; j++)
+            if (nums[i] + nums[j] == target) return new int[]{i, j};
+    return new int[]{};
+}</code></pre>
+
+    <p class="code-title">Variation 2 — one-pass HashMap (optimal) · O(n) time, O(n) space</p>
+<pre class="code"><code>public int[] twoSum(int[] nums, int target) {
     // value -&gt; index of every number we've already walked past
     Map&lt;Integer, Integer&gt; seen = new HashMap&lt;&gt;();
     for (int i = 0; i &lt; nums.length; i++) {
-        // The partner nums[i] needs to reach the target
-        int need = target - nums[i];
-        // O(1) average lookup — this replaces an O(n) rescan of the array
-        if (seen.containsKey(need)) {
-            // Partner was seen earlier, so its index comes first
+        int need = target - nums[i];        // the partner that would complete a pair
+        if (seen.containsKey(need))         // O(1) lookup replaces an O(n) rescan
             return new int[]{seen.get(need), i};
-        }
-        // Add AFTER the check — prevents pairing an element with itself
-        // (e.g. target 6 must not match a single 3 twice)
-        seen.put(nums[i], i);
+        seen.put(nums[i], i);               // insert AFTER checking -&gt; no self-pairing
     }
-    // The problem guarantees exactly one answer, so we never get here
-    return new int[]{-1, -1};
+    return new int[]{};                     // unreachable: an answer is guaranteed
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n) — one pass with O(1) work per element; space O(n) — the map can hold every element.
-    Runnable mirror: <code>code/01-arrays-hashing/TwoSum.java</code>.</p>
+    <p><strong>Takeaway.</strong> Rather than searching forward for a partner, each element checks
+    <em>backward</em> in O(1): "did my partner already pass by?" The check-before-insert order is what
+    prevents an element pairing with itself. If the array were <em>sorted</em>, two pointers would solve it
+    with O(1) memory — that's Two Sum II on the <a href="02-two-pointers.html">next page</a>.
+    Mirror: <code>code/01-arrays-hashing/TwoSum.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked solution — Group Anagrams (LeetCode 49, medium)</summary>
+  <summary><span class="badge medium">medium</span> Group Anagrams — LeetCode 49</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> given an array of strings, group the anagrams together.</p>
-    <p><strong>Idea:</strong> invent a key that all anagrams share and nothing else does — their letter-count
-    signature. Serialize the 26 counts to a string, use it as a map key, and the map does the grouping for
-    you. Counting is O(L) per word, beating the O(L log L) sorted-characters key (both are accepted answers;
-    mention both in an interview).</p>
-<pre class="code"><code>public static List&lt;List&lt;String&gt;&gt; groupAnagrams(String[] strs) {
+    <p><strong>The problem.</strong> Given an array of strings, group the anagrams together and return the
+    groups (any order). E.g. "eat", "tea", "ate" all use letters {a,e,t} once each, so they form one group.</p>
+    <p><strong>Example.</strong> <code>["eat","tea","tan","ate","nat","bat"]</code> →
+    <code>[["eat","tea","ate"], ["tan","nat"], ["bat"]]</code>.</p>
+    <p><strong>The insight.</strong> A map groups values that share a key — so invent a key that all anagrams
+    share and nothing else does (a <em>canonical key</em>). Two standard choices:</p>
+
+    <p class="code-title">Variation 1 — sorted-characters key · O(n · L log L)</p>
+<pre class="code"><code>public List&lt;List&lt;String&gt;&gt; groupAnagramsSortKey(String[] strs) {
+    Map&lt;String, List&lt;String&gt;&gt; groups = new HashMap&lt;&gt;();
+    for (String s : strs) {
+        char[] chars = s.toCharArray();
+        Arrays.sort(chars);                       // "tea" -&gt; "aet", "ate" -&gt; "aet"
+        String key = new String(chars);           // all anagrams produce the same key
+        groups.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;()).add(s);
+    }
+    return new ArrayList&lt;&gt;(groups.values());
+}</code></pre>
+
+    <p class="code-title">Variation 2 — letter-count signature key (faster) · O(n · L)</p>
+<pre class="code"><code>public List&lt;List&lt;String&gt;&gt; groupAnagrams(String[] strs) {
     // canonical key -&gt; all words that share it (i.e. one anagram group)
     Map&lt;String, List&lt;String&gt;&gt; groups = new HashMap&lt;&gt;();
     for (String s : strs) {
-        // Canonical key = letter counts. Anagrams have identical counts,
-        // and building this is O(L) vs O(L log L) for a sorted-chars key.
+        // Counting is O(L) vs O(L log L) for sorting the characters
         int[] count = new int[26];
         for (char c : s.toCharArray()) count[c - 'a']++;
-        // Serialize counts into a string key like "1#0#0#...".
-        // The '#' separator matters: without it, counts (1,12) and (11,2)
-        // could collide as "112".
+        // Serialize counts into a key like "1#0#0#...". The '#' separator
+        // matters: without it, counts (1,12) and (11,2) could both read "112".
         StringBuilder sb = new StringBuilder();
         for (int n : count) sb.append(n).append('#');
-        String key = sb.toString();
-        // computeIfAbsent creates the group list on first sight, then appends
-        groups.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;()).add(s);
+        groups.computeIfAbsent(sb.toString(), k -&gt; new ArrayList&lt;&gt;()).add(s);
     }
-    // The map's values ARE the answer — one list per anagram group
-    return new ArrayList&lt;&gt;(groups.values());
+    return new ArrayList&lt;&gt;(groups.values());      // the map's values ARE the groups
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n·L) for n words of average length L; space O(n·L).
-    Runnable mirror: <code>code/01-arrays-hashing/GroupAnagrams.java</code>.</p>
+    <p><strong>Takeaway.</strong> Both are accepted everywhere; the count key wins asymptotically for long
+    words. Never use the raw <code>int[]</code> as the map key — array <code>hashCode()</code> is
+    identity-based, so equal counts would <em>not</em> collide. Mirror:
+    <code>code/01-arrays-hashing/GroupAnagrams.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>★ Worked solution — Longest Consecutive Sequence (LeetCode 128, medium)</summary>
+  <summary><span class="badge medium">medium</span> Top K Frequent Elements — LeetCode 347</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> in an unsorted array, find the length of the longest run of
-    consecutive integers (e.g. 1,2,3,4) — in O(n), so sorting is off the table.</p>
-    <p><strong>Idea:</strong> put everything in a <code>HashSet</code>, then only begin counting a run at its
-    true start — an element whose predecessor <code>n−1</code> is absent. Every other element gets skipped by
-    the guard, so despite the nested-looking while loop, each number is walked over at most once.</p>
-<pre class="code"><code>public static int longestConsecutive(int[] nums) {
+    <p><strong>The problem.</strong> Given an integer array and a number <code>k</code>, return the
+    <code>k</code> values that occur most often (any order). <code>k</code> is guaranteed valid and the
+    answer is unique.</p>
+    <p><strong>Example.</strong> <code>nums=[1,1,1,2,2,3], k=2</code> → <code>[1,2]</code>
+    (1 occurs 3×, 2 occurs 2×, 3 occurs 1×). <code>nums=[1], k=1</code> → <code>[1]</code>.</p>
+
+    <p class="code-title">Variation 1 — count, then sort by frequency · O(n log n)</p>
+<pre class="code"><code>public int[] topKFrequentSort(int[] nums, int k) {
+    Map&lt;Integer, Integer&gt; freq = new HashMap&lt;&gt;();
+    for (int x : nums) freq.merge(x, 1, Integer::sum);       // value -&gt; count
+
+    // Sort the distinct values by their count, biggest first
+    List&lt;Integer&gt; vals = new ArrayList&lt;&gt;(freq.keySet());
+    vals.sort((a, b) -&gt; freq.get(b) - freq.get(a));
+    int[] res = new int[k];
+    for (int i = 0; i &lt; k; i++) res[i] = vals.get(i);
+    return res;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — bucket by frequency (optimal) · O(n)</p>
+<pre class="code"><code>public int[] topKFrequent(int[] nums, int k) {
+    Map&lt;Integer, Integer&gt; freq = new HashMap&lt;&gt;();
+    for (int x : nums) freq.merge(x, 1, Integer::sum);
+
+    // Key idea: a count can never exceed n, so use the COUNT as an array
+    // index. bucket[c] = all values that occur exactly c times.
+    List&lt;Integer&gt;[] bucket = new List[nums.length + 1];
+    for (Map.Entry&lt;Integer, Integer&gt; e : freq.entrySet()) {
+        int c = e.getValue();
+        if (bucket[c] == null) bucket[c] = new ArrayList&lt;&gt;();
+        bucket[c].add(e.getKey());
+    }
+
+    // Walk buckets from the highest count down, collecting k values
+    int[] res = new int[k];
+    int idx = 0;
+    for (int c = nums.length; c &gt;= 1 &amp;&amp; idx &lt; k; c--)
+        if (bucket[c] != null)
+            for (int v : bucket[c]) {
+                res[idx++] = v;
+                if (idx == k) break;
+            }
+    return res;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Sorting compares counts against each other (n log n); bucketing exploits
+    that counts live in the small fixed range 1..n, so they can be used as indexes — the same idea as
+    counting sort (<a href="06-sorting.html">page 06</a>). A third variation — a size-k min-heap, O(n log k),
+    best for streaming data — is worked on <a href="12-heaps.html">page 12</a>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Product of Array Except Self — LeetCode 238</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return an array <code>answer</code> where <code>answer[i]</code> is the
+    product of every element of <code>nums</code> <em>except</em> <code>nums[i]</code>. You must run in O(n)
+    and <strong>division is not allowed</strong> (it would break on zeros anyway).</p>
+    <p><strong>Example.</strong> <code>[1,2,3,4]</code> → <code>[24,12,8,6]</code>
+    (e.g. answer[0] = 2·3·4 = 24). <code>[-1,1,0,-3,3]</code> → <code>[0,0,9,0,0]</code>.</p>
+    <p><strong>The insight.</strong> The product of "everything except me" = (product of everything to my
+    left) × (product of everything to my right). Both sides can be precomputed in one pass each.</p>
+
+    <p class="code-title">Variation 1 — two extra arrays · O(n) time, O(n) space</p>
+<pre class="code"><code>public int[] productExceptSelfTwoArrays(int[] nums) {
+    int n = nums.length;
+    int[] left = new int[n], right = new int[n], ans = new int[n];
+    left[0] = 1;                                    // nothing to the left of index 0
+    for (int i = 1; i &lt; n; i++)
+        left[i] = left[i - 1] * nums[i - 1];        // product of nums[0..i-1]
+    right[n - 1] = 1;                               // nothing to the right of the end
+    for (int i = n - 2; i &gt;= 0; i--)
+        right[i] = right[i + 1] * nums[i + 1];      // product of nums[i+1..n-1]
+    for (int i = 0; i &lt; n; i++)
+        ans[i] = left[i] * right[i];
+    return ans;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — reuse the output array (optimal) · O(n) time, O(1) extra space</p>
+<pre class="code"><code>public int[] productExceptSelf(int[] nums) {
+    int n = nums.length;
+    int[] ans = new int[n];
+    ans[0] = 1;
+    for (int i = 1; i &lt; n; i++)                 // pass 1: ans[i] = product of the left side
+        ans[i] = ans[i - 1] * nums[i - 1];
+    int right = 1;                              // running product of the right side
+    for (int i = n - 1; i &gt;= 0; i--) {
+        ans[i] *= right;                        // left-product * right-product
+        right *= nums[i];                       // extend the right side to include nums[i]
+    }
+    return ans;                                 // output array doesn't count as extra space
+}</code></pre>
+    <p><strong>Takeaway.</strong> This is prefix products — the multiplicative twin of the prefix sums on
+    <a href="04-prefix-sum.html">page 04</a>. Variation 2 folds the right-side array into a single running
+    variable, a space squeeze you'll reuse in DP (<a href="18-dp-1d.html">page 18</a>).</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Longest Consecutive Sequence — LeetCode 128</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given an unsorted array, return the length of the longest run of
+    consecutive integers present in it (the run's members can appear anywhere in the array). Required time:
+    O(n).</p>
+    <p><strong>Example.</strong> <code>[100,4,200,1,3,2]</code> → <code>4</code>, because 1,2,3,4 are all
+    present. <code>[0,3,7,2,5,8,4,6,0,1]</code> → <code>9</code> (0 through 8).</p>
+
+    <p class="code-title">Variation 1 — sort and scan · O(n log n)</p>
+<pre class="code"><code>public int longestConsecutiveSort(int[] nums) {
+    if (nums.length == 0) return 0;
+    Arrays.sort(nums);
+    int best = 1, len = 1;
+    for (int i = 1; i &lt; nums.length; i++) {
+        if (nums[i] == nums[i - 1]) continue;       // skip duplicates
+        len = (nums[i] == nums[i - 1] + 1) ? len + 1 : 1;  // extend or restart the run
+        best = Math.max(best, len);
+    }
+    return best;
+}</code></pre>
+    <p>Simple, but the problem explicitly demands O(n) — sorting is the thing being ruled out.</p>
+
+    <p class="code-title">Variation 2 — seen-set with run-start guard (optimal) · O(n)</p>
+<pre class="code"><code>public int longestConsecutive(int[] nums) {
     // Dump everything in a set: O(1) membership tests, duplicates collapse
     Set&lt;Integer&gt; set = new HashSet&lt;&gt;();
     for (int n : nums) set.add(n);
@@ -351,30 +532,78 @@ for (int i = 0; i &lt; nums.length; i++) {
     int best = 0;
     for (int n : set) {
         // KEY INSIGHT: only count from the START of a run.
-        // If n-1 exists, n is mid-run — skip it, the run's start will
-        // count it later. This is what keeps the total work O(n).
+        // If n-1 exists, n is mid-run — skip it; the run's true start
+        // will count it later. This guard keeps total work O(n).
         if (set.contains(n - 1)) continue;
-        // n starts a run: walk forward while consecutive neighbors exist
         int len = 1;
-        while (set.contains(n + len)) len++;
+        while (set.contains(n + len)) len++;   // walk the run upward
         best = Math.max(best, len);
     }
     return best;
 }</code></pre>
-    <p><strong>Complexity:</strong> time O(n) — each element is touched at most twice (once by the outer loop,
-    once inside exactly one run's walk); space O(n) for the set.
-    Runnable mirror: <code>code/01-arrays-hashing/LongestConsecutiveSequence.java</code>.</p>
+    <p><strong>Takeaway.</strong> The while loop looks nested but isn't quadratic: every element is walked by
+    exactly one run (the one whose start owns it), so the total walking across all runs is n steps. Mirror:
+    <code>code/01-arrays-hashing/LongestConsecutiveSequence.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> First Missing Positive — LeetCode 41</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given an unsorted integer array (may contain zeros, negatives,
+    duplicates), return the smallest positive integer that is <em>not</em> present. Required: O(n) time and
+    O(1) extra space.</p>
+    <p><strong>Example.</strong> <code>[1,2,0]</code> → <code>3</code>. <code>[3,4,-1,1]</code> →
+    <code>2</code>. <code>[7,8,9,11,12]</code> → <code>1</code>.</p>
+    <p><strong>The insight.</strong> The answer must lie in <code>1..n+1</code> (n values can cover at most
+    1..n). So only values in 1..n matter — and each such value <code>v</code> has a natural home:
+    index <code>v−1</code>.</p>
+
+    <p class="code-title">Variation 1 — seen-set · O(n) time but O(n) space (violates the constraint)</p>
+<pre class="code"><code>public int firstMissingPositiveSet(int[] nums) {
+    Set&lt;Integer&gt; set = new HashSet&lt;&gt;();
+    for (int x : nums) set.add(x);
+    for (int v = 1; v &lt;= nums.length + 1; v++)  // answer is in 1..n+1
+        if (!set.contains(v)) return v;
+    return -1;                                   // unreachable
+}</code></pre>
+    <p>The natural first idea — write it, then note it breaks the O(1)-space requirement, which is the cue
+    for cyclic sort.</p>
+
+    <p class="code-title">Variation 2 — cyclic sort (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public int firstMissingPositive(int[] nums) {
+    int n = nums.length;
+    // Phase 1: swap every value v in 1..n to its home index v-1.
+    for (int i = 0; i &lt; n; i++) {
+        // Keep swapping until nums[i] is out of range, or already home,
+        // or its home already holds a correct copy (guards duplicates).
+        while (nums[i] &gt;= 1 &amp;&amp; nums[i] &lt;= n
+               &amp;&amp; nums[nums[i] - 1] != nums[i]) {
+            int home = nums[i] - 1;             // where nums[i] belongs
+            int t = nums[home];                 // classic swap
+            nums[home] = nums[i];
+            nums[i] = t;
+        }
+    }
+    // Phase 2: the first index whose value disagrees exposes the answer.
+    for (int i = 0; i &lt; n; i++)
+        if (nums[i] != i + 1) return i + 1;
+    return n + 1;                               // 1..n all present -&gt; answer is n+1
+}</code></pre>
+    <p><strong>Takeaway.</strong> The while loop is amortized O(n) overall: every swap puts one value into its
+    final home forever, and there are only n homes. Cyclic sort is the standard escape hatch whenever hashing
+    is banned but values are confined to <code>1..n</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Insert after checking</strong> in complement-lookup problems, or an element can "find" itself (Two Sum with target 6 and a single 3).</li>
   <li><strong>Integer boxing is not <code>==</code>-safe:</strong> <code>map.get(a) == map.get(b)</code> compares references outside the −128..127 cache. Use <code>.equals()</code> or unbox to <code>int</code>. Classic Java-specific trap.</li>
   <li><strong>Never use a mutable object as a key</strong> (or an <code>int[]</code>, whose <code>hashCode</code> is identity-based) — serialize count arrays to a <code>String</code>, as in Group Anagrams.</li>
-  <li><strong>Say "average"</strong> when you say HashMap is O(1), and mention Java 8+ treeification to O(log n) — it's the difference between using the tool and knowing it.</li>
-  <li><strong>Read the constraints for a small alphabet:</strong> "lowercase English letters" is an invitation to swap the HashMap for an <code>int[26]</code> and say why.</li>
+  <li><strong>Say "average"</strong> when you say HashMap is O(1), and mention Java 8+ treeification to O(log n).</li>
+  <li><strong>Read the constraints for a small alphabet:</strong> "lowercase English letters" is a cue to swap the HashMap for an <code>int[26]</code>.</li>
   <li><strong>When asked for O(1) space</strong> on a 1..n array, the intended answer is cyclic sort (or index-sign tricks) — hashing is explicitly the thing being banned.</li>
 </ul>
 
