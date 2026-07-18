@@ -432,6 +432,103 @@ public static int minMeetingRoomsSweep(int[][] intervals) {
   </div>
 </details>
 
+<details class="sol" id="lc45">
+  <summary><span class="badge medium">medium</span> Jump Game II — LeetCode 45</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Same setup as Jump Game (each value = max jump length), but now
+    reaching the last index is guaranteed — return the <em>minimum</em> number of jumps.</p>
+    <p><strong>Example.</strong> <code>[2,3,1,1,4]</code> → 2 (index 0 → 1 → 4).</p>
+    <p class="code-title">Implicit BFS layers over indices · O(n)</p>
+<pre class="code"><code>public static int jump(int[] nums) {
+    int jumps = 0;
+    int right = 0;              // end of the current BFS layer
+    int furthest = 0;           // furthest reach from within this layer
+    for (int i = 0; i &lt; nums.length - 1; i++) {   // last index excluded!
+        furthest = Math.max(furthest, i + nums[i]);
+        if (i == right) {       // layer exhausted — forced to jump again
+            jumps++;
+            right = furthest;
+        }
+    }
+    return jumps;
+}</code></pre>
+    <p><strong>Takeaway.</strong> This greedy <em>is</em> BFS wearing O(1) space: "everything
+    reachable in k jumps" is a contiguous index range, so the queue collapses into two integers
+    (layer end, next layer end). Seeing minimum-steps = BFS-layers explains both why it works and
+    why the loop excludes the last index (arriving ends the walk — no jump departs from it).
+    Companion insight to Jump Game's max-reach scan (above).
+    Mirror: <code>code/21-greedy-intervals/JumpGameII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc678">
+  <summary><span class="badge medium">medium</span> Valid Parenthesis String — LeetCode 678</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A string of '(', ')' and '*', where each '*' may act as '(',
+    ')' or nothing. Can it be a valid parenthesis string?</p>
+    <p><strong>Example.</strong> "(*)" → true. "(*))" → true. ")(" → false. "*(" → false.</p>
+    <p class="code-title">Track the RANGE of possible open counts · O(n), O(1)</p>
+<pre class="code"><code>public static boolean checkValidString(String s) {
+    int lo = 0;                 // fewest possible unmatched '(' so far
+    int hi = 0;                 // most possible unmatched '(' so far
+    for (char c : s.toCharArray()) {
+        if (c == '(') {
+            lo++;
+            hi++;
+        } else if (c == ')') {
+            lo--;
+            hi--;
+        } else {                // '*': could be ')' (lo--), '(' (hi++), or ""
+            lo--;
+            hi++;
+        }
+        if (hi &lt; 0) return false;   // beyond repair: ')' exceeds every option
+        lo = Math.max(lo, 0);       // a real count can't be negative
+    }
+    return lo == 0;             // 0 lies inside [lo, hi] -&gt; some choice works
+}</code></pre>
+    <p><strong>Takeaway.</strong> Instead of branching on every '*' (3ⁿ) or running two-pass
+    heuristics, carry an <em>interval of feasible states</em> — the wildcard just widens it. The
+    range stays contiguous, so two ints represent every possible world at once; feasibility at the
+    end is "does the range contain 0". This interval-of-possibilities compression is a mini
+    technique that resurfaces in scheduling and simulation problems.
+    Mirror: <code>code/21-greedy-intervals/ValidParenthesisString.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc846">
+  <summary><span class="badge medium">medium</span> Hand of Straights — LeetCode 846</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Can the cards be partitioned into groups of exactly
+    <code>groupSize</code> <em>consecutive</em> values?</p>
+    <p><strong>Example.</strong> <code>[1,2,3,6,2,3,4,7,8]</code>, size 3 → true
+    ([1,2,3], [2,3,4], [6,7,8]). <code>[1,1,2,2,3,3]</code>, size 2 → false.</p>
+    <p class="code-title">Smallest card must lead a group · O(n log n)</p>
+<pre class="code"><code>public static boolean isNStraightHand(int[] hand, int groupSize) {
+    if (hand.length % groupSize != 0) return false;
+    TreeMap&lt;Integer, Integer&gt; counts = new TreeMap&lt;&gt;();
+    for (int card : hand) counts.merge(card, 1, Integer::sum);
+
+    while (!counts.isEmpty()) {
+        int start = counts.firstKey();          // FORCED: nothing smaller left,
+        for (int v = start; v &lt; start + groupSize; v++) {  // so it must lead
+            Integer c = counts.get(v);
+            if (c == null) return false;        // gap — the straight breaks
+            if (c == 1) counts.remove(v);
+            else counts.put(v, c - 1);
+        }
+    }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The greedy is airtight because the smallest remaining card has no
+    choice: no smaller card exists to precede it, so it must start a group — a forced move, the
+    strongest kind of greedy argument. TreeMap supplies "smallest remaining" in O(log n)
+    (<a href="24-advanced-structures.html">page 24</a>'s ordered-map pattern). Identical problem in
+    different clothes: LC 1296 "Divide Array in Sets of K Consecutive Numbers".
+    Mirror: <code>code/21-greedy-intervals/HandOfStraights.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc134">
   <summary><span class="badge medium">medium</span> Gas Station — LeetCode 134</summary>
   <div class="sol-body">
@@ -563,6 +660,44 @@ public static int minMeetingRoomsSweep(int[][] intervals) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc135">
+  <summary><span class="badge hard">hard</span> Candy — LeetCode 135</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Children in a line with ratings; each gets ≥ 1 candy, and
+    anyone rated higher than an adjacent child must get more candy than that neighbor. Minimize
+    total candies.</p>
+    <p><strong>Example.</strong> ratings <code>[1,0,2]</code> → 5 (candies 2,1,2).
+    <code>[1,2,2]</code> → 4 (candies 1,2,1 — equal ratings owe nothing).</p>
+    <p class="code-title">Two sweeps, one per constraint direction · O(n)</p>
+<pre class="code"><code>public static int candy(int[] ratings) {
+    int n = ratings.length;
+    int[] candies = new int[n];
+    java.util.Arrays.fill(candies, 1);          // floor: one candy each
+
+    for (int i = 1; i &lt; n; i++)                 // pass 1: rising from the left
+        if (ratings[i] &gt; ratings[i - 1])
+            candies[i] = candies[i - 1] + 1;
+
+    for (int i = n - 2; i &gt;= 0; i--)            // pass 2: rising from the right
+        if (ratings[i] &gt; ratings[i + 1])
+            candies[i] = Math.max(candies[i],   // max preserves pass 1's rule
+                    candies[i + 1] + 1);
+
+    int total = 0;
+    for (int c : candies) total += c;
+    return total;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The constraint "greater than BOTH neighbors when higher" splits
+    into two one-directional constraints, each trivially solvable by a sweep — and
+    <code>Math.max</code> merges the solutions without breaking either (raising a value never
+    violates a greater-than rule). Decomposing a bidirectional constraint into two independent
+    passes is the reusable idea; Trapping Rain Water's maxLeft/maxRight
+    (<a href="02-two-pointers.html#lc42">page 02</a>) is the same shape.
+    Mirror: <code>code/21-greedy-intervals/Candy.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Comparator overflow:</strong> <code>(a, b) -&gt; a[0] - b[0]</code> breaks when values straddle ±2·10⁹

@@ -465,10 +465,13 @@
   <tr><td><a href="20-dp-advanced.html#lc122">Best Time to Buy and Sell Stock II</a></td><td>122</td><td><span class="badge medium">medium</span></td><td>Hold/cash two-state machine.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc309">Best Time ... with Cooldown</a></td><td>309</td><td><span class="badge medium">medium</span></td><td>Add a cooldown state — a three-state machine.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc337">House Robber III</a></td><td>337</td><td><span class="badge medium">medium</span></td><td>Tree DP: each node returns (robbed, skipped).</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc1049">Last Stone Weight II</a></td><td>1049</td><td><span class="badge medium">medium</span></td><td>Smashing = signing: minimize |sum(A) − sum(B)| via subset sum.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc312">Burst Balloons</a></td><td>312</td><td><span class="badge hard">hard</span></td><td>Interval DP: choose the LAST balloon popped in each range.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc877">Stone Game</a></td><td>877</td><td><span class="badge medium">medium</span></td><td>Game DP on the score difference; the current player maximizes.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc698">Partition to K Equal Sum Subsets</a></td><td>698</td><td><span class="badge medium">medium</span></td><td>Bitmask over chosen elements, pruned bucket by bucket.</td></tr>
   <tr><td><a href="20-dp-advanced.html#lc188">Best Time to Buy and Sell Stock IV</a></td><td>188</td><td><span class="badge hard">hard</span></td><td>k transactions → a 2k-state machine over (day, txn, holding).</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc329">Longest Increasing Path in a Matrix</a></td><td>329</td><td><span class="badge hard">hard</span></td><td>Strict increase kills cycles — the grid is a DAG, memo DFS is the DP.</td></tr>
+  <tr><td><a href="20-dp-advanced.html#lc10">Regular Expression Matching</a></td><td>10</td><td><span class="badge hard">hard</span></td><td>“x*” is the unit: delete it (j−2) or expand one copy (i−1, same j).</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> trading-strategy state machines, matrix-chain query planners (<a href="25-real-world-systems.html#db">databases</a>).</p>
@@ -482,9 +485,13 @@
   <tr><td><a href="21-greedy-intervals.html#lc56">Merge Intervals</a></td><td>56</td><td><span class="badge medium">medium</span></td><td>Sort by start; overlapping intervals absorb into one.</td></tr>
   <tr><td><a href="21-greedy-intervals.html#lc435">Non-overlapping Intervals</a></td><td>435</td><td><span class="badge medium">medium</span></td><td>Sort by end; keep the earliest-ending compatible interval.</td></tr>
   <tr><td><a href="21-greedy-intervals.html#lc253">Meeting Rooms II</a></td><td>253</td><td><span class="badge medium">medium</span></td><td>Peak overlap count = rooms; min-heap of end times or a sweep line.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc45">Jump Game II</a></td><td>45</td><td><span class="badge medium">medium</span></td><td>BFS layers compressed to two ints: layer end, furthest reach.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc678">Valid Parenthesis String</a></td><td>678</td><td><span class="badge medium">medium</span></td><td>Carry the RANGE of possible open counts; “*” just widens it.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc846">Hand of Straights</a></td><td>846</td><td><span class="badge medium">medium</span></td><td>The smallest remaining card is FORCED to lead a group (TreeMap).</td></tr>
   <tr><td><a href="21-greedy-intervals.html#lc134">Gas Station</a></td><td>134</td><td><span class="badge medium">medium</span></td><td>Failure at i eliminates every start ≤ i; the net total decides feasibility.</td></tr>
   <tr><td><a href="21-greedy-intervals.html#lc57">Insert Interval</a></td><td>57</td><td><span class="badge medium">medium</span></td><td>Sorted disjoint input → before/absorb/after in one pass.</td></tr>
   <tr><td><a href="21-greedy-intervals.html#lc452">Minimum Number of Arrows to Burst Balloons</a></td><td>452</td><td><span class="badge medium">medium</span></td><td>Interval scheduling inverted: shoot at the earliest end.</td></tr>
+  <tr><td><a href="21-greedy-intervals.html#lc135">Candy</a></td><td>135</td><td><span class="badge hard">hard</span></td><td>Split the two-sided constraint into two sweeps; max merges them.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> meeting/room scheduling (<a href="25-real-world-systems.html#sched">schedulers</a>), interval maps in storage engines (<a href="25-real-world-systems.html#db">databases</a>).</p>
@@ -498,8 +505,11 @@
   <tr><td><a href="22-bit-manipulation.html#lc268">Missing Number</a></td><td>268</td><td><span class="badge easy">easy</span></td><td>XOR indices against values; the missing one survives.</td></tr>
   <tr><td><a href="22-bit-manipulation.html#lc191">Number of 1 Bits</a></td><td>191</td><td><span class="badge easy">easy</span></td><td>n &amp; (n−1) clears the lowest set bit — count the iterations.</td></tr>
   <tr><td><a href="22-bit-manipulation.html#lc190">Reverse Bits</a></td><td>190</td><td><span class="badge easy">easy</span></td><td>Peel bits off one end, push them onto the other.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc476">Number Complement</a></td><td>476</td><td><span class="badge easy">easy</span></td><td>XOR with a same-length mask of 1s = flip only significant bits.</td></tr>
   <tr><td><a href="22-bit-manipulation.html#lc371">Sum of Two Integers</a></td><td>371</td><td><span class="badge medium">medium</span></td><td>XOR = sum without carry, AND≪1 = carry; loop until the carry dies.</td></tr>
   <tr><td><a href="22-bit-manipulation.html#lc137">Single Number II</a></td><td>137</td><td><span class="badge medium">medium</span></td><td>Count bits mod 3 (or the two-register state machine).</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc260">Single Number III</a></td><td>260</td><td><span class="badge medium">medium</span></td><td>XOR-all = a^b; split everyone on one differing bit, XOR each side.</td></tr>
+  <tr><td><a href="22-bit-manipulation.html#lc201">Bitwise AND of Numbers Range</a></td><td>201</td><td><span class="badge medium">medium</span></td><td>Only the endpoints’ common binary prefix survives a range AND.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> permission masks, bitmap indexes (<a href="25-real-world-systems.html#db">databases</a>), feature flags, bloom-filter internals (<a href="25-real-world-systems.html#infra">infra</a>).</p>
@@ -508,6 +518,7 @@
 <div class="tablewrap">
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="23-math-geometry.html#lc9">Palindrome Number</a></td><td>9</td><td><span class="badge easy">easy</span></td><td>Reverse only half the digits — overflow becomes impossible.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc204">Count Primes</a></td><td>204</td><td><span class="badge medium">medium</span></td><td>The sieve: mark multiples starting from each prime squared.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc50">Pow(x, n)</a></td><td>50</td><td><span class="badge medium">medium</span></td><td>Square-and-multiply halves the exponent every step.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc384">Shuffle an Array</a></td><td>384</td><td><span class="badge medium">medium</span></td><td>Fisher-Yates: swap each i with a uniform j ≤ i.</td></tr>
@@ -515,6 +526,10 @@
   <tr><td><a href="23-math-geometry.html#lc171">Excel Sheet Column Number</a></td><td>171</td><td><span class="badge easy">easy</span></td><td>Bijective base-26 parsing: result = result·26 + digit.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc528">Random Pick with Weight</a></td><td>528</td><td><span class="badge medium">medium</span></td><td>Prefix sums turn weights into ranges; binary-search the dart.</td></tr>
   <tr><td><a href="23-math-geometry.html#lc189">Rotate Array</a></td><td>189</td><td><span class="badge medium">medium</span></td><td>Three reversals rotate in place; normalize with k %= n first.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc7">Reverse Integer</a></td><td>7</td><td><span class="badge medium">medium</span></td><td>Check the overflow BEFORE the multiply (MAX/10 with digit 7/−8).</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc43">Multiply Strings</a></td><td>43</td><td><span class="badge medium">medium</span></td><td>Digit i × digit j lands at positions i+j and i+j+1.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc398">Random Pick Index</a></td><td>398</td><td><span class="badge medium">medium</span></td><td>Reservoir sampling: keep match k with probability 1/k.</td></tr>
+  <tr><td><a href="23-math-geometry.html#lc149">Max Points on a Line</a></td><td>149</td><td><span class="badge hard">hard</span></td><td>Anchor a point; equal gcd-reduced slopes = same line.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> sharding and consistent hashing arithmetic (<a href="25-real-world-systems.html#infra">infra</a>), weighted load balancing, A/B bucketing.</p>
@@ -523,13 +538,17 @@
 <div class="tablewrap">
 <table>
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
+  <tr><td><a href="24-advanced-structures.html#lc706">Design HashMap</a></td><td>706</td><td><span class="badge easy">easy</span></td><td>Separate chaining from scratch: hash → bucket → chain walk.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc146">LRU Cache</a></td><td>146</td><td><span class="badge medium">medium</span></td><td>HashMap + doubly linked list = O(1) get/put in recency order.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc380">Insert Delete GetRandom O(1)</a></td><td>380</td><td><span class="badge medium">medium</span></td><td>Array + index map; swap-with-last makes remove O(1).</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc307">Range Sum Query — Mutable</a></td><td>307</td><td><span class="badge medium">medium</span></td><td>Fenwick tree: point update and prefix query, both O(log n).</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc729">My Calendar I</a></td><td>729</td><td><span class="badge medium">medium</span></td><td>TreeMap neighbors: only the floor and ceiling bookings can conflict.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc362">Design Hit Counter</a></td><td>362</td><td><span class="badge medium">medium</span></td><td>Timestamp queue vs 300 circular buckets — the window-counting trade.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc981">Time Based Key-Value Store</a></td><td>981</td><td><span class="badge medium">medium</span></td><td>Floor binary search over an append-only (hence sorted) version list.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc622">Design Circular Queue</a></td><td>622</td><td><span class="badge medium">medium</span></td><td>Ring buffer: head + size dodges the full/empty ambiguity.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc1396">Design Underground System</a></td><td>1396</td><td><span class="badge medium">medium</span></td><td>Open-session map + per-route running (sum, count) aggregates.</td></tr>
   <tr><td><a href="24-advanced-structures.html#lc460">LFU Cache</a></td><td>460</td><td><span class="badge hard">hard</span></td><td>Frequency buckets of LinkedHashSets plus a minFreq pointer.</td></tr>
+  <tr><td><a href="24-advanced-structures.html#lc715">Range Module</a></td><td>715</td><td><span class="badge hard">hard</span></td><td>Disjoint TreeMap intervals; every op is floor/ceiling neighbor surgery.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> caches at every layer (<a href="25-real-world-systems.html#infra">infra</a>), rate limiters, time-series and versioned stores (<a href="25-real-world-systems.html#db">databases</a>).</p>

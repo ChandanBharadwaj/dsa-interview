@@ -215,6 +215,33 @@ r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs
     <span class="hint">Reservoir sampling with k=1 over a single pass — cite the 1/n proof.</span></div>
 </div>
 
+<details class="sol" id="lc9">
+  <summary><span class="badge easy">easy</span> Palindrome Number — LeetCode 9</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Is the integer a palindrome — without converting it to a
+    string?</p>
+    <p><strong>Example.</strong> 121 → true. −121 → false (the sign breaks it). 10 → false.</p>
+    <p class="code-title">Reverse only half the digits · O(log n), overflow-proof</p>
+<pre class="code"><code>public static boolean isPalindrome(int x) {
+    // negatives never qualify; a trailing 0 would need a leading 0
+    if (x &lt; 0 || (x % 10 == 0 &amp;&amp; x != 0)) return false;
+    int reversedHalf = 0;
+    while (x &gt; reversedHalf) {              // stop at the middle
+        reversedHalf = reversedHalf * 10 + x % 10;
+        x /= 10;
+    }
+    // even length: halves equal; odd: drop the reversed middle digit
+    return x == reversedHalf || x == reversedHalf / 10;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Reversing the <em>whole</em> number risks overflow (see Reverse
+    Integer below); reversing only until the halves meet cannot — the reversed part never exceeds
+    the remaining part by more than one digit. The two guard clauses (negatives, trailing zeros) do
+    real work; state them before coding. Digit-peeling with <code>% 10</code> and <code>/ 10</code>
+    is the shared engine of this whole problem family.
+    Mirror: <code>code/23-math-geometry/PalindromeNumber.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc204">
   <summary><span class="badge medium">medium</span> Count Primes — LeetCode 204 (sieve of Eratosthenes)</summary>
   <div class="sol-body">
@@ -441,6 +468,150 @@ private static void reverse(int[] a, int i, int j) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc7">
+  <summary><span class="badge medium">medium</span> Reverse Integer — LeetCode 7</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Reverse an int's digits; if the result overflows 32 bits,
+    return 0. You may not use 64-bit integers (that's the point of the exercise).</p>
+    <p><strong>Example.</strong> 123 → 321. −123 → −321. 120 → 21. 1534236469 → 0 (its reversal
+    exceeds 2³¹−1).</p>
+    <p class="code-title">Check overflow BEFORE the multiply · O(log n)</p>
+<pre class="code"><code>public static int reverse(int x) {
+    int result = 0;
+    while (x != 0) {
+        int digit = x % 10;         // negatives work: -123 % 10 == -3 in Java
+        x /= 10;
+        // result * 10 + digit is about to run — verify it fits FIRST
+        if (result &gt; Integer.MAX_VALUE / 10
+                || (result == Integer.MAX_VALUE / 10 &amp;&amp; digit &gt; 7))
+            return 0;               // MAX_VALUE ends in ...7
+        if (result &lt; Integer.MIN_VALUE / 10
+                || (result == Integer.MIN_VALUE / 10 &amp;&amp; digit &lt; -8))
+            return 0;               // MIN_VALUE ends in ...8
+        result = result * 10 + digit;
+    }
+    return result;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The discipline being tested: detect overflow <em>before</em> the
+    operation that would cause it — after the multiply, the value is already garbage. Comparing
+    against <code>MAX_VALUE / 10</code> (with the last-digit refinement 7/−8) is the standard
+    pre-check idiom, the same one <code>Integer.parseInt</code>'s implementation uses. Java's
+    negative <code>%</code> behavior conveniently makes one loop serve both signs.
+    Mirror: <code>code/23-math-geometry/ReverseInteger.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc43">
+  <summary><span class="badge medium">medium</span> Multiply Strings — LeetCode 43</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Multiply two non-negative integers given as strings (up to 200
+    digits — far beyond long), without BigInteger or direct numeric conversion.</p>
+    <p><strong>Example.</strong> "123" × "456" → "56088". "999" × "999" → "998001".</p>
+    <p class="code-title">Schoolbook digits: i × j lands at i+j, i+j+1 · O(mn)</p>
+<pre class="code"><code>public static String multiply(String num1, String num2) {
+    if (num1.equals("0") || num2.equals("0")) return "0";
+    int m = num1.length(), n = num2.length();
+    int[] result = new int[m + n];              // a product has ≤ m+n digits
+
+    for (int i = m - 1; i &gt;= 0; i--) {
+        for (int j = n - 1; j &gt;= 0; j--) {
+            int prod = (num1.charAt(i) - '0') * (num2.charAt(j) - '0');
+            // KEY FACT: digit i × digit j contributes to exactly
+            // positions i+j (carry) and i+j+1 (unit) of the result.
+            int posLow = i + j + 1, posHigh = i + j;
+            int sum = prod + result[posLow];
+            result[posLow] = sum % 10;
+            result[posHigh] += sum / 10;        // carry rolls upward
+        }
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int d : result)
+        if (!(sb.length() == 0 &amp;&amp; d == 0))      // strip leading zeros
+            sb.append(d);
+    return sb.toString();
+}</code></pre>
+    <p><strong>Takeaway.</strong> The whole trick is the position formula — digit i times digit j
+    lands at index i+j+1 with carry into i+j — which turns third-grade long multiplication into two
+    clean loops with no string juggling mid-computation. This is genuinely how arbitrary-precision
+    libraries multiply (before they switch to Karatsuba/FFT at scale). Add Two Numbers
+    (<a href="08-linked-lists.html#lc2">page 08</a>) is the additive sibling.
+    Mirror (cross-checked against long arithmetic on random inputs):
+    <code>code/23-math-geometry/MultiplyStrings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc398">
+  <summary><span class="badge medium">medium</span> Random Pick Index — LeetCode 398</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given an array with duplicates, <code>pick(target)</code>
+    returns the index of one occurrence of target, each occurrence equally likely — designed for
+    when the array is huge and extra memory is at a premium.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,3,3]</code>: pick(3) returns 2, 3 or 4, each with
+    probability 1/3.</p>
+    <p class="code-title">Reservoir sampling with k = 1 · O(n) per pick, O(1) space</p>
+<pre class="code"><code>public int pick(int target) {
+    int count = 0, chosen = -1;
+    for (int i = 0; i &lt; nums.length; i++) {
+        if (nums[i] != target) continue;
+        count++;
+        // Keep the i-th match with probability 1/count. Proof sketch: the
+        // k-th match survives all later replacements with probability
+        // (1/k) · (k/(k+1)) · ((k+1)/(k+2)) · … = 1/count — uniform!
+        if (rand.nextInt(count) == 0)
+            chosen = i;
+    }
+    return chosen;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Reservoir sampling picks uniformly from a stream <em>whose length
+    you don't know in advance</em>, in one pass and O(1) memory — the telescoping-product proof is
+    two lines and worth rehearsing aloud. The general k-sample version (keep first k, then replace
+    a random slot with probability k/i) powers log sampling and A/B assignment over data streams.
+    (If memory were free, a HashMap of index lists gives O(1) picks — say the trade-off.)
+    Mirror (statistically verified over 30k picks):
+    <code>code/23-math-geometry/RandomPickIndex.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc149">
+  <summary><span class="badge hard">hard</span> Max Points on a Line — LeetCode 149</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The maximum number of given points lying on one straight line.</p>
+    <p><strong>Example.</strong> <code>[[1,1],[2,2],[3,3]]</code> → 3.
+    <code>[[1,1],[3,2],[5,3],[4,1],[2,3],[1,4]]</code> → 4.</p>
+    <p class="code-title">Anchor each point, bucket others by reduced slope · O(n²)</p>
+<pre class="code"><code>public static int maxPoints(int[][] points) {
+    int n = points.length;
+    if (n &lt;= 2) return n;
+    int best = 2;
+    for (int i = 0; i &lt; n; i++) {              // anchor point
+        Map&lt;String, Integer&gt; slopes = new HashMap&lt;&gt;();
+        for (int j = i + 1; j &lt; n; j++) {
+            int dx = points[j][0] - points[i][0];
+            int dy = points[j][1] - points[i][1];
+            // Reduce dy/dx by gcd — exact fractions, no float equality bugs.
+            int g = gcd(Math.abs(dx), Math.abs(dy));
+            dx /= g;
+            dy /= g;
+            if (dx &lt; 0 || (dx == 0 &amp;&amp; dy &lt; 0)) {   // one canonical sign
+                dx = -dx;
+                dy = -dy;
+            }
+            int c = slopes.merge(dy + "/" + dx, 1, Integer::sum);
+            best = Math.max(best, c + 1);          // +1: the anchor itself
+        }
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two lines through a shared point are equal iff their slopes are —
+    so anchoring reduces 2D collinearity to a per-anchor frequency count (page 01's machinery). The
+    hard part is slope <em>representation</em>: doubles fail on precision, so use gcd-reduced
+    fractions with a canonical sign, which also absorbs vertical (1/0) and horizontal (0/1) lines
+    with zero special cases. A recurring screen at map/graphics-adjacent companies.
+    Mirror: <code>code/23-math-geometry/MaxPointsOnLine.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Java's <code>%</code> can be negative:</strong> <code>-7 % 3 == -1</code>. Normalize with <code>((a % m) + m) % m</code> whenever a subtraction is involved.</li>
