@@ -602,6 +602,144 @@ private static int robLine(int[] nums, int lo, int hi) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc53">
+  <summary><span class="badge medium">medium</span> Maximum Subarray — LeetCode 53</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The contiguous subarray with the largest sum (elements may be
+    negative; the subarray must be non-empty).</p>
+    <p><strong>Example.</strong> <code>[-2,1,-3,4,-1,2,1,-5,4]</code> → 6, from
+    <code>[4,-1,2,1]</code>. All-negative <code>[-3,-1,-2]</code> → −1 (the least-bad single
+    element).</p>
+
+    <p class="code-title">Variation 1 — brute force · O(n²)</p>
+<pre class="code"><code>public static int maxSubArrayBrute(int[] nums) {
+    int best = Integer.MIN_VALUE;
+    for (int i = 0; i &lt; nums.length; i++) {
+        int sum = 0;
+        for (int j = i; j &lt; nums.length; j++) {
+            sum += nums[j];                  // extend the (i..j) subarray
+            best = Math.max(best, sum);
+        }
+    }
+    return best;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — Kadane's algorithm · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int maxSubArray(int[] nums) {
+    // DP in disguise: endingHere = best sum of a subarray ENDING at i.
+    int endingHere = nums[0];
+    int best = nums[0];
+    for (int i = 1; i &lt; nums.length; i++) {
+        // Extend the previous run, or abandon it and restart at nums[i] —
+        // a negative running sum can only drag the future down.
+        endingHere = Math.max(nums[i], endingHere + nums[i]);
+        best = Math.max(best, endingHere);
+    }
+    return best;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The most famous 1D DP there is, and the state definition is the
+    whole lesson: not "best so far" but "best <em>ending here</em>" — the same ending-here trick as
+    Maximum Product Subarray (above), which extends it to track a min too. Two things to say
+    unprompted: it handles all-negative arrays (no "empty subarray" cheat), and it generalizes to
+    circular arrays (LC 918) via max(normal Kadane, total − min-Kadane). See it face off against
+    sliding window and prefix sums in
+    <a href="26-interview-playbook.html#p-drill-7-best-contiguous-stretch-window-vs-prefix-m">playbook
+    drill 7</a>. Mirror (cross-checked against brute force):
+    <code>code/18-dp-1d/MaximumSubarray.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc91">
+  <summary><span class="badge medium">medium</span> Decode Ways — LeetCode 91</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Letters map A=1..Z=26; count the ways to decode a digit string.
+    Zeros are only valid inside "10" or "20".</p>
+    <p><strong>Example.</strong> "12" → 2 (AB, L). "226" → 3. "06" → 0. "100" → 0.</p>
+    <p class="code-title">Climbing stairs with validity gates · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int numDecodings(String s) {
+    int n = s.length();
+    if (n == 0 || s.charAt(0) == '0') return 0;   // leading zero: dead
+    int prev2 = 1;                  // dp[0]: empty prefix decodes one way
+    int prev1 = 1;                  // dp[1]: the first (non-zero) char
+    for (int i = 2; i &lt;= n; i++) {
+        int curr = 0;
+        if (s.charAt(i - 1) != '0')               // 1-digit step "X"
+            curr += prev1;
+        int two = (s.charAt(i - 2) - '0') * 10 + (s.charAt(i - 1) - '0');
+        if (two &gt;= 10 &amp;&amp; two &lt;= 26)               // 2-digit step "XY"
+            curr += prev2;
+        if (curr == 0) return 0;                  // stuck (e.g. "30", "100")
+        prev2 = prev1;
+        prev1 = curr;
+    }
+    return prev1;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Structurally Climbing Stairs — each position closes a 1-step or a
+    2-step — but the steps carry validity conditions, and the zeros are where every wrong submission
+    dies: '0' can't stand alone, "30" traps it with no partner, and the two-digit range check must be
+    ≥ 10 (else "06" sneaks in). Run "10", "100", "27" by hand before declaring victory.
+    Mirror: <code>code/18-dp-1d/DecodeWays.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc279">
+  <summary><span class="badge medium">medium</span> Perfect Squares — LeetCode 279</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The fewest perfect squares (1, 4, 9, 16, …) summing to n.</p>
+    <p><strong>Example.</strong> 12 → 3 (4+4+4, not 9+1+1+1). 13 → 2 (4+9).</p>
+    <p class="code-title">Coin Change with the squares as coins · O(n√n)</p>
+<pre class="code"><code>public static int numSquares(int n) {
+    int[] dp = new int[n + 1];              // dp[x] = fewest squares for x
+    for (int x = 1; x &lt;= n; x++) {
+        dp[x] = Integer.MAX_VALUE;
+        for (int root = 1; root * root &lt;= x; root++)
+            dp[x] = Math.min(dp[x], dp[x - root * root] + 1);
+    }
+    return dp[n];                            // dp[0] = 0 seeds everything
+}</code></pre>
+    <p><strong>Takeaway.</strong> Spotting the reduction — "the coin set is {1,4,9,…}" — turns a
+    number-theory-looking problem into Coin Change (above) verbatim; no new DP needed. Since squares
+    include 1, every amount is reachable, so the unreachable-sentinel handling Coin Change needs
+    disappears. Bonus fact worth dropping: Lagrange's four-square theorem caps every answer at 4
+    (the mirror asserts it), and a BFS-on-amounts view finds the answer level by level.
+    Mirror: <code>code/18-dp-1d/PerfectSquares.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc740">
+  <summary><span class="badge medium">medium</span> Delete and Earn — LeetCode 740</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Taking a copy of value v earns v points but deletes
+    <em>every</em> element equal to v−1 or v+1. Maximize total points.</p>
+    <p><strong>Example.</strong> <code>[3,4,2]</code> → 6 (take 4 — deletes the 3 — then take 2).
+    <code>[2,2,3,3,3,4]</code> → 9 (all three 3s; the 2s and 4 die).</p>
+    <p class="code-title">Reduce to House Robber on the value axis · O(n + maxVal)</p>
+<pre class="code"><code>public static int deleteAndEarn(int[] nums) {
+    int maxVal = 0;
+    for (int x : nums) maxVal = Math.max(maxVal, x);
+    // Bucket first: taking one v earns ALL copies of v (they don't
+    // delete each other) — so per value it's all-or-nothing.
+    long[] gain = new long[maxVal + 1];      // gain[v] = v * count(v)
+    for (int x : nums) gain[x] += x;
+
+    // Adjacent values conflict = adjacent houses. Rob the value line:
+    long skip = 0, take = gain[0];
+    for (int v = 1; v &lt;= maxVal; v++) {
+        long newTake = skip + gain[v];       // taking v forces skipping v−1
+        skip = Math.max(skip, take);         // skipping v keeps the better of v−1
+        take = newTake;
+    }
+    return (int) Math.max(skip, take);
+}</code></pre>
+    <p><strong>Takeaway.</strong> A reduction in two moves: bucket duplicates (all copies of v live
+    or die together → <code>gain[v] = v·count</code>), then notice "taking v kills v±1" is exactly
+    House Robber's adjacency constraint — just indexed by <em>value</em> instead of position.
+    Interviews love this problem precisely because it tests whether you can see an old DP under a
+    new costume. Mirror: <code>code/18-dp-1d/DeleteAndEarn.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Say the state sentence before writing code.</strong> Most DP failures are a fuzzy state ("dp[i] is... the answer... at i?"). If dp[i] is "best ending AT i" (LIS) the final answer is a max over all cells; if it's "best considering 0..i" (robber) the answer is the last cell. Know which yours is.</li>
