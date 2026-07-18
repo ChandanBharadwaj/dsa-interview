@@ -45,13 +45,7 @@
   <li><a href="07-binary-search.html">07 · Binary Search</a> — the halving instinct returns as fast exponentiation</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li>Do you know <strong>Euclid's algorithm</strong> cold, including <em>why</em> it works?</li>
-  <li>Can you handle <strong>"return the answer mod 10⁹+7"</strong> without overflow bugs — the #1 trap in counting problems?</li>
-  <li>Do you know a <strong>provably fair shuffle</strong> and <strong>sampling from a stream</strong> — favorites for data-infra roles?</li>
-  <li>Geometry-lite: overlap checks and distances — do you reduce them to <strong>per-axis interval logic</strong> instead of trigonometry?</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> a small toolbox (Euclid, sieve, powMod, Fisher-Yates) that shows up verbatim for years — cheap points if prepared.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -202,11 +196,9 @@ r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and variations per problem — try each yourself before opening the walkthrough.</p>
 
-<div class="problems card">
-  <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/greatest-common-divisor-of-strings/">Greatest Common Divisor of Strings</a>
-    <span class="hint">Slick fact: if s+t equals t+s the answer has length gcd(|s|,|t|) — Euclid on string lengths.</span></div>
   <div class="prob"><span class="badge easy">Easy</span> <a class="t" href="https://leetcode.com/problems/excel-sheet-column-number/">Excel Sheet Column Number</a>
     <span class="hint">Base-26 positional notation: result = result*26 + (c-'A'+1).</span></div>
   <div class="prob"><span class="badge medium">Medium</span> <a class="t" href="https://leetcode.com/problems/count-primes/">Count Primes</a>
@@ -224,7 +216,7 @@ r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs
 </div>
 
 <details class="sol">
-  <summary>Worked solution: Count Primes (sieve of Eratosthenes) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Count Primes — LeetCode 204 (sieve of Eratosthenes)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Count primes strictly less than n (n up to 5·10⁶ — trial division per number is too slow).</p>
     <p><strong>Idea.</strong> One shared boolean array; every prime crosses out its multiples starting at p·p
@@ -249,7 +241,7 @@ r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Pow(x, n) (fast exponentiation) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Pow(x, n) — LeetCode 50 (fast exponentiation)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Implement xⁿ for integer n (which may be negative — or Integer.MIN_VALUE).</p>
     <p><strong>Idea.</strong> Square-and-multiply over n's bits: O(log n) multiplications. Negative n means 1/x^|n| —
@@ -275,7 +267,7 @@ r.nextInt(bound);                 // uniform 0..bound-1 — never abuse Math.abs
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Shuffle an Array (Fisher-Yates) — Medium</summary>
+  <summary><span class="badge medium">medium</span> Shuffle an Array — LeetCode 384 (Fisher-Yates)</summary>
   <div class="sol-body">
     <p><strong>Problem.</strong> Design a class with <code>shuffle()</code> returning a uniformly random permutation
     and <code>reset()</code> returning the original array.</p>
@@ -308,15 +300,155 @@ public int[] shuffle() {
   </div>
 </details>
 
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Greatest Common Divisor of Strings — LeetCode 1071</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The largest string x such that both <code>str1</code> and
+    <code>str2</code> are built by repeating x ("" if none exists).</p>
+    <p><strong>Example.</strong> <code>"ABCABC"</code>, <code>"ABC"</code> → <code>"ABC"</code>.
+    <code>"ABABAB"</code>, <code>"ABAB"</code> → <code>"AB"</code>.
+    <code>"LEET"</code>, <code>"CODE"</code> → <code>""</code>.</p>
+    <p class="code-title">Euclid on string lengths · O(n+m)</p>
+<pre class="code"><code>public static String gcdOfStrings(String str1, String str2) {
+    // Divisibility test in string-land: if a common repeating unit exists,
+    // then concatenation commutes — str1+str2 must equal str2+str1.
+    // (If they differ, no unit can tile both; return "".)
+    if (!(str1 + str2).equals(str2 + str1)) return "";
+    // When the test passes, the answer's length is exactly gcd(|s1|, |s2|)
+    // — Euclid's algorithm on the LENGTHS.
+    int g = gcd(str1.length(), str2.length());
+    return str1.substring(0, g);
+}
+
+private static int gcd(int a, int b) {
+    return b == 0 ? a : gcd(b, a % b);   // when b hits 0, a holds the answer
+}</code></pre>
+    <p><strong>Takeaway.</strong> Number theory transplanted to strings: "repeating unit" behaves like a
+    divisor, and commuting concatenation (<code>s1+s2 == s2+s1</code>) is precisely the condition for a
+    common one to exist. When a problem's objects compose like numbers, gcd logic often ports over intact.
+    Mirror: <code>code/23-math-geometry/GcdOfStrings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Excel Sheet Column Number — LeetCode 171</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Convert an Excel column title to its number: A→1, B→2, …, Z→26,
+    AA→27, AB→28, …</p>
+    <p><strong>Example.</strong> "A" → 1. "AB" → 28. "ZY" → 701.</p>
+    <p class="code-title">Base-26 positional notation (with a twist) · O(L)</p>
+<pre class="code"><code>public static int titleToNumber(String columnTitle) {
+    int result = 0;
+    for (char c : columnTitle.toCharArray()) {
+        // Standard positional parsing: shift what we have by one "digit"
+        // (×26), then add the new digit. A=1 .. Z=26 — note there is NO
+        // zero digit, which is what makes this "bijective base 26".
+        result = result * 26 + (c - 'A' + 1);
+    }
+    return result;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The loop is the universal parse-a-number-in-base-B pattern
+    (<code>result = result*B + digit</code>) — the same shape as parsing decimal strings or building
+    polynomial hashes (<a href="14-strings-advanced.html">page 14</a>). Excel's quirk is having no zero:
+    digits run 1..26, so "AA" is 1·26+1=27, not 26. The reverse problem (LC 168) needs a
+    <code>(n−1) % 26</code> adjustment for exactly that reason.
+    Mirror: <code>code/23-math-geometry/ExcelColumnNumber.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Random Pick with Weight — LeetCode 528</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Given positive weights <code>w</code>, implement
+    <code>pickIndex()</code> returning index i with probability <code>w[i] / sum(w)</code>.</p>
+    <p><strong>Example.</strong> <code>w=[1,3]</code>: index 0 comes up ~25% of the time, index 1 ~75%.</p>
+    <p class="code-title">Prefix sums + binary search on a random dart · O(n) build, O(log n) per pick</p>
+<pre class="code"><code>public class RandomPickWeight {
+    private final int[] prefix;      // prefix[i] = w[0] + ... + w[i]
+    private final int total;
+    private final Random rand = new Random();
+
+    public RandomPickWeight(int[] w) {
+        prefix = new int[w.length];
+        int sum = 0;
+        for (int i = 0; i &lt; w.length; i++) {
+            sum += w[i];
+            prefix[i] = sum;         // weights become adjacent ranges on a line:
+        }                            // [1..w0][w0+1..w0+w1]... — range size = weight
+        total = sum;
+    }
+
+    public int pickIndex() {
+        // Throw a dart uniformly into [1..total]; whichever range it lands
+        // in wins — bigger weights own proportionally bigger ranges.
+        int dart = rand.nextInt(total) + 1;
+        // First index whose prefix >= dart (lowerBound, page 07).
+        int lo = 0, hi = prefix.length - 1;
+        while (lo &lt; hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (prefix[mid] &gt;= dart) hi = mid;
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> A three-topic combo: prefix sums (<a href="04-prefix-sum.html">04</a>)
+    turn weights into ranges, randomness throws the dart, and lowerBound binary search
+    (<a href="07-binary-search.html">07</a>) finds the range in O(log n). This is exactly how weighted
+    load balancers, A/B-test bucketing, and loot tables in games pick outcomes.
+    Mirror: <code>code/23-math-geometry/RandomPickWeight.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Rotate Array — LeetCode 189</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Rotate the array right by k steps, in place, ideally O(1) extra
+    space.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,4,5,6,7], k=3</code> → <code>[5,6,7,1,2,3,4]</code>.
+    k may exceed n: k=10 on length 7 behaves like k=3.</p>
+
+    <p class="code-title">Variation 1 — copy to a shifted position · O(n) time, O(n) space</p>
+<pre class="code"><code>public static void rotateCopy(int[] nums, int k) {
+    int n = nums.length;
+    int[] out = new int[n];
+    for (int i = 0; i &lt; n; i++)
+        out[(i + k) % n] = nums[i];    // every element jumps k slots, wrapping
+    System.arraycopy(out, 0, nums, 0, n);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — three reversals (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public static void rotate(int[] nums, int k) {
+    int n = nums.length;
+    k %= n;                            // rotations wrap: k = n is a no-op
+    // [1,2,3,4,5,6,7], k=3:
+    reverse(nums, 0, n - 1);           // [7,6,5,4,3,2,1]  whole array
+    reverse(nums, 0, k - 1);           // [5,6,7,4,3,2,1]  first k
+    reverse(nums, k, n - 1);           // [5,6,7,1,2,3,4]  the rest — done!
+}
+
+private static void reverse(int[] a, int i, int j) {
+    while (i &lt; j) {
+        int t = a[i]; a[i] = a[j]; a[j] = t;
+        i++; j--;
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> Reversing the whole array puts both blocks in the right <em>place</em> but
+    each internally backwards; two more reversals fix their insides. The <code>k %= n</code> normalization is
+    the classic missed edge case. The same three-reversal trick rotates strings and is how text editors
+    implement "move block". Mirror: <code>code/23-math-geometry/RotateArray.java</code>.</p>
+  </div>
+</details>
+
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Java's <code>%</code> can be negative:</strong> <code>-7 % 3 == -1</code>. Normalize with <code>((a % m) + m) % m</code> whenever a subtraction is involved.</li>
   <li><strong>Multiply before you mod — in a long.</strong> Two ints ≈ 10⁹ multiply to ≈ 10¹⁸: fits long, destroys int. Declare accumulators long by reflex.</li>
   <li><strong><code>Math.pow</code> is for doubles.</strong> Integer exponentiation via Math.pow silently loses precision around 2⁵³ — always the square-and-multiply loop for exact/modular work.</li>
   <li><strong><code>Math.abs</code> can return a negative:</strong> <code>Math.abs(Integer.MIN_VALUE)</code> is still MIN_VALUE. This poisons "abs then mod" hashing tricks — mask instead.</li>
   <li><strong>Compare squared distances</strong>, never <code>sqrt</code> results — faster and immune to floating-point equality traps.</li>
-  <li><strong>Say the sieve's complexity right:</strong> it's O(n log log n) — knowing that odd little bound (and starting the crossing at p·p) is the whole signal.</li>
+  <li><strong>Say the sieve's complexity right:</strong> it's O(n log log n) (and start the crossing at p·p).</li>
 </ul>
 
 <nav class="pager">
