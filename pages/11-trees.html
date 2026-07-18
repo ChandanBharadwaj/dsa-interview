@@ -46,13 +46,7 @@
   <li><a href="07-binary-search.html">07 · Binary Search</a> — the BST is binary search turned into a data structure.</li>
 </ul>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Traversal fluency:</strong> can you pick pre/in/post/level-order for a task and write it without notes?</li>
-  <li><strong>The top-down vs bottom-up split:</strong> do you know when to pass state <em>down</em> (parameters) vs return answers <em>up</em>? This one distinction solves most tree mediums.</li>
-  <li><strong>Invariant thinking:</strong> validate-BST is a famous bug trap — do you reason about what <em>all ancestors</em> require, or just the parent?</li>
-  <li><strong>Complexity honesty:</strong> O(n) time for visiting every node, O(h) stack space — and h is log n only if the tree is balanced.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> a top-3 area — traversal choice, top-down vs bottom-up recursion, and the BST-is-sorted fact cover most questions.</p>
 
 <h3>How this builds on the previous topic</h3>
 <p>
@@ -267,39 +261,20 @@ while (!queue.isEmpty()) {
 </div>
 
 <!-- ============================================================ -->
-<h2 id="problems">Curated problems (easy → hard)</h2>
-
-<div class="problems card">
-  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/maximum-depth-of-binary-tree/">Maximum Depth of Binary Tree</a></span>
-    <span class="hint">The hello-world of bottom-up recursion: deeper child + 1. Get this to reflex speed.</span></div>
-  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/invert-binary-tree/">Invert Binary Tree</a></span>
-    <span class="hint">Swap children, recurse (either order). Famously the question that rejected Homebrew's author.</span></div>
-  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/same-tree/">Same Tree</a></span>
-    <span class="hint">Recurse on pairs: both null → true, one null or values differ → false, else left-pair &amp;&amp; right-pair.</span></div>
-  <div class="prob"><span class="badge easy">easy</span> <span class="t"><a href="https://leetcode.com/problems/diameter-of-binary-tree/">Diameter of Binary Tree</a></span>
-    <span class="hint">Return height up, record left+right+2 through each node on the side — THE return-one-thing-track-another pattern.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/binary-tree-level-order-traversal/">Binary Tree Level Order Traversal</a></span>
-    <span class="hint">BFS with the frozen queue-size trick; every "by level" variant (zigzag, right view) is this + a tweak.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/validate-binary-search-tree/">Validate Binary Search Tree</a></span>
-    <span class="hint">Pass an (exclusive) min/max window top-down; parent-only checks are the famous trap.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/">Lowest Common Ancestor of a BST</a></span>
-    <span class="hint">Walk down: both smaller → go left, both bigger → go right, otherwise you're standing on the split point.</span></div>
-  <div class="prob"><span class="badge medium">medium</span> <span class="t"><a href="https://leetcode.com/problems/kth-smallest-element-in-a-bst/">Kth Smallest Element in a BST</a></span>
-    <span class="hint">In-order emits sorted values — count visits and stop at k. No arrays, no sorting.</span></div>
-  <div class="prob"><span class="badge hard">hard</span> <span class="t"><a href="https://leetcode.com/problems/serialize-and-deserialize-binary-tree/">Serialize and Deserialize Binary Tree</a></span>
-    <span class="hint">Pre-order with "#" for nulls; deserialize by consuming tokens with the same recursion. Shape round-trips exactly.</span></div>
-</div>
+<h2 id="problems">Problems, fully worked (easy → hard)</h2>
+<p class="muted small">Full statement, example, and every useful variation per problem — try each yourself
+before opening the walkthrough. All code uses the standard <code>TreeNode</code> (val, left, right).</p>
 
 <details class="sol">
-  <summary>Worked solution: Maximum Depth of Binary Tree (LeetCode 104)</summary>
+  <summary><span class="badge easy">easy</span> Maximum Depth of Binary Tree — LeetCode 104</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return the number of nodes on the longest root-to-leaf path.</p>
-    <p><strong>Idea:</strong> the recursive definition writes the code for you. The empty tree has depth 0; any other
-    tree is 1 (itself) plus the depth of its deeper subtree. Trust the recursion to handle the subtrees — that's the
-    leap of faith from page 10 in its purest form.</p>
-<p class="code-title">code/11-trees/MaxDepth.java</p>
-<pre class="code"><code>// LeetCode 104. Depth = number of nodes on the longest root-to-leaf path.
-public static int maxDepth(TreeNode root) {
+    <p><strong>The problem.</strong> Return the depth of a binary tree: the number of nodes on the longest
+    path from the root down to a leaf.</p>
+    <p><strong>Example.</strong> Tree <code>[3,9,20,null,null,15,7]</code> (3 at the root, 20's children 15
+    and 7) → <code>3</code>. Single node → 1. Empty → 0.</p>
+
+    <p class="code-title">Variation 1 — bottom-up recursion (the default) · O(n) time, O(h) stack</p>
+<pre class="code"><code>public static int maxDepth(TreeNode root) {
     // Base case: the empty tree has depth 0. This one line also handles
     // leaves cleanly (both their children are null subtrees of depth 0).
     if (root == null) return 0;
@@ -310,24 +285,84 @@ public static int maxDepth(TreeNode root) {
     // "Combine after recursing" makes this a POST-ORDER (bottom-up) pattern.
     return Math.max(left, right) + 1;
 }</code></pre>
-    <p><strong>Complexity:</strong> <strong>time O(n)</strong> — each node visited once; <strong>space O(h)</strong>
-    recursion stack — O(log n) balanced, O(n) degenerate.</p>
+
+    <p class="code-title">Variation 2 — BFS counting levels (no recursion) · O(n) time, O(w) space</p>
+<pre class="code"><code>public static int maxDepthBFS(TreeNode root) {
+    if (root == null) return 0;
+    Deque&lt;TreeNode&gt; queue = new ArrayDeque&lt;&gt;();
+    queue.offer(root);
+    int depth = 0;
+    while (!queue.isEmpty()) {
+        int levelSize = queue.size();          // one whole level per outer pass
+        for (int i = 0; i &lt; levelSize; i++) {
+            TreeNode n = queue.poll();
+            if (n.left != null) queue.offer(n.left);
+            if (n.right != null) queue.offer(n.right);
+        }
+        depth++;                               // finished a level -&gt; one deeper
+    }
+    return depth;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The three-line recursion is the "hello world" of bottom-up tree code —
+    combine children's answers, add yourself. The BFS variation matters when the tree is deep enough to
+    threaten the call stack. Mirror: <code>code/11-trees/MaxDepth.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Diameter of Binary Tree (LeetCode 543)</summary>
+  <summary><span class="badge easy">easy</span> Invert Binary Tree — LeetCode 226</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> length in edges of the longest path between any two nodes — the path need
-    not pass through the root.</p>
-    <p><strong>Idea:</strong> at every node, the longest path <em>bending through it</em> is (height of left) +
-    (height of right) + 2 connecting edges. So compute heights bottom-up, and while you're at it, record that bend at
-    every node — the best one anywhere is the diameter. The subtlety: the recursion <em>returns</em> height (what a
-    parent can extend) while the diameter is tracked on the side, because a parent's path can't use both of my subtrees.</p>
-<p class="code-title">code/11-trees/DiameterOfBinaryTree.java</p>
-<pre class="code"><code>// LeetCode 543. Diameter = length (in EDGES) of the longest path between
-// any two nodes. The path does not have to pass through the root.
-private static int best; // longest path seen anywhere in the tree
+    <p><strong>The problem.</strong> Mirror the tree: swap every node's left and right children.</p>
+    <p><strong>Example.</strong> <code>[4,2,7,1,3,6,9]</code> → <code>[4,7,2,9,6,3,1]</code>.</p>
+    <p class="code-title">Swap, then recurse · O(n) time, O(h) stack</p>
+<pre class="code"><code>public static TreeNode invertTree(TreeNode root) {
+    if (root == null) return null;         // nothing to mirror
+    // Swap my two children...
+    TreeNode tmp = root.left;
+    root.left = root.right;
+    root.right = tmp;
+    // ...then trust the recursion to mirror each (already swapped) subtree.
+    invertTree(root.left);
+    invertTree(root.right);
+    return root;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Four real lines. Its fame comes from a viral tweet about failing an
+    interview on it — the lesson is that "obvious" recursion is only obvious once the swap-then-trust
+    structure is instinct. An iterative version is the same swap driven by any queue/stack of nodes.
+    Mirror: <code>code/11-trees/InvertBinaryTree.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Same Tree — LeetCode 100</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Are two binary trees structurally identical with equal node values?</p>
+    <p><strong>Example.</strong> <code>[1,2,3]</code> vs <code>[1,2,3]</code> → true.
+    <code>[1,2]</code> vs <code>[1,null,2]</code> → false (same values, different shape).</p>
+    <p class="code-title">Parallel recursion · O(n) time, O(h) stack</p>
+<pre class="code"><code>public static boolean isSameTree(TreeNode p, TreeNode q) {
+    if (p == null &amp;&amp; q == null) return true;    // both empty: match
+    if (p == null || q == null) return false;   // one empty, one not: shape differs
+    if (p.val != q.val) return false;           // values differ right here
+    // Both subtree pairs must match too
+    return isSameTree(p.left, q.left) &amp;&amp; isSameTree(p.right, q.right);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Walking two trees in lockstep is a pattern of its own — Symmetric Tree
+    (LC 101) is this with mirrored children (<code>p.left</code> vs <code>q.right</code>), and Subtree of
+    Another Tree (LC 572) calls it from every node. The two null-checks ordered exactly this way cover all
+    shape mismatches. Mirror: <code>code/11-trees/SameTree.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge easy">easy</span> Diameter of Binary Tree — LeetCode 543</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the length in <em>edges</em> of the longest path between any two
+    nodes — the path does not need to pass through the root.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,4,5]</code> → <code>3</code>: the path 4→2→1→3 (or 5→2→1→3)
+    crosses three edges. Single node → 0.</p>
+    <p class="code-title">Height recursion with a side-channel best · O(n) time, O(h) stack</p>
+<pre class="code"><code>private static int best; // longest path seen anywhere in the tree
 
 public static int diameterOfBinaryTree(TreeNode root) {
     best = 0;
@@ -348,21 +383,21 @@ private static int height(TreeNode node) {
     // (The parent's path can't bend through both of my subtrees.)
     return Math.max(left, right) + 1;
 }</code></pre>
-    <p><strong>Complexity:</strong> <strong>time O(n)</strong>, <strong>space O(h)</strong>. In an interview prefer
-    passing a one-element <code>int[]</code> instead of a static field if asked about thread safety.</p>
+    <p><strong>Takeaway.</strong> The template for a whole family (Binary Tree Maximum Path Sum, Longest
+    Univalue Path): the recursion <em>returns</em> what a parent can extend (one arm), while the real answer
+    (the bend through the node, both arms) is recorded on the side. Confusing those two roles is the classic
+    bug. Mirror: <code>code/11-trees/DiameterOfBinaryTree.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Binary Tree Level Order Traversal (LeetCode 102)</summary>
+  <summary><span class="badge medium">medium</span> Binary Tree Level Order Traversal — LeetCode 102</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> return the values grouped level by level, left to right.</p>
-    <p><strong>Idea:</strong> BFS with a queue naturally visits in level order; the only trick is knowing where one
-    level ends. Freeze <code>queue.size()</code> before the inner loop — at that moment the queue holds <em>exactly</em>
-    the current level, because children enqueued during the loop belong to the next one.</p>
-<p class="code-title">code/11-trees/LevelOrder.java</p>
-<pre class="code"><code>// LeetCode 102. Return node values grouped level by level, left to right.
-public static List&lt;List&lt;Integer&gt;&gt; levelOrder(TreeNode root) {
+    <p><strong>The problem.</strong> Return node values grouped level by level, left to right.</p>
+    <p><strong>Example.</strong> <code>[3,9,20,null,null,15,7]</code> →
+    <code>[[3],[9,20],[15,7]]</code>. Empty tree → <code>[]</code>.</p>
+    <p class="code-title">BFS with the frozen-size trick · O(n) time, O(w) space</p>
+<pre class="code"><code>public static List&lt;List&lt;Integer&gt;&gt; levelOrder(TreeNode root) {
     List&lt;List&lt;Integer&gt;&gt; result = new ArrayList&lt;&gt;();
     if (root == null) return result;         // empty tree -&gt; no levels
     Deque&lt;TreeNode&gt; queue = new ArrayDeque&lt;&gt;(); // FIFO frontier (never Stack!)
@@ -383,22 +418,25 @@ public static List&lt;List&lt;Integer&gt;&gt; levelOrder(TreeNode root) {
     }
     return result;
 }</code></pre>
-    <p><strong>Complexity:</strong> <strong>time O(n)</strong>; <strong>space O(w)</strong> where w is the widest level
-    — up to ~n/2 for a full bottom level.</p>
+    <p><strong>Takeaway.</strong> One frozen <code>queue.size()</code> replaces any node-wrapper carrying a
+    depth field. Every "by level" variant — zigzag (LC 103, flip alternate levels), right side view (LC 199,
+    keep each level's last), level averages — is this loop with two lines changed.
+    Mirror: <code>code/11-trees/LevelOrder.java</code>.</p>
   </div>
 </details>
 
 <details class="sol">
-  <summary>Worked solution: Validate Binary Search Tree (LeetCode 98)</summary>
+  <summary><span class="badge medium">medium</span> Validate Binary Search Tree — LeetCode 98</summary>
   <div class="sol-body">
-    <p><strong>Problem in one line:</strong> check whether a binary tree satisfies the BST invariant everywhere.</p>
-    <p><strong>Idea:</strong> top-down recursion carrying the window of legal values. Each node must fall strictly
-    inside the (min, max) imposed by <em>all</em> its ancestors; descending left tightens the ceiling to my value,
-    descending right raises the floor. Using <code>long</code> bounds sidesteps the edge case of node values equal to
-    <code>Integer.MIN_VALUE</code>/<code>MAX_VALUE</code>.</p>
-<p class="code-title">code/11-trees/ValidateBST.java</p>
-<pre class="code"><code>// LeetCode 98. Is this a valid binary search tree?
-public static boolean isValidBST(TreeNode root) {
+    <p><strong>The problem.</strong> Verify the BST invariant <em>everywhere</em>: for every node, all values
+    in its left subtree are smaller and all in its right subtree larger (strictly).</p>
+    <p><strong>Example.</strong> <code>[2,1,3]</code> → true.
+    <code>[5,1,4,null,null,3,6]</code> → false (3 sits in 5's right subtree but 3 &lt; 5).
+    The famous trap: <code>[5,4,6,null,null,3,7]</code> — every parent-child pair looks fine, but 3 is in
+    5's right subtree → false.</p>
+
+    <p class="code-title">Variation 1 — top-down bounds (the default) · O(n) time, O(h) stack</p>
+<pre class="code"><code>public static boolean isValidBST(TreeNode root) {
     // Every node must live inside an OPEN interval (min, max) imposed by
     // ALL of its ancestors — not just its parent. Start unbounded, and use
     // Long so Integer.MIN_VALUE / MAX_VALUE node values still validate.
@@ -416,18 +454,154 @@ private static boolean valid(TreeNode node, long min, long max) {
     return valid(node.left, min, node.val)
         &amp;&amp; valid(node.right, node.val, max);
 }</code></pre>
-    <p><strong>Complexity:</strong> <strong>time O(n)</strong>, <strong>space O(h)</strong>. Alternative worth naming:
-    in-order traversal checking the sequence is strictly increasing — same costs, different style.</p>
+
+    <p class="code-title">Variation 2 — in-order must be strictly increasing · same costs</p>
+<pre class="code"><code>private static TreeNode prev;                 // last node visited in-order
+
+public static boolean isValidBSTInorder(TreeNode root) {
+    prev = null;
+    return inorder(root);
+}
+
+private static boolean inorder(TreeNode node) {
+    if (node == null) return true;
+    if (!inorder(node.left)) return false;    // left subtree first
+    // In-order visits a BST in sorted order — so each value must be
+    // STRICTLY greater than the previous one.
+    if (prev != null &amp;&amp; node.val &lt;= prev.val) return false;
+    prev = node;
+    return inorder(node.right);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two mental models of the same invariant: ancestors impose a window
+    (top-down), or the flattened sequence must be sorted (in-order). The parent-only check is the most famous
+    wrong answer in interviewing — the trap example above defeats it.
+    Mirror: <code>code/11-trees/ValidateBST.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Lowest Common Ancestor of a BST — LeetCode 235</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> In a BST, find the lowest node that has both <code>p</code> and
+    <code>q</code> as descendants (a node counts as its own descendant).</p>
+    <p><strong>Example.</strong> BST <code>[6,2,8,0,4,7,9]</code>: LCA(2,8) = 6; LCA(2,4) = 2 (an ancestor
+    of itself).</p>
+    <p class="code-title">Walk toward the split point · O(h) time, O(1) space</p>
+<pre class="code"><code>public static TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+    TreeNode cur = root;
+    while (cur != null) {
+        if (p.val &lt; cur.val &amp;&amp; q.val &lt; cur.val) {
+            cur = cur.left;              // both targets are smaller — LCA is left
+        } else if (p.val &gt; cur.val &amp;&amp; q.val &gt; cur.val) {
+            cur = cur.right;             // both larger — LCA is right
+        } else {
+            // The targets SPLIT here (or one equals cur):
+            // this is the lowest node with one on each side.
+            return cur;
+        }
+    }
+    return null;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The BST ordering turns LCA into "descend until p and q separate" — no
+    recursion, no parent pointers, O(h). For a <em>general</em> binary tree (LC 236) there's no ordering to
+    steer by; the standard answer is bottom-up recursion: a node returns itself if it is p/q, and a node with
+    hits in both subtrees is the LCA. Mirror: <code>code/11-trees/LcaBST.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge medium">medium</span> Kth Smallest Element in a BST — LeetCode 230</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Return the k-th smallest value in a BST (1-indexed).</p>
+    <p><strong>Example.</strong> BST <code>[3,1,4,null,2]</code>, k=1 → <code>1</code>.
+    BST <code>[5,3,6,2,4,null,null,1]</code>, k=3 → <code>3</code>.</p>
+
+    <p class="code-title">Variation 1 — flatten with in-order, index in · O(n) time and space</p>
+<pre class="code"><code>public static int kthSmallestFlatten(TreeNode root, int k) {
+    List&lt;Integer&gt; sorted = new ArrayList&lt;&gt;();
+    flatten(root, sorted);                    // in-order = ascending values
+    return sorted.get(k - 1);
+}
+private static void flatten(TreeNode n, List&lt;Integer&gt; out) {
+    if (n == null) return;
+    flatten(n.left, out);
+    out.add(n.val);
+    flatten(n.right, out);
+}</code></pre>
+
+    <p class="code-title">Variation 2 — iterative in-order, stop at k (optimal) · O(h + k) time, O(h) space</p>
+<pre class="code"><code>public static int kthSmallest(TreeNode root, int k) {
+    Deque&lt;TreeNode&gt; stack = new ArrayDeque&lt;&gt;();
+    TreeNode cur = root;
+    while (cur != null || !stack.isEmpty()) {
+        while (cur != null) {                 // dive left as far as possible,
+            stack.push(cur);                  // remembering the path
+            cur = cur.left;
+        }
+        cur = stack.pop();                    // next node in ASCENDING order
+        if (--k == 0) return cur.val;         // the k-th visit is the answer
+        cur = cur.right;                      // then explore its right subtree
+    }
+    throw new IllegalArgumentException("k out of range");
+}</code></pre>
+    <p><strong>Takeaway.</strong> "In-order visits a BST in sorted order" is the single most useful BST
+    fact. The iterative traversal lets you <em>stop early</em> at k instead of flattening everything —
+    and the explicit stack version of in-order is worth having in your fingers anyway.
+    Mirror: <code>code/11-trees/KthSmallestBST.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol">
+  <summary><span class="badge hard">hard</span> Serialize and Deserialize Binary Tree — LeetCode 297</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Design <code>serialize(root)</code> → String and
+    <code>deserialize(String)</code> → tree such that any binary tree round-trips exactly.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,null,null,4,5]</code> might serialize to
+    <code>"1,2,#,#,3,4,#,#,5,#,#"</code> and must deserialize back to the identical tree.</p>
+    <p class="code-title">Preorder with null markers · O(n) both ways</p>
+<pre class="code"><code>// Serialize: preorder, writing '#' for every null. The null markers are
+// what make the string unambiguous — shape is fully recorded.
+public static String serialize(TreeNode root) {
+    StringBuilder sb = new StringBuilder();
+    ser(root, sb);
+    return sb.toString();
+}
+private static void ser(TreeNode n, StringBuilder sb) {
+    if (n == null) { sb.append("#,"); return; }
+    sb.append(n.val).append(',');            // node BEFORE children = preorder
+    ser(n.left, sb);
+    ser(n.right, sb);
+}
+
+// Deserialize: consume tokens in the same preorder. The recursion's
+// structure IS the tree's structure — each call eats exactly one subtree.
+public static TreeNode deserialize(String data) {
+    Deque&lt;String&gt; tokens = new ArrayDeque&lt;&gt;(Arrays.asList(data.split(",")));
+    return des(tokens);
+}
+private static TreeNode des(Deque&lt;String&gt; tokens) {
+    String t = tokens.poll();
+    if (t.equals("#")) return null;          // a recorded null: subtree ends here
+    TreeNode node = new TreeNode(Integer.parseInt(t));
+    node.left = des(tokens);                 // tokens are consumed left-to-right,
+    node.right = des(tokens);                // exactly as serialize emitted them
+    return node;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Preorder + explicit nulls is a <em>complete</em> description of shape and
+    values — that's why plain preorder (which can't distinguish left-child-missing from
+    right-child-missing) fails without the '#' markers. The same idea with level-order is how LeetCode's own
+    bracket notation works. For a <em>BST</em> specifically, values alone suffice (bounds reconstruct the
+    shape — LC 449). Mirror: <code>code/11-trees/SerializeDeserialize.java</code>.</p>
   </div>
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Null is a tree too.</strong> Make <code>if (node == null)</code> the first line of every recursion and half the edge cases (empty tree, missing child) vanish. NPEs in tree code almost always mean a missing base case.</li>
-  <li><strong>Validate-BST with parent-only checks</strong> is the most famous wrong answer in interviewing. Say the word "ancestors" and carry bounds — and mention the <code>Integer.MIN_VALUE</code> edge that makes <code>long</code> bounds (or nullable <code>Integer</code>) necessary.</li>
-  <li><strong>Don't say O(log n) space by reflex.</strong> Recursion stack is O(h); h = n for a skewed tree. "O(log n) if balanced, O(n) worst case" is the answer that sounds senior.</li>
-  <li><strong>Depth in nodes vs height in edges</strong> differ by one and problems mix them freely (LC 104 counts nodes, LC 543 counts edges). Restate the definition to the interviewer before coding.</li>
+  <li><strong>Validate-BST with parent-only checks</strong> is the most famous wrong answer in interviewing. Carry ancestor bounds, and mind the <code>Integer.MIN_VALUE</code> edge that makes <code>long</code> bounds (or nullable <code>Integer</code>) necessary.</li>
+  <li><strong>Don't say O(log n) space by reflex.</strong> Recursion stack is O(h); h = n for a skewed tree. "O(log n) if balanced, O(n) worst case".</li>
+  <li><strong>Depth in nodes vs height in edges</strong> differ by one and problems mix them freely (LC 104 counts nodes, LC 543 counts edges). Restate the definition before coding.</li>
   <li><strong>Level questions → freeze the queue size.</strong> If you're tagging each node with its depth in a wrapper class, you've missed the standard trick.</li>
   <li><strong>BST questions → say "in-order is sorted" early.</strong> Kth smallest, validation, successors, "two nodes swapped" — the sorted-sequence view usually is the solution.</li>
 </ul>
