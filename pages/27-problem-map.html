@@ -180,11 +180,16 @@
   <tr><th>Problem</th><th>LC</th><th>Difficulty</th><th>Why this concept</th></tr>
   <tr><td><a href="06-sorting.html#lc88">Merge Sorted Array</a></td><td>88</td><td><span class="badge easy">easy</span></td><td>Merge from the back so nothing gets overwritten.</td></tr>
   <tr><td><a href="06-sorting.html#lc1365">How Many Numbers Are Smaller Than the Current Number</a></td><td>1365</td><td><span class="badge easy">easy</span></td><td>Value range 0–100 → counting sort beats comparisons.</td></tr>
+  <tr><td><a href="06-sorting.html#lc905">Sort Array By Parity</a></td><td>905</td><td><span class="badge easy">easy</span></td><td>Quicksort’s partition step bare, with “is even” as the pivot test.</td></tr>
+  <tr><td><a href="06-sorting.html#lc1122">Relative Sort Array</a></td><td>1122</td><td><span class="badge easy">easy</span></td><td>Counting sort emitting in a custom order: arr2 first, leftovers ascending.</td></tr>
   <tr><td><a href="06-sorting.html#lc75">Sort Colors (Dutch National Flag)</a></td><td>75</td><td><span class="badge medium">medium</span></td><td>Dutch national flag: three-way partition in one pass.</td></tr>
   <tr><td><a href="06-sorting.html#lc215">Kth Largest Element in an Array</a></td><td>215</td><td><span class="badge medium">medium</span></td><td>Quickselect: partition until the pivot lands at index k.</td></tr>
   <tr><td><a href="06-sorting.html#lc179">Largest Number</a></td><td>179</td><td><span class="badge medium">medium</span></td><td>Custom comparator: order by (a+b) vs (b+a) concatenation.</td></tr>
   <tr><td><a href="06-sorting.html#lc148">Sort List</a></td><td>148</td><td><span class="badge medium">medium</span></td><td>Merge sort is the natural O(n log n) for linked lists.</td></tr>
+  <tr><td><a href="06-sorting.html#lc912">Sort an Array</a></td><td>912</td><td><span class="badge medium">medium</span></td><td>Implement the engines: merge, random-pivot 3-way quick, heap.</td></tr>
+  <tr><td><a href="06-sorting.html#lc274">H-Index</a></td><td>274</td><td><span class="badge medium">medium</span></td><td>Clamp citations at n — the range becomes bounded, counting sort applies.</td></tr>
   <tr><td><a href="06-sorting.html#lc315">Count of Smaller Numbers After Self</a></td><td>315</td><td><span class="badge hard">hard</span></td><td>Merge sort counts cross-half inversions while it merges.</td></tr>
+  <tr><td><a href="06-sorting.html#lc164">Maximum Gap</a></td><td>164</td><td><span class="badge hard">hard</span></td><td>Pigeonhole: the max sorted gap must span a bucket boundary.</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> external sort in databases and MapReduce shuffles (<a href="25-real-world-systems.html#db">databases</a>).</p>
