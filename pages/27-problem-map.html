@@ -74,10 +74,19 @@
   <tr><td><a href="01-arrays-hashing.html#lc217">Contains Duplicate</a></td><td>217</td><td><span class="badge easy">easy</span></td><td>Seen-before test — one HashSet membership check per element.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc242">Valid Anagram</a></td><td>242</td><td><span class="badge easy">easy</span></td><td>Frequency counting: two strings are anagrams iff their count maps match.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc1">Two Sum</a></td><td>1</td><td><span class="badge easy">easy</span></td><td>Complement lookup: “have I seen target−x?” is one HashMap probe.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc383">Ransom Note</a></td><td>383</td><td><span class="badge easy">easy</span></td><td>Frequency counting as inventory: stock the magazine, spend on the note.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc169">Majority Element</a></td><td>169</td><td><span class="badge easy">easy</span></td><td>HashMap count — or Boyer-Moore voting for O(1) space.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc205">Isomorphic Strings</a></td><td>205</td><td><span class="badge easy">easy</span></td><td>Bijection check: two maps, one per direction.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc290">Word Pattern</a></td><td>290</td><td><span class="badge easy">easy</span></td><td>The same bijection, letters ↔ whole words.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc202">Happy Number</a></td><td>202</td><td><span class="badge easy">easy</span></td><td>Repeat detection: HashSet of seen values (or Floyd at two speeds).</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc219">Contains Duplicate II</a></td><td>219</td><td><span class="badge easy">easy</span></td><td>A windowed HashSet: membership over only the last k elements.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc448">Find All Numbers Disappeared in an Array</a></td><td>448</td><td><span class="badge easy">easy</span></td><td>The array is its own hash table — mark presence by negating.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc49">Group Anagrams</a></td><td>49</td><td><span class="badge medium">medium</span></td><td>Canonical key (sorted word / count signature) groups anagrams in one map.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc347">Top K Frequent Elements</a></td><td>347</td><td><span class="badge medium">medium</span></td><td>Count map + bucket-by-frequency beats sorting for top-K.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc238">Product of Array Except Self</a></td><td>238</td><td><span class="badge medium">medium</span></td><td>Prefix × suffix products — the no-division two-pass trick.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc128">Longest Consecutive Sequence</a></td><td>128</td><td><span class="badge medium">medium</span></td><td>Set membership lets each streak be walked once from its true start.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc271">Encode and Decode Strings</a></td><td>271</td><td><span class="badge medium">medium</span></td><td>No delimiter is safe → length-prefix framing, like network protocols.</td></tr>
+  <tr><td><a href="01-arrays-hashing.html#lc2013">Detect Squares</a></td><td>2013</td><td><span class="badge medium">medium</span></td><td>Fix the diagonal partner; the two forced corners are O(1) count lookups.</td></tr>
   <tr><td><a href="01-arrays-hashing.html#lc41">First Missing Positive</a></td><td>41</td><td><span class="badge hard">hard</span></td><td>Index-as-hash: cyclic sort puts value v at index v−1; the first hole answers.</td></tr>
 </table>
 </div>

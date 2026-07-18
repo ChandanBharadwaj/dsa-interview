@@ -355,6 +355,222 @@ variation from brute force to optimal — read the problem, try it yourself firs
   </div>
 </details>
 
+<details class="sol" id="lc383">
+  <summary><span class="badge easy">easy</span> Ransom Note — LeetCode 383</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Can <code>ransomNote</code> be built from the letters of
+    <code>magazine</code>, each magazine letter usable at most once? Both are lowercase.</p>
+    <p><strong>Example.</strong> note "a", magazine "b" → false. note "aa", magazine "ab" → false
+    (only one 'a' in stock). note "aa", magazine "aab" → true.</p>
+    <p class="code-title">Count, then spend · O(n+m) time, O(1) space (26 counters)</p>
+<pre class="code"><code>public static boolean canConstruct(String ransomNote, String magazine) {
+    int[] counts = new int[26];                 // lowercase letters only
+    for (char c : magazine.toCharArray())
+        counts[c - 'a']++;                      // stock the shelf
+    for (char c : ransomNote.toCharArray())
+        if (--counts[c - 'a'] &lt; 0)              // spend; negative = shortage
+            return false;
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The purest form of frequency counting: one array as inventory,
+    decrement to consume. Valid Anagram (above) is this same problem with the extra demand that the
+    inventory come out exactly empty. A fixed alphabet means an <code>int[26]</code> beats a HashMap —
+    say that out loud in an interview, it's a free point.
+    Mirror: <code>code/01-arrays-hashing/RansomNote.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc169">
+  <summary><span class="badge easy">easy</span> Majority Element — LeetCode 169</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> An element appears <em>more than ⌊n/2⌋ times</em> (guaranteed to
+    exist). Find it. Follow-up: O(1) space.</p>
+    <p><strong>Example.</strong> <code>[3,2,3]</code> → 3. <code>[2,2,1,1,1,2,2]</code> → 2.</p>
+
+    <p class="code-title">Variation 1 — frequency map · O(n) time, O(n) space</p>
+<pre class="code"><code>public static int majorityByCounting(int[] nums) {
+    Map&lt;Integer, Integer&gt; freq = new HashMap&lt;&gt;();
+    for (int x : nums) {
+        int c = freq.merge(x, 1, Integer::sum); // increment and read back
+        if (c &gt; nums.length / 2) return x;      // strictly more than half
+    }
+    throw new IllegalArgumentException("no majority element");
+}</code></pre>
+
+    <p class="code-title">Variation 2 — Boyer-Moore voting (optimal) · O(n) time, O(1) space</p>
+<pre class="code"><code>public static int majorityElement(int[] nums) {
+    int candidate = 0, count = 0;
+    for (int x : nums) {
+        if (count == 0) candidate = x;          // previous run cancelled out
+        count += (x == candidate) ? 1 : -1;     // vote for or against
+    }
+    return candidate;                           // the true majority survives
+}</code></pre>
+    <p><strong>Takeaway.</strong> Boyer-Moore is a pairing argument: every time the count hits zero,
+    the discarded block contained the candidate and non-candidates in equal number — so it threw away
+    at most as many majority copies as others. With more than n/2 copies, the majority can't be fully
+    cancelled. Note it only works because a majority is <em>guaranteed</em>; without that guarantee
+    you'd verify the candidate with one more pass.
+    Mirror: <code>code/01-arrays-hashing/MajorityElement.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc205">
+  <summary><span class="badge easy">easy</span> Isomorphic Strings — LeetCode 205</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Can s be transformed into t by a consistent letter substitution?
+    Every occurrence of a letter must map to the same letter, and no two letters may map to the same
+    letter.</p>
+    <p><strong>Example.</strong> "egg"/"add" → true (e→a, g→d). "foo"/"bar" → false (o would need to be
+    both a and r). "badc"/"baba" → false (d and c would both map to a).</p>
+    <p class="code-title">Two maps — the substitution must be a bijection · O(n)</p>
+<pre class="code"><code>public static boolean isIsomorphic(String s, String t) {
+    Map&lt;Character, Character&gt; fwd = new HashMap&lt;&gt;();
+    Map&lt;Character, Character&gt; back = new HashMap&lt;&gt;();
+    for (int i = 0; i &lt; s.length(); i++) {
+        char a = s.charAt(i), b = t.charAt(i);
+        Character seenB = fwd.putIfAbsent(a, b);   // a's existing image, if any
+        Character seenA = back.putIfAbsent(b, a);  // b's existing preimage
+        if (seenB != null &amp;&amp; seenB != b) return false;  // a mapped elsewhere before
+        if (seenA != null &amp;&amp; seenA != a) return false;  // b already claimed
+    }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The classic trap is checking only one direction — "badc"/"baba"
+    passes a forward-only check. A consistent substitution is a <em>bijection</em>, and a bijection
+    needs both maps (or one map plus a "used images" set). This is exactly how compilers check
+    α-equivalence of variable renamings.
+    Mirror: <code>code/01-arrays-hashing/IsomorphicStrings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc290">
+  <summary><span class="badge easy">easy</span> Word Pattern — LeetCode 290</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Does the space-separated sentence s follow <code>pattern</code>,
+    with a bijection between pattern letters and whole words?</p>
+    <p><strong>Example.</strong> "abba" / "dog cat cat dog" → true. "abba" / "dog cat cat fish" → false.
+    "abba" / "dog dog dog dog" → false (a and b can't both be "dog").</p>
+    <p class="code-title">Isomorphic Strings, letters ↔ words · O(n)</p>
+<pre class="code"><code>public static boolean wordPattern(String pattern, String s) {
+    String[] words = s.split(" ");
+    if (words.length != pattern.length()) return false;  // lengths must agree first
+
+    Map&lt;Character, String&gt; letterToWord = new HashMap&lt;&gt;();
+    Map&lt;String, Character&gt; wordToLetter = new HashMap&lt;&gt;();
+    for (int i = 0; i &lt; pattern.length(); i++) {
+        char p = pattern.charAt(i);
+        String w = words[i];
+        String seenW = letterToWord.putIfAbsent(p, w);
+        Character seenP = wordToLetter.putIfAbsent(w, p);
+        if (seenW != null &amp;&amp; !seenW.equals(w)) return false;  // letter reused differently
+        if (seenP != null &amp;&amp; seenP != p) return false;        // word already claimed
+    }
+    return true;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Same bijection discipline as Isomorphic Strings, one level up
+    (letters ↔ words instead of letters ↔ letters). The two easy-to-miss cases: a length mismatch
+    between pattern and sentence, and the reverse-map check. Comparing with <code>.equals</code>, not
+    <code>==</code>, matters now that values are Strings.
+    Mirror: <code>code/01-arrays-hashing/WordPattern.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc202">
+  <summary><span class="badge easy">easy</span> Happy Number — LeetCode 202</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Repeatedly replace n by the sum of the squares of its digits.
+    If the process reaches 1, n is "happy"; otherwise it loops forever. Decide which.</p>
+    <p><strong>Example.</strong> 19 → 1²+9²=82 → 68 → 100 → 1 → happy. 2 → 4 → 16 → 37 → … enters the
+    cycle 4→16→37→58→89→145→42→20→4 → not happy.</p>
+
+    <p class="code-title">Variation 1 — HashSet cycle detection · O(1)-ish per step</p>
+<pre class="code"><code>public static boolean isHappySet(int n) {
+    Set&lt;Integer&gt; seen = new HashSet&lt;&gt;();
+    while (n != 1 &amp;&amp; seen.add(n))   // add() returns false on a repeat
+        n = next(n);
+    return n == 1;                  // stopped at 1, or on a proven cycle
+}
+
+private static int next(int n) {
+    int sum = 0;
+    while (n &gt; 0) {
+        int d = n % 10;             // peel the last digit
+        sum += d * d;
+        n /= 10;
+    }
+    return sum;
+}</code></pre>
+
+    <p class="code-title">Variation 2 — Floyd's tortoise and hare · O(1) space</p>
+<pre class="code"><code>public static boolean isHappy(int n) {
+    int slow = n, fast = next(n);
+    while (fast != 1 &amp;&amp; slow != fast) {
+        slow = next(slow);          // one step
+        fast = next(next(fast));    // two steps
+    }
+    return fast == 1;               // met at 1 = happy; met elsewhere = cycle
+}</code></pre>
+    <p><strong>Takeaway.</strong> "Does this iteration ever repeat?" is cycle detection, whether the
+    steps follow pointers or arithmetic. The set version is the honest first answer; Floyd removes the
+    memory by running the same sequence at two speeds — the identical trick as Linked List Cycle on
+    <a href="08-linked-lists.html#lc141">page 08</a>, just with <code>next()</code> instead of
+    <code>.next</code>. Mirror: <code>code/01-arrays-hashing/HappyNumber.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc219">
+  <summary><span class="badge easy">easy</span> Contains Duplicate II — LeetCode 219</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Are there two equal elements at most k indices apart?</p>
+    <p><strong>Example.</strong> <code>[1,2,3,1], k=3</code> → true. <code>[1,0,1,1], k=1</code> → true.
+    <code>[1,2,3,1,2,3], k=2</code> → false (the equal pairs are 3 apart).</p>
+    <p class="code-title">A sliding set of the last k elements · O(n)</p>
+<pre class="code"><code>public static boolean containsNearbyDuplicate(int[] nums, int k) {
+    Set&lt;Integer&gt; window = new HashSet&lt;&gt;();
+    for (int i = 0; i &lt; nums.length; i++) {
+        if (i &gt; k)
+            window.remove(nums[i - k - 1]);   // evict what fell out of range
+        if (!window.add(nums[i]))             // add() is false if already present
+            return true;
+    }
+    return false;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Contains Duplicate (above) with a distance constraint — and the
+    constraint turns the global set into a <em>windowed</em> set: membership over only the last k
+    items. It's your first taste of the sliding-window idea formalized on
+    <a href="03-sliding-window.html">page 03</a>. (An alternative: a value→lastIndex map, comparing
+    index gaps.) Mirror: <code>code/01-arrays-hashing/ContainsDuplicateII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc448">
+  <summary><span class="badge easy">easy</span> Find All Numbers Disappeared in an Array — LeetCode 448</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> nums has n entries, each in [1, n]. Return every value in [1, n]
+    that never appears — ideally O(1) extra space, treating the returned list as free.</p>
+    <p><strong>Example.</strong> <code>[4,3,2,7,8,2,3,1]</code> → <code>[5,6]</code>.
+    <code>[1,1]</code> → <code>[2]</code>.</p>
+    <p class="code-title">The array is its own hash table: mark by negation · O(n) time, O(1) space</p>
+<pre class="code"><code>public static List&lt;Integer&gt; findDisappearedNumbers(int[] nums) {
+    for (int x : nums) {
+        int idx = Math.abs(x) - 1;      // abs: x may already carry a mark
+        if (nums[idx] &gt; 0)
+            nums[idx] = -nums[idx];     // mark "value idx+1 exists"
+    }
+    List&lt;Integer&gt; missing = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; nums.length; i++)
+        if (nums[i] &gt; 0)                // never marked
+            missing.add(i + 1);
+    return missing;
+}</code></pre>
+    <p><strong>Takeaway.</strong> When values are confined to [1, n], the indices themselves can act as
+    hash buckets and the sign bit as the "present" flag — hashing with zero extra memory. This is the
+    gentle version of the cyclic-sort idea that First Missing Positive (below) pushes to its hard
+    extreme. Mirror: <code>code/01-arrays-hashing/DisappearedNumbers.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc49">
   <summary><span class="badge medium">medium</span> Group Anagrams — LeetCode 49</summary>
   <div class="sol-body">
@@ -544,6 +760,83 @@ variation from brute force to optimal — read the problem, try it yourself firs
     <p><strong>Takeaway.</strong> The while loop looks nested but isn't quadratic: every element is walked by
     exactly one run (the one whose start owns it), so the total walking across all runs is n steps. Mirror:
     <code>code/01-arrays-hashing/LongestConsecutiveSequence.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc271">
+  <summary><span class="badge medium">medium</span> Encode and Decode Strings — LeetCode 271</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Design <code>encode(List&lt;String&gt;) → String</code> and
+    <code>decode(String) → List&lt;String&gt;</code> so any list of strings round-trips through a single
+    string — including strings containing any character your format uses.</p>
+    <p><strong>Example.</strong> <code>["hello","wor#ld","","12#34"]</code> must decode back exactly.
+    A naive comma-join dies on strings containing commas; there is no safe delimiter.</p>
+    <p class="code-title">Length-prefix framing · O(total length)</p>
+<pre class="code"><code>public static String encode(List&lt;String&gt; strs) {
+    StringBuilder sb = new StringBuilder();
+    for (String s : strs)
+        sb.append(s.length()).append('#').append(s);   // "5#hello4#worl…"
+    return sb.toString();
+}
+
+public static List&lt;String&gt; decode(String data) {
+    List&lt;String&gt; out = new ArrayList&lt;&gt;();
+    int i = 0;
+    while (i &lt; data.length()) {
+        int hash = data.indexOf('#', i);            // end of the length field
+        int len = Integer.parseInt(data.substring(i, hash));
+        out.add(data.substring(hash + 1, hash + 1 + len));  // exactly len chars —
+        i = hash + 1 + len;                         // a '#' inside them is just data
+    }
+    return out;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The insight is that no delimiter can be safe when content is
+    arbitrary — but a <em>length</em> is unambiguous: after reading "5#", the next 5 characters are data
+    no matter what they contain. This is exactly how network protocols (HTTP's Content-Length, TCP
+    framing, Redis's RESP) delimit messages. Empty strings ("0#") work for free.
+    Mirror: <code>code/01-arrays-hashing/EncodeDecodeStrings.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc2013">
+  <summary><span class="badge medium">medium</span> Detect Squares — LeetCode 2013</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Design a class with <code>add(point)</code> (duplicates allowed)
+    and <code>count(q)</code>: how many axis-aligned squares of positive area can be formed using q and
+    three previously added points?</p>
+    <p><strong>Example.</strong> add (3,10), (11,2), (3,2); count((11,10)) → 1 — the square with corners
+    (3,10),(11,2),(3,2),(11,10). Add (11,2) again → count((11,10)) → 2, because the duplicated corner
+    participates in a second (identical) square.</p>
+    <p class="code-title">Count map + iterate diagonal partners · add O(1), count O(points)</p>
+<pre class="code"><code>public class DetectSquares {
+    // Multiset of points: duplicates multiply the number of squares.
+    private final Map&lt;String, Integer&gt; counts = new HashMap&lt;&gt;();
+    private final List&lt;int[]&gt; points = new ArrayList&lt;&gt;();
+
+    public void add(int[] point) {
+        counts.merge(point[0] + "," + point[1], 1, Integer::sum);
+        points.add(point);
+    }
+
+    public int count(int[] q) {
+        int total = 0;
+        // Try every stored point p as the corner DIAGONAL to q. A diagonal
+        // pins the square: the other two corners are forced.
+        for (int[] p : points) {
+            int dx = p[0] - q[0], dy = p[1] - q[1];
+            if (dx == 0 || Math.abs(dx) != Math.abs(dy)) continue;  // not diagonal
+            // remaining corners: (q.x, p.y) and (p.x, q.y) — multiply their counts
+            total += counts.getOrDefault(q[0] + "," + p[1], 0)
+                   * counts.getOrDefault(p[0] + "," + q[1], 0);
+        }
+        return total;
+    }
+}</code></pre>
+    <p><strong>Takeaway.</strong> The geometric trick: enumerate the <em>diagonal</em> partner, because
+    a diagonal determines the square — then the two forced corners are O(1) hash lookups, and
+    multiplying counts handles duplicates automatically. "Fix the piece that determines everything,
+    look up the rest" is the same shape as Two Sum's complement lookup, upgraded to 2D.
+    Mirror: <code>code/01-arrays-hashing/DetectSquares.java</code>.</p>
   </div>
 </details>
 
