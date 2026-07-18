@@ -42,12 +42,7 @@
 <h3>Prerequisites</h3>
 <p>None — this is the starting point. You only need everyday Java: loops, arrays, <code>HashMap</code>, <code>List</code>.</p>
 
-<h3>What the interviewer is actually testing</h3>
-<ul>
-  <li><strong>Can you state the time and space complexity</strong> of your own solution, unprompted? This is asked in nearly 100% of interviews.</li>
-  <li><strong>Can you compare approaches?</strong> "I could sort in O(n log n), or use a HashMap for O(n) with O(n) extra space" is exactly the sentence they want to hear.</li>
-  <li><strong>Do you pick the right tool?</strong> Choosing <code>HashMap</code> vs <code>TreeMap</code> vs <code>PriorityQueue</code> deliberately — not by habit.</li>
-</ul>
+<p class="muted small"><strong>Interview relevance:</strong> stating time and space complexity unprompted — and comparing approaches by cost — is expected in nearly every interview.</p>
 
 <h3>How this runbook builds incrementally</h3>
 <p>
@@ -106,8 +101,7 @@
 <div class="tip">
   <strong>Interview rule of thumb.</strong> Around 10⁸ simple operations per second is a safe mental budget.
   If n ≤ 10⁵ and your idea is O(n²) (10¹⁰ ops), it will be "correct but too slow" — the interviewer is waiting
-  for you to notice and reach for a better tool. This single habit — check n, budget the ops — instantly makes you
-  sound experienced.
+  for you to notice and reach for a better tool. Build the habit: check n, budget the operations.
 </div>
 
 <h3>2. Reading complexity straight off the code</h3>
@@ -270,13 +264,13 @@ public int[] twoSum(int[] nums, int target) {
 </details>
 
 <!-- ============================================================ -->
-<h2 id="pitfalls">Pitfalls &amp; interview tips</h2>
+<h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Don't say "O(2n)" or "O(n/2)".</strong> Constants are dropped: both are O(n). Nested-but-shrinking loops (pairs) are still O(n²).</li>
   <li><strong>Two different inputs get two variables:</strong> processing lists of sizes n and m is O(n + m) (or O(n·m) if nested) — never collapse them into one n.</li>
   <li><strong>HashMap is O(1) <em>average</em>.</strong> Saying "average, with a treeified O(log n) worst case in Java 8+" earns senior-level credit.</li>
   <li><strong>Recursion isn't free space.</strong> The call stack counts: recursing n deep is O(n) space even with no allocations. (Big theme from page 10 on.)</li>
-  <li><strong>Say complexity before being asked.</strong> Finish every solution with "time O(…), space O(…) because …". It becomes a reflex within a week of practice.</li>
+  <li><strong>Finish every solution with its costs:</strong> "time O(…), space O(…) because …". It becomes a reflex within a week of practice.</li>
   <li><strong>Integer overflow:</strong> <code>int</code> tops out at ~2.1·10⁹ — sums and products need <code>long</code>. Cheap point lost constantly.</li>
 </ul>
 
