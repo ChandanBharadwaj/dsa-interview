@@ -545,6 +545,133 @@ public static int change(int amount, int[] coins) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc63">
+  <summary><span class="badge medium">medium</span> Unique Paths II — LeetCode 63</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Unique Paths (right/down only) with obstacles: blocked cells
+    cannot be entered. Count paths from top-left to bottom-right.</p>
+    <p><strong>Example.</strong> A 3×3 grid with an obstacle in the center → 2 (around either
+    side). Obstacle on the start or end → 0.</p>
+    <p class="code-title">Same recurrence; obstacles contribute zero · O(mn) time, O(n) space</p>
+<pre class="code"><code>public static int uniquePathsWithObstacles(int[][] grid) {
+    int cols = grid[0].length;
+    int[] dp = new int[cols];               // rolling row: dp[c] = paths to (row, c)
+    dp[0] = grid[0][0] == 1 ? 0 : 1;        // the start itself may be blocked
+    for (int[] row : grid) {
+        for (int c = 0; c &lt; cols; c++) {
+            if (row[c] == 1)
+                dp[c] = 0;                  // obstacle: no path passes through
+            else if (c &gt; 0)
+                dp[c] += dp[c - 1];         // up (old dp[c]) + left (dp[c-1])
+        }
+    }
+    return dp[cols - 1];
+}</code></pre>
+    <p><strong>Takeaway.</strong> Constraints slot into DP as <em>zeroed-out states</em>, not new
+    logic — the recurrence is untouched; blocked cells simply hold 0 and propagate nothing. Note the
+    combinatorics shortcut that solved Unique Paths I dies here (obstacles break the symmetry), which
+    is exactly why interviewers add them. The rolling-row shows how "up + left" collapses into one
+    array where <code>dp[c]</code> pre-update <em>is</em> "up".
+    Mirror: <code>code/19-dp-2d/UniquePathsII.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc221">
+  <summary><span class="badge medium">medium</span> Maximal Square — LeetCode 221</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The largest square of all 1s in a binary matrix; return its
+    area.</p>
+    <p><strong>Example.</strong> The classic 4×5 grid → 4 (a 2×2 square of 1s).</p>
+    <p class="code-title">Side ending at each bottom-right corner · O(mn)</p>
+<pre class="code"><code>public static int maximalSquare(char[][] matrix) {
+    int rows = matrix.length, cols = matrix[0].length;
+    // dp[r][c] = side of the largest all-1s square whose BOTTOM-RIGHT
+    // corner is at (r-1, c-1). Padding row/col 0 kills the edge cases.
+    int[][] dp = new int[rows + 1][cols + 1];
+    int best = 0;
+    for (int r = 1; r &lt;= rows; r++)
+        for (int c = 1; c &lt;= cols; c++)
+            if (matrix[r - 1][c - 1] == '1') {
+                // A k-square here needs (k−1)-squares up, left, and up-left —
+                // the minimum of the three supports is the binding constraint.
+                dp[r][c] = 1 + Math.min(dp[r - 1][c - 1],
+                           Math.min(dp[r - 1][c], dp[r][c - 1]));
+                best = Math.max(best, dp[r][c]);
+            }
+    return best * best;                          // asked for AREA, not side
+}</code></pre>
+    <p><strong>Takeaway.</strong> Another "best ending here" state (Kadane's 2D cousin): defining
+    dp by the square's bottom-right corner makes the dependencies point up-and-left, exactly the
+    direction the scan fills. The min-of-three is worth being able to <em>justify</em>, not just
+    recite: each neighbor certifies one of the three sub-squares a bigger square needs. Contrast
+    with Largest Rectangle in Histogram-based Maximal Rectangle (LC 85) — squares get easy DP,
+    rectangles don't. Mirror: <code>code/19-dp-2d/MaximalSquare.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc494">
+  <summary><span class="badge medium">medium</span> Target Sum — LeetCode 494</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Put + or − before every number; count expressions evaluating
+    to target.</p>
+    <p><strong>Example.</strong> <code>[1,1,1,1,1], target=3</code> → 5 (choose one of the five 1s
+    to negate). <code>[0,0,1], target=1</code> → 4 (each 0's sign is free).</p>
+    <p class="code-title">Algebra first: reduce to subset-sum counting · O(n · P)</p>
+<pre class="code"><code>public static int findTargetSumWays(int[] nums, int target) {
+    // Let P = sum of the numbers given '+'. Then P − (total − P) = target,
+    // so P = (total + target) / 2 — count subsets summing to P.
+    int total = 0;
+    for (int x : nums) total += x;
+    if ((total + target) % 2 != 0 || total + target &lt; 0) return 0;  // infeasible
+    int p = (total + target) / 2;
+
+    int[] dp = new int[p + 1];              // dp[s] = number of subsets summing to s
+    dp[0] = 1;
+    for (int x : nums)
+        for (int s = p; s &gt;= x; s--)        // backwards -&gt; each number used once
+            dp[s] += dp[s - x];
+    return dp[p];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The transformation <em>is</em> the interview: one line of algebra
+    turns a ±-assignment search (2ⁿ) into Partition Equal Subset Sum's counting twin. The two
+    feasibility gates — parity and sign of total+target — fall straight out of the formula, and the
+    backwards inner loop is the standard 0/1-knapsack guard against reusing an item. Zeros are the
+    sneaky test: each doubles the count, handled naturally since <code>s ≥ 0</code> includes them.
+    Mirror: <code>code/19-dp-2d/TargetSum.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc115">
+  <summary><span class="badge hard">hard</span> Distinct Subsequences — LeetCode 115</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> How many distinct subsequences of s equal t?</p>
+    <p><strong>Example.</strong> s="rabbbit", t="rabbit" → 3 (three choices of which b to drop).
+    s="babgbag", t="bag" → 5.</p>
+    <p class="code-title">The LCS table shape, counting instead of maximizing · O(mn)</p>
+<pre class="code"><code>public static int numDistinct(String s, String t) {
+    int m = s.length(), n = t.length();
+    // dp[i][j] = ways to form t's first j chars from s's first i chars
+    long[][] dp = new long[m + 1][n + 1];   // long: counts explode fast
+    for (int i = 0; i &lt;= m; i++)
+        dp[i][0] = 1;                       // empty t: exactly one way
+    for (int i = 1; i &lt;= m; i++)
+        for (int j = 1; j &lt;= n; j++) {
+            dp[i][j] = dp[i - 1][j];        // always allowed: skip s's char
+            if (s.charAt(i - 1) == t.charAt(j - 1))
+                dp[i][j] += dp[i - 1][j - 1];   // plus: consume both
+        }
+    return (int) dp[m][n];
+}</code></pre>
+    <p><strong>Takeaway.</strong> The 2D-subsequence table from LCS/Edit Distance, with the cell
+    meaning changed from "best" to "how many" — a reminder that the same table shape hosts
+    optimization, counting, and existence questions; only the combine rule changes. The asymmetry
+    matters: skipping is always legal for s (it's the supply) but never for t (the pattern must be
+    produced whole). First row = 1 (empty t) and first column = 0 (nothing to build from) encode
+    that. Mirror: <code>code/19-dp-2d/DistinctSubsequences.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>dp indices are prefix lengths, not char indices.</strong> dp[i][j] speaks of the first i and j characters, so the characters compared are <code>a.charAt(i-1)</code> and <code>b.charAt(j-1)</code>. Mixing these up is the #1 two-string DP bug.</li>
