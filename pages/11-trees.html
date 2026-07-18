@@ -390,6 +390,89 @@ private static int height(TreeNode node) {
   </div>
 </details>
 
+<details class="sol" id="lc101">
+  <summary><span class="badge easy">easy</span> Symmetric Tree — LeetCode 101</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Is the tree a mirror of itself around its center?</p>
+    <p><strong>Example.</strong> <code>[1,2,2,3,4,4,3]</code> → true.
+    <code>[1,2,2,null,3,null,3]</code> → false.</p>
+    <p class="code-title">Recurse on PAIRS with crossed children · O(n)</p>
+<pre class="code"><code>public static boolean isSymmetric(TreeNode root) {
+    return root == null || mirrors(root.left, root.right);
+}
+
+private static boolean mirrors(TreeNode a, TreeNode b) {
+    if (a == null &amp;&amp; b == null) return true;    // both absent: mirror holds
+    if (a == null || b == null) return false;   // one absent: broken
+    return a.val == b.val
+        &amp;&amp; mirrors(a.left, b.right)             // outer pair
+        &amp;&amp; mirrors(a.right, b.left);            // inner pair — the crossing
+}</code></pre>
+    <p><strong>Takeaway.</strong> The unlock is recursing on a <em>pair</em> of nodes instead of one —
+    Same Tree (above) with the recursive calls crossed: outer-with-outer, inner-with-inner. When a
+    tree property won't fit "node + its children", ask what pair or triple of nodes the property
+    really relates. Mirror: <code>code/11-trees/SymmetricTree.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc110">
+  <summary><span class="badge easy">easy</span> Balanced Binary Tree — LeetCode 110</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Is the tree height-balanced — every node's two subtree heights
+    differing by at most 1?</p>
+    <p><strong>Example.</strong> <code>[3,9,20,null,null,15,7]</code> → true.
+    <code>[1,2,2,3,3,null,null,4,4]</code> → false.</p>
+    <p class="code-title">Post-order height with a −1 "broken" flag · O(n)</p>
+<pre class="code"><code>public static boolean isBalanced(TreeNode root) {
+    return height(root) != -1;
+}
+
+private static int height(TreeNode n) {
+    if (n == null) return 0;
+    int left = height(n.left);
+    if (left == -1) return -1;              // already broken below — bail out
+    int right = height(n.right);
+    if (right == -1) return -1;
+    if (Math.abs(left - right) &gt; 1) return -1;   // broken right HERE
+    return 1 + Math.max(left, right);       // healthy: report the real height
+}</code></pre>
+    <p><strong>Takeaway.</strong> The naive version calls a separate height() per node — O(n log n)
+    and the trap most candidates walk into. Computing height and checking balance in <em>one</em>
+    post-order pass, smuggling failure through a sentinel (−1), is the fix — the same
+    "bottom-up, return richer info" move as Diameter (above) and Max Path Sum (below). This
+    invariant is exactly what AVL trees maintain on every insert.
+    Mirror: <code>code/11-trees/BalancedBinaryTree.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc572">
+  <summary><span class="badge easy">easy</span> Subtree of Another Tree — LeetCode 572</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Does root contain a node whose subtree is <em>identical</em> to
+    subRoot (structure and values, all the way to the leaves)?</p>
+    <p><strong>Example.</strong> root <code>[3,4,5,1,2]</code>, subRoot <code>[4,1,2]</code> → true.
+    Hang an extra child under the 2 and it's false — the match must include absence.</p>
+    <p class="code-title">Try Same-Tree at every anchor · O(m·n) worst case</p>
+<pre class="code"><code>public static boolean isSubtree(TreeNode root, TreeNode subRoot) {
+    if (root == null) return false;         // ran out of anchor points
+    if (same(root, subRoot)) return true;   // exact match anchored here?
+    return isSubtree(root.left, subRoot)    // otherwise try anchoring lower
+        || isSubtree(root.right, subRoot);
+}
+
+private static boolean same(TreeNode a, TreeNode b) {
+    if (a == null &amp;&amp; b == null) return true;
+    if (a == null || b == null) return false;
+    return a.val == b.val &amp;&amp; same(a.left, b.left) &amp;&amp; same(a.right, b.right);
+}</code></pre>
+    <p><strong>Takeaway.</strong> Two recursions stacked: an outer walk choosing the anchor, an inner
+    Same Tree check — decomposing into a problem you've already solved is the pattern. The named
+    follow-up: serialize both trees (with null markers!) and substring-search, turning it into
+    <a href="14-strings-advanced.html#lc28">KMP</a> for O(m+n).
+    Mirror: <code>code/11-trees/SubtreeOfAnother.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc102">
   <summary><span class="badge medium">medium</span> Binary Tree Level Order Traversal — LeetCode 102</summary>
   <div class="sol-body">
@@ -551,6 +634,100 @@ private static void flatten(TreeNode n, List&lt;Integer&gt; out) {
   </div>
 </details>
 
+<details class="sol" id="lc199">
+  <summary><span class="badge medium">medium</span> Binary Tree Right Side View — LeetCode 199</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> The values visible looking at the tree from the right — one per
+    level, top to bottom.</p>
+    <p><strong>Example.</strong> <code>[1,2,3,null,5,null,4]</code> → <code>[1,3,4]</code>. And when
+    a deep left branch outlives the right side, it pokes into view:
+    <code>[1,2,3,4]</code> → <code>[1,3,4]</code>.</p>
+    <p class="code-title">Level-order BFS, keep each level's last node · O(n)</p>
+<pre class="code"><code>public static List&lt;Integer&gt; rightSideView(TreeNode root) {
+    List&lt;Integer&gt; view = new ArrayList&lt;&gt;();
+    if (root == null) return view;
+    Queue&lt;TreeNode&gt; q = new ArrayDeque&lt;&gt;();
+    q.offer(root);
+    while (!q.isEmpty()) {
+        int size = q.size();                 // snapshot = exactly this level
+        for (int i = 0; i &lt; size; i++) {
+            TreeNode n = q.poll();
+            if (i == size - 1) view.add(n.val);   // rightmost of the level
+            if (n.left != null) q.offer(n.left);
+            if (n.right != null) q.offer(n.right);
+        }
+    }
+    return view;
+}</code></pre>
+    <p><strong>Takeaway.</strong> Level Order Traversal (above) with a one-line filter — most "view"
+    problems (left view, bottom view) are level-order plus a per-level selection rule. The equally
+    clean DFS: visit right-first, record the first node seen at each new depth. The test case that
+    kills naive "follow right children" solutions is the deep-left-branch tree.
+    Mirror: <code>code/11-trees/RightSideView.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc105">
+  <summary><span class="badge medium">medium</span> Construct Binary Tree from Preorder and Inorder — LeetCode 105</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> Rebuild the unique binary tree from its preorder and inorder
+    traversals (values distinct).</p>
+    <p><strong>Example.</strong> preorder <code>[3,9,20,15,7]</code>, inorder
+    <code>[9,3,15,20,7]</code> → the tree rooted at 3 with 9 left and 20(15,7) right.</p>
+    <p class="code-title">Preorder names the root; inorder splits the children · O(n)</p>
+<pre class="code"><code>private static int preIdx;
+private static Map&lt;Integer, Integer&gt; inPos;   // value -&gt; inorder index
+
+public static TreeNode buildTree(int[] preorder, int[] inorder) {
+    preIdx = 0;
+    inPos = new HashMap&lt;&gt;();
+    for (int i = 0; i &lt; inorder.length; i++)
+        inPos.put(inorder[i], i);
+    return build(preorder, 0, inorder.length - 1);
+}
+
+private static TreeNode build(int[] pre, int inLo, int inHi) {
+    if (inLo &gt; inHi) return null;            // empty inorder span
+    TreeNode root = new TreeNode(pre[preIdx++]);   // next preorder = the root
+    int split = inPos.get(root.val);         // everything left of split is
+    root.left = build(pre, inLo, split - 1); // the left subtree, right of it
+    root.right = build(pre, split + 1, inHi);// the right subtree
+    return root;
+}</code></pre>
+    <p><strong>Takeaway.</strong> The whole algorithm is two facts: preorder visits root-first (so a
+    single advancing cursor hands out roots in the right order), and inorder puts the left subtree
+    entirely before the root (so the root's inorder position counts the left subtree's nodes). The
+    value→index map turns the O(n) searches into O(1). Note why preorder+postorder <em>alone</em>
+    can't always rebuild: without inorder, a single child's side is ambiguous.
+    Mirror: <code>code/11-trees/BuildTreePreIn.java</code>.</p>
+  </div>
+</details>
+
+<details class="sol" id="lc236">
+  <summary><span class="badge medium">medium</span> Lowest Common Ancestor of a Binary Tree — LeetCode 236</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> LCA in a plain binary tree — no BST ordering to steer by (both
+    nodes guaranteed present; a node counts as its own ancestor).</p>
+    <p><strong>Example.</strong> In the classic tree rooted at 3: LCA(5,1) = 3; LCA(5,4) = 5.</p>
+    <p class="code-title">Post-order: the split point is where both sides report · O(n)</p>
+<pre class="code"><code>public static TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+    if (root == null || root == p || root == q)
+        return root;                          // found a target (or dead end)
+    TreeNode left = lowestCommonAncestor(root.left, p, q);
+    TreeNode right = lowestCommonAncestor(root.right, p, q);
+    if (left != null &amp;&amp; right != null)
+        return root;                          // p and q split HERE -&gt; the LCA
+    return left != null ? left : right;       // pass the single find upward
+}</code></pre>
+    <p><strong>Takeaway.</strong> Compare directly with the BST version (above): there the ordering
+    tells you which <em>one</em> subtree to enter (O(h)); here you must ask both and read the answer
+    from <em>where the reports meet</em> (O(n)). Early return means finding p immediately stops that
+    branch — which is also why "a node is its own ancestor" falls out for free. This
+    ask-both-children-then-combine shape is the backbone of most hard tree problems.
+    Mirror: <code>code/11-trees/LowestCommonAncestorBT.java</code>.</p>
+  </div>
+</details>
+
 <details class="sol" id="lc297">
   <summary><span class="badge hard">hard</span> Serialize and Deserialize Binary Tree — LeetCode 297</summary>
   <div class="sol-body">
@@ -596,6 +773,45 @@ private static TreeNode des(Deque&lt;String&gt; tokens) {
 </details>
 
 <!-- ============================================================ -->
+<details class="sol" id="lc124">
+  <summary><span class="badge hard">hard</span> Binary Tree Maximum Path Sum — LeetCode 124</summary>
+  <div class="sol-body">
+    <p><strong>The problem.</strong> A path is any node sequence connected by edges, no revisits — it
+    may start and end anywhere (not just the root or leaves). Maximize its value sum; values can be
+    negative.</p>
+    <p><strong>Example.</strong> <code>[1,2,3]</code> → 6 (2→1→3).
+    <code>[-10,9,20,null,null,15,7]</code> → 42 (15→20→7, ignoring the −10 root entirely).</p>
+    <p class="code-title">Every node: arch for the answer, segment for the parent · O(n)</p>
+<pre class="code"><code>private static int best;
+
+public static int maxPathSum(TreeNode root) {
+    best = Integer.MIN_VALUE;
+    gain(root);
+    return best;
+}
+
+private static int gain(TreeNode n) {
+    if (n == null) return 0;
+    // A negative branch is worse than no branch — clamp at zero.
+    int left = Math.max(gain(n.left), 0);
+    int right = Math.max(gain(n.right), 0);
+    // Role 1 — ARCH: the best path that BENDS at n uses both sides.
+    // It can't extend upward, so it competes for the global answer here.
+    best = Math.max(best, left + n.val + right);
+    // Role 2 — SEGMENT: what n offers its parent may use only ONE side.
+    return n.val + Math.max(left, right);
+}</code></pre>
+    <p><strong>Takeaway.</strong> The essence is the arch/segment split: a bending path is complete
+    (record it globally), a straight path is extendable (return it upward) — Diameter of Binary Tree
+    (above) is this exact structure with edge counts instead of sums. The two negative-handling
+    details do the rest: clamping branch gains at 0, and seeding <code>best</code> with
+    <code>MIN_VALUE</code> so an all-negative tree still answers with its least-bad single node.
+    The hardest-rated frequent tree question at senior loops.
+    Mirror: <code>code/11-trees/MaxPathSum.java</code>.</p>
+  </div>
+</details>
+
+
 <h2 id="pitfalls">Pitfalls</h2>
 <ul>
   <li><strong>Null is a tree too.</strong> Make <code>if (node == null)</code> the first line of every recursion and half the edge cases (empty tree, missing child) vanish. NPEs in tree code almost always mean a missing base case.</li>

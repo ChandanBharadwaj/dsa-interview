@@ -290,11 +290,18 @@
   <tr><td><a href="11-trees.html#lc226">Invert Binary Tree</a></td><td>226</td><td><span class="badge easy">easy</span></td><td>Swap the children at every node.</td></tr>
   <tr><td><a href="11-trees.html#lc100">Same Tree</a></td><td>100</td><td><span class="badge easy">easy</span></td><td>Compare both trees node-by-node in lockstep.</td></tr>
   <tr><td><a href="11-trees.html#lc543">Diameter of Binary Tree</a></td><td>543</td><td><span class="badge easy">easy</span></td><td>Diameter through a node = left depth + right depth; track a global max.</td></tr>
+  <tr><td><a href="11-trees.html#lc101">Symmetric Tree</a></td><td>101</td><td><span class="badge easy">easy</span></td><td>Recurse on pairs with crossed children: outer-outer, inner-inner.</td></tr>
+  <tr><td><a href="11-trees.html#lc110">Balanced Binary Tree</a></td><td>110</td><td><span class="badge easy">easy</span></td><td>One post-order pass; −1 smuggles “unbalanced” up the stack.</td></tr>
+  <tr><td><a href="11-trees.html#lc572">Subtree of Another Tree</a></td><td>572</td><td><span class="badge easy">easy</span></td><td>Outer walk picks the anchor, inner Same-Tree checks it.</td></tr>
   <tr><td><a href="11-trees.html#lc102">Binary Tree Level Order Traversal</a></td><td>102</td><td><span class="badge medium">medium</span></td><td>BFS with a per-level size snapshot.</td></tr>
   <tr><td><a href="11-trees.html#lc98">Validate Binary Search Tree</a></td><td>98</td><td><span class="badge medium">medium</span></td><td>Pass down (min,max) bounds — parent-child checks are not enough.</td></tr>
   <tr><td><a href="11-trees.html#lc235">Lowest Common Ancestor of a BST</a></td><td>235</td><td><span class="badge medium">medium</span></td><td>BST order: the LCA is where p and q split.</td></tr>
   <tr><td><a href="11-trees.html#lc230">Kth Smallest Element in a BST</a></td><td>230</td><td><span class="badge medium">medium</span></td><td>In-order traversal visits a BST in sorted order; stop at k.</td></tr>
+  <tr><td><a href="11-trees.html#lc199">Binary Tree Right Side View</a></td><td>199</td><td><span class="badge medium">medium</span></td><td>Level order keeping each level’s last node.</td></tr>
+  <tr><td><a href="11-trees.html#lc105">Construct Binary Tree from Preorder and Inorder</a></td><td>105</td><td><span class="badge medium">medium</span></td><td>Preorder hands out roots in order; inorder splits the spans.</td></tr>
+  <tr><td><a href="11-trees.html#lc236">Lowest Common Ancestor of a Binary Tree</a></td><td>236</td><td><span class="badge medium">medium</span></td><td>Post-order reports: the node where both sides answer is the LCA.</td></tr>
   <tr><td><a href="11-trees.html#lc297">Serialize and Deserialize Binary Tree</a></td><td>297</td><td><span class="badge hard">hard</span></td><td>Preorder with null markers round-trips the exact shape.</td></tr>
+  <tr><td><a href="11-trees.html#lc124">Binary Tree Maximum Path Sum</a></td><td>124</td><td><span class="badge hard">hard</span></td><td>Arch (both sides, record) vs segment (one side, return up).</td></tr>
 </table>
 </div>
 <p class="small"><strong>Real-world:</strong> B-tree indexes and file systems (<a href="25-real-world-systems.html#db">databases</a>), DOM/AST processing (<a href="25-real-world-systems.html#git">Git trees</a>).</p>
