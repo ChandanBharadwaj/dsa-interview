@@ -207,6 +207,16 @@
 </table>
 </div>
 <p class="small muted">Production adds: turn penalties and lane restrictions encoded in the graph, live re-routing, and per-time-of-day weight profiles. The interview version — Dijkstra with a PQ — is the genuine core.</p>
+<div class="note">
+  <strong>Why real routers precompute.</strong> A* helps, but on a continent a single query can still touch millions
+  of nodes. <strong>Contraction hierarchies</strong> spend hours offline "contracting" nodes in importance order,
+  adding <em>shortcut</em> edges that preserve distances, so an online query runs a bidirectional Dijkstra that only
+  ever moves "upward" in the hierarchy and settles a few thousand nodes — milliseconds instead of seconds.
+  <strong>ALT</strong> (A*, Landmarks, Triangle inequality) is the lighter cousin: precompute exact distances from a
+  handful of landmark nodes, then use the triangle inequality as a much sharper admissible heuristic than
+  straight-line distance (page 17). Both are the same senior lesson — <em>preprocessing beats a cleverer online
+  algorithm</em> when the graph is static and queried billions of times.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="git">3. Git</h2>
@@ -246,6 +256,17 @@
 </table>
 </div>
 <p class="small muted">Production adds: packfiles with delta compression, the Myers diff algorithm (an optimized LCS relative), and rename detection via content-similarity hashing.</p>
+<div class="note">
+  <strong>The Merkle DAG, and what it buys.</strong> Because every object is named by the hash of its contents —
+  and a tree's hash includes its children's hashes, and a commit's hash includes its tree's — Git is a
+  <strong>Merkle DAG</strong>: one 40-hex commit id transitively fingerprints the entire snapshot and all history
+  behind it. Two consequences fall out for free. <em>Integrity:</em> flip a single byte anywhere and every hash up
+  to the commit changes, so corruption is self-detecting. <em>Deduplication:</em> an unchanged subtree keeps its
+  hash across commits, so Git stores it once no matter how many commits reference it — the same content-addressing
+  idea powers IPFS, Docker image layers, and blockchains. <code>git diff</code> is the LCS DP of page 19; the Myers
+  algorithm is edit distance run as a shortest-path search on the edit grid, O((n+m)·D) where D is the number of
+  differing lines — near-linear when files are similar, which they usually are.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="db">4. Databases &amp; search engines</h2>
@@ -291,6 +312,17 @@
 </table>
 </div>
 <p class="small muted">Production adds: write-ahead logs, MVCC, tiered/leveled compaction strategies, and cost models feeding the planner's DP — but every one of those sits on the structures above.</p>
+<div class="note">
+  <strong>B+ tree vs LSM, in numbers.</strong> A B+ tree keeps all data in the leaves and only keys in internal
+  nodes, so the fan-out is (page size / key size): a 16&nbsp;KB page holding ~8-byte keys branches a few hundred ways,
+  and a few hundred cubed already exceeds a billion — so <strong>3–4 disk reads reach any row</strong> among billions
+  (the fan-out math of page 11's B-tree, tuned to the page cache). Its cost is <em>write amplification</em>: an
+  in-place update dirties a whole page and may split it. LSM trees invert the trade — writes are cheap sequential
+  appends to a memtable, but a read may probe several SSTable levels (hence the per-file <strong>bloom filter</strong>
+  gate of page 24, which turns most of those probes into a single in-memory bit test) and background compaction pays
+  <em>read/space amplification</em> later. The rule of thumb: <strong>B-trees for read-heavy, LSM for write-heavy</strong>
+  — the same "when do the expensive operations happen?" question you ask of any amortized structure (page 00).
+</div>
 
 <!-- ============================================================ -->
 <h2 id="infra">5. Web-scale infrastructure</h2>
@@ -329,6 +361,17 @@
 </table>
 </div>
 <p class="small muted">Production adds: virtual nodes (each server appears ~100–200 times on the ring for smoothness), health checks feeding the balancer, and distributed rate-limit state in Redis.</p>
+<div class="note">
+  <strong>Why virtual nodes, and hashing traded for accuracy.</strong> With one point per server, random placement
+  leaves some arcs of the ring far bigger than others, so load is lopsided — variance in arc length is O(1/√count).
+  Giving each server ~100–200 <em>virtual</em> points averages those arcs out, and a leaving node's load spreads
+  across many neighbours instead of dumping onto one. The same "hash it" reflex, pushed further, buys sublinear
+  <em>analytics</em>: <strong>HyperLogLog</strong> estimates distinct-count (uniques) in ~1.5&nbsp;KB by tracking the
+  longest run of leading zeros a hash produced — more leading zeros seen ⇒ more distinct items — and
+  <strong>count-min sketch</strong> estimates per-key frequencies in fixed memory by hashing into several counter
+  rows and taking the min. Both trade exactness for a bounded error and O(1) memory, the count-distinct/heavy-hitter
+  answer when a HashMap of every key won't fit (page 01).
+</div>
 
 <!-- ============================================================ -->
 <h2 id="social">6. Social networks</h2>
@@ -407,6 +450,17 @@
 </table>
 </div>
 <p class="small muted">Production adds: fairness and preemption policies on top of the heap, hierarchical timer wheels for millions of timers, and exactly-once bookkeeping in stream processors.</p>
+<div class="note">
+  <strong>Timer wheel vs heap: when O(1) beats O(log n).</strong> A min-heap of deadlines gives O(log n) insert and
+  O(log n) expiry — fine for hundreds of timers, but a busy server juggling millions (one per connection timeout)
+  feels that log factor. A <strong>timer wheel</strong> is an array of buckets swept by a clock hand (page 09's
+  circular queue): a timer due in <code>d</code> ticks drops into bucket <code>(now + d) % size</code> in
+  <strong>O(1)</strong>, and each tick the hand fires exactly one bucket — O(1) amortized expiry, no comparisons.
+  The catch is range: a flat wheel needs a bucket per reachable tick. <strong>Hierarchical timer wheels</strong>
+  fix it the way a clock does — seconds, minutes, hours wheels cascade — so seconds-to-days of resolution fit in a
+  few small arrays. This is exactly how the Linux kernel and Netty schedule timeouts, and it's the crisp answer to
+  "your heap works — now make it scale to ten million timers."
+</div>
 
 <!-- ============================================================ -->
 <h2 id="exercises">Exercises: map the system yourself</h2>

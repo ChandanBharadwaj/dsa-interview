@@ -155,6 +155,26 @@
   <strong>O(n) total</strong>. The intuition: half the nodes are leaves (sift distance 0), a quarter sift at most 1, an
   eighth at most 2… the sum Σ n/2^h · h converges to ~2n. One sentence of "why" here is worth a lot in an interview.
 </p>
+<p>
+  The full proof is short enough to give on a whiteboard, and it's a model for a whole class of "surprisingly
+  linear" arguments. Bucket the nodes by <strong>height</strong> h — distance to the deepest leaf below, so
+  leaves have h = 0. A complete tree has at most <strong>⌈n / 2<sup>h+1</sup>⌉ nodes of height h</strong>
+  (half the tree is leaves, a quarter sits one level up, and so on), and a sift-down from height h costs at
+  most h swaps. Total swaps ≤ Σ<sub>h≥0</sub> (n / 2<sup>h+1</sup>) · h = (n/2) · Σ h/2<sup>h</sup>. That
+  series is the classic Σ<sub>h≥1</sub> h·x<sup>h</sup> = x/(1−x)² evaluated at x = ½, which equals 2 — so the
+  total is at most (n/2) · 2 = <strong>n swaps</strong>. Comparisons are within a constant factor: O(n), full
+  stop.
+</p>
+<div class="note">
+  <strong>Why direction decides everything.</strong> Sift-<em>down</em> cost is distance to the
+  <em>leaves</em>, and almost all nodes live near the leaves — cheap for the many, expensive only for the few.
+  Building by n offers sifts <em>up</em>, whose cost is distance to the <em>root</em>: the n/2 bottom-level
+  nodes can each travel log n, so offer-based building is genuinely Θ(n log n) worst case (feed it descending
+  input into a min-heap). Same tree, same swaps-along-a-path — the sum flips from convergent to divergent
+  purely on which end the long trips are charged to. This does <em>not</em> contradict the Ω(n log n) sorting
+  bound of <a href="06-sorting.html">page 06</a>: heapify produces a heap, not a sorted order — heapsort still
+  pays its n × O(log n) in the extraction phase.
+</div>
 
 <h3>4. Java's <code>PriorityQueue</code>: a MIN-heap (and how to flip it)</h3>
 <pre class="code"><code>PriorityQueue&lt;Integer&gt; min = new PriorityQueue&lt;&gt;();                    // smallest on top
@@ -167,6 +187,36 @@ PriorityQueue&lt;int[]&gt; byCost = new PriorityQueue&lt;&gt;((a, b) -&gt; Integ
 // says what you MEAN — prefer it. Two more facts worth stating out loud:
 //   * pq.iterator() / toString() are NOT in priority order — only poll() is.
 //   * remove(Object) is O(n): the heap can't FIND things, only rank them.</code></pre>
+<p>
+  Under the hood there is no tree anywhere: a plain <code>Object[]</code> (default initial capacity 11, growing
+  by roughly doubling while small and ~1.5× once large), with children of slot i at <code>2i+1</code> and
+  <code>2i+2</code> and the comparator consulted inside private <code>siftUp</code>/<code>siftDown</code> loops
+  — §2's diagrams, verbatim. The O(n) <code>remove(Object)</code> follows directly: the heap property orders
+  <em>ancestors</em>, not the array, so finding an arbitrary element means scanning it.
+</p>
+<p>
+  The API gap that actually matters in interviews: <strong><code>PriorityQueue</code> has no
+  decrease-key</strong>. Textbook Dijkstra says "lower that node's priority in place, O(log n)" — but lowering
+  a key requires <em>finding</em> its entry, which is exactly the O(n) scan above (and mutating an element's
+  priority field while it sits in the heap silently corrupts the ordering — pitfall below). Two standard
+  workarounds:
+</p>
+<p class="code-title">Living without decrease-key (exactly what Dijkstra on page 17 does)</p>
+<pre class="code"><code>// Workaround 1 — LAZY DELETION: never update, offer a duplicate.
+pq.offer(new int[]{node, betterDist});     // stale entry stays behind, inert
+// ...
+int[] top = pq.poll();
+if (top[1] &gt; dist[top[0]]) continue;       // stale? it already lost — skip it
+
+// Workaround 2 — REMOVE AND RE-INSERT: pq.remove(entry); pq.offer(updated);
+// Correct, but remove(Object) is O(n) — fine for a 20-element scheduler,
+// wrong inside an O(E log V) graph algorithm.</code></pre>
+<p>
+  Lazy deletion lets the heap hold up to E entries instead of V, so Dijkstra runs in O(E log E) =
+  O(E log V) — a memory-for-simplicity trade that <a href="17-shortest-paths.html">page 17</a> makes verbatim,
+  and the standard answer to "but Java has no decrease-key, so how do you write Dijkstra?". The one-line skip
+  check <em>is</em> the answer.
+</p>
 
 <h3>5. The pattern gallery</h3>
 <p><strong>Top-K — the inversion trick, slowly.</strong> To keep the K <em>largest</em> items of a stream, use a
@@ -185,6 +235,45 @@ runs and external-sort chunks.</p>
 nearest timer, and Dijkstra popping the closest unsettled node (page <a href="17-shortest-paths.html">17</a>) are all
 one loop: <code>while (!pq.isEmpty()) process(pq.poll())</code>, occasionally offering new work. Recognize the loop and
 you've recognized the structure.</p>
+<div class="tip">
+  <strong>The "streaming or batch?" reflex.</strong> Every "K-th largest / K best" prompt forks on one
+  question: is the data <em>all here, in memory, mutable</em>? Batch → quickselect
+  (<a href="06-sorting.html">page 06</a>): expected O(n), beats O(n log k) — say "randomized expected O(n),
+  O(n²) worst case, mutates the array" and take it. Streaming, too big for memory, or "as values arrive" →
+  size-k heap: O(k) memory is the only game in town. The same fork decides the median: batch → quickselect the
+  middle; streaming → the two-heap design worked below. Ask the fork out loud <em>before</em> choosing — that
+  question is worth more than either implementation.
+</div>
+
+<h3>6. The heap family beyond binary</h3>
+<p class="lead">
+  "Can the heap itself go faster?" is a legitimate senior follow-up, and the honest answer is a small zoo of
+  named structures — recognize them, weigh them, and know why the boring binary heap keeps winning.
+</p>
+<ul>
+  <li><strong>d-ary heaps.</strong> Give every node d children (children of i at <code>d·i + 1 … d·i + d</code>)
+  and the tree's height drops to log<sub>d</sub> n — offers get cheaper, while poll pays d comparisons per
+  level to find the smallest child. The real argument is the cache: a 4-ary heap packs each sibling group into
+  one cache line, and 4-ary heaps routinely beat binary in measured code. When inserts far outnumber polls
+  (dense-graph Dijkstra), cranking d up shifts cost toward the rare operation.</li>
+  <li><strong>Binomial heaps.</strong> A forest of power-of-two-sized trees — think "binary addition with
+  trees as digits". Their trick is <strong>merge two heaps in O(log n)</strong>, which array heaps can't do
+  (rebuilding is O(n)). Mostly a stepping stone to…</li>
+  <li><strong>Fibonacci heaps.</strong> The theory champion: O(1) amortized offer <em>and decrease-key</em>,
+  O(log n) poll — which puts Dijkstra at O(E + V log V) on paper. Practice ignores them, and saying why is the
+  senior move: heavy pointer-webbed nodes, large constants, cache-hostile layout, and amortized bounds that
+  allow ugly latency spikes. Real Dijkstra code uses a binary heap with lazy deletion (§4) and wins on the
+  clock.</li>
+  <li><strong>Pairing and skew heaps.</strong> The pragmatic mergeable heaps: a few lines of code, O(log n)
+  amortized everything, excellent measured performance. Fun fact with real interview mileage: the pairing
+  heap's exact decrease-key complexity is a <em>still-open research problem</em> — known to be between
+  Ω(log log n) and O(log n) amortized.</li>
+</ul>
+<p>
+  The takeaway shape: at interview scale, the array-backed binary heap's contiguity beats every asymptotic
+  refinement — the exotic heaps only enter the conversation when someone asks about merging priority queues or
+  shaving Dijkstra's theoretical bound (<a href="17-shortest-paths.html">page 17</a> runs that ladder).
+</p>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

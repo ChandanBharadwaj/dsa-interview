@@ -156,6 +156,26 @@ private static int waysTo(int i, int[] memo) {
   interviewer wants it or if recursion depth (n ≈ 10⁵ would overflow Java's stack) is a risk.
 </div>
 
+<p>
+  There is a picture worth keeping for the rest of your DP career: draw every distinct subproblem as a node and an
+  edge from each state to the states its recurrence reads — you get a <strong>DAG of subproblems</strong> (acyclic
+  by necessity: a cycle would mean a state depends on itself, and the recursion would never bottom out). In that
+  picture, <strong>memoization is a depth-first search</strong> of the DAG starting at the state you asked about,
+  caching answers in post-order; <strong>tabulation is a topological order of the same DAG, written as a loop</strong>.
+  For 1D DPs the topological order is usually just "left to right", which is why the loop looks so innocent.
+  Page 17's closing observation — min path sum works with a plain sweep because the grid is a DAG — was this same
+  fact, met from the other direction.
+</p>
+<p>
+  The DAG view also settles "which direction should I code?" beyond taste. <strong>Top-down wins when the reachable
+  states are sparse</strong>: the DFS visits only states actually reachable from the start, while a bottom-up loop
+  grinds through every state whether or not anything needs it — think Coin Change with coins {100, 500} and a large
+  amount, where most amounts are unreachable. <strong>Bottom-up wins when the state space is dense anyway</strong>,
+  because it costs no call stack — memoized recursion over ~10⁵ states risks <code>StackOverflowError</code> on the
+  JVM's default thread stack (<a href="09-stacks-queues.html">page 9</a> has the frame arithmetic) — and because a
+  predictable fill order is what unlocks the space optimizations of §4.
+</p>
+
 <h3>3. The 4-step recipe (use it on every DP problem, forever)</h3>
 <div class="card">
   <ol>
@@ -165,6 +185,20 @@ private static int waysTo(int i, int[] memo) {
     <li><strong>Order &amp; answer.</strong> Fill states so dependencies are ready before they're needed (usually left→right for 1D); say which cell holds the final answer.</li>
   </ol>
 </div>
+
+<p>
+  Step 1 hides a fork that decides everything downstream, and interviewers probe it deliberately: is dp[i] the
+  answer <strong>for the prefix 0..i</strong> (element i merely <em>considered</em>, not necessarily used), or the
+  best answer <strong>ending exactly at i</strong> (element i mandatory)? House Robber uses the prefix form — dp[i]
+  may or may not rob house i, and the final answer is the last cell. Kadane's maximum subarray and LIS are
+  <em>forced</em> into the ending-at form: a subarray or an increasing run is only extendable if you know where it
+  ends, so "best in the first i elements" doesn't decompose — the best subarray of a prefix tells you nothing about
+  whether nums[i+1] can extend anything. The tell: <strong>if the object being optimized is contiguous or must
+  physically end somewhere, define the state as "ending exactly at i" and take the max over all cells at the
+  end; if elements can be freely skipped, the prefix state works and the answer sits in the last cell.</strong>
+  The two forms have different base cases and different final answers — mixing them is the most common
+  whiteboard DP bug, which is why the pitfalls below open with it.
+</p>
 
 <h3>4. Space optimization: look at what you actually read</h3>
 <p>
@@ -239,6 +273,48 @@ private static int waysTo(int i, int[] memo) {
   counterexample is the fastest way to justify DP to an interviewer — memorize it. (US-style coin systems happen to be
   greedy-safe, which is exactly why the habit feels right; page 21 covers when greedy is provably fine.)
 </p>
+
+<h3>7. Why the tails array works — the proof behind O(n log n) LIS</h3>
+<p class="lead">
+  The Longest Increasing Subsequence walkthrough below (LeetCode 300) gives both solutions; this section adds the
+  part a senior loop actually probes — <em>why</em> the <code>tails</code> trick is correct. Don't re-derive the
+  code; internalize the two invariants.
+</p>
+<p>
+  <strong>Invariant 1: <code>tails[k]</code> is the smallest possible tail value of any increasing subsequence of
+  length k+1</strong> among the elements processed so far. The exchange argument for why "smallest tail" is the
+  right thing to track: of two increasing subsequences of equal length, the one with the smaller tail can be
+  extended by everything that extends the other, and possibly more — so remembering the smaller tail is never
+  worse. Any strategy holding a larger tail can be exchanged, slot by slot, into this one without ever losing a
+  unit of length. That is the same "my choice dominates yours" template <a href="21-greedy-intervals.html">page 21</a>
+  uses to certify greedy algorithms — LIS-in-O(n log n) is a greedy wearing DP's clothes.
+</p>
+<p>
+  <strong>Invariant 2: <code>tails</code> is strictly increasing</strong> — which is what legalizes the binary
+  search. Proof by contradiction: suppose <code>tails[k] &gt;= tails[k+1]</code>. Take the length-(k+2) increasing
+  subsequence whose tail is <code>tails[k+1]</code> and drop its last element: what remains is a length-(k+1)
+  increasing subsequence whose tail is <em>strictly less</em> than <code>tails[k+1] ≤ tails[k]</code> —
+  contradicting invariant 1's claim that <code>tails[k]</code> was already minimal. Both invariants survive every
+  step: replacing the first tail ≥ x with x lowers one slot without disturbing the order, and appending happens
+  only when x exceeds every tail (a genuinely longer subsequence now exists).
+</p>
+<p>
+  Two sentences worth saying unprompted: the array's <em>length</em> is the LIS length, but its <em>contents</em>
+  are generally not an actual LIS (each slot's value may come from a different subsequence — reconstructing a real
+  LIS needs extra bookkeeping); and lower-bound (first tail ≥ x) versus upper-bound (first tail &gt; x) is exactly
+  the strict-vs-non-decreasing switch. O(n log n) time, O(n) space; the search itself is
+  <a href="07-binary-search.html">page 7</a>'s lower-bound template verbatim.
+</p>
+
+<div class="warn">
+  <strong>Counting DPs: take the modulus at every add, not at the end.</strong> "Number of ways" answers grow
+  exponentially, which is why constraints say "return the answer modulo 10⁹+7". The discipline: apply
+  <code>% MOD</code> at <em>every</em> addition — <code>dp[i] = (dp[i-1] + dp[i-2]) % MOD</code> — never once at
+  the end, because the overflow already happened in the intermediate sums. And when a counting recurrence
+  <em>subtracts</em> (inclusion–exclusion), write <code>(a - b + MOD) % MOD</code>: Java's <code>%</code> keeps the
+  sign of the dividend, so a plain <code>(a - b) % MOD</code> can hand you a negative "count".
+  <a href="23-math-geometry.html">Page 23</a> covers the full modular toolbox.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

@@ -122,6 +122,27 @@
   The array wins interviews for a–z inputs: less code, no boxing, cache-friendly. Mention the map variant in one
   sentence to show you know the array is a special case.
 </p>
+<p>
+  The memory math behind the table's "~208 bytes", concretely: a <code>Node[26]</code> is itself an object —
+  ~16 bytes of array header plus 26 references (104 bytes compressed, 208 uncompressed) — and the node object
+  wrapping it adds ~16 more. Call it <strong>~140–240 bytes per node</strong>, where each node represents a
+  single character of some stored prefix; a <code>String</code> stores that character in one or two bytes. In a
+  real dictionary most nodes have exactly <em>one</em> child, so you're paying 26 slots to use 1 — that
+  emptiness, not the asymptotics, is why "why not always a trie?" is answered with memory. Two intermediate
+  designs interviewers reward you for naming:
+</p>
+<ul>
+  <li><strong>Ternary search tree (TST)</strong> — each node holds <em>one</em> character and three pointers:
+  less-than, equal (descend a level), greater-than. It's a BST spliced into every trie level: lookup becomes
+  O(L + log n)-ish instead of a flat O(L), but memory drops to three references per node regardless of
+  alphabet size — the classic Bentley–Sedgewick middle ground between HashMap children and the raw array, and
+  it handles Unicode for free.</li>
+  <li><strong>Bitmap / array-mapped nodes</strong> — keep a 26-bit (or 64-bit) mask of which children exist
+  plus a dense array of only those children. The child for letter c lives at index
+  <code>Integer.bitCount(mask &amp; ((1 &lt;&lt; c) - 1))</code> — one popcount instruction, O(1), and a node
+  with two children pays for exactly two references. This is precisely the node layout of the HAMT behind
+  Scala's and Clojure's immutable maps; recognizing the shared trick is real signal.</li>
+</ul>
 
 <h3>3. The three operations — all O(L)</h3>
 <p>
@@ -154,6 +175,65 @@
   your dictionary would suggest — each node is an object with a 26-slot array. A HashSet of the same words is often
   several times smaller. Tries buy prefix-shaped queries with memory; if you only ever need exact-match lookup, the
   HashSet wins and you should say so. (Production systems compress tries into radix trees / DAWGs for this reason.)
+</div>
+
+<h3>6. Compressed tries: radix trees and Patricia</h3>
+<p class="lead">
+  That warning's fix deserves its own mechanics. In a real dictionary, long runs of single-child nodes are the
+  norm — "important" spends nine nodes spelling a chain with no branches. <strong>Path compression</strong>
+  collapses every such chain into one edge labeled with the whole substring.
+</p>
+<p>
+  The result is a <strong>radix tree</strong> (Patricia trie): edges carry strings, not characters, and every
+  internal node is a genuine <em>decision point</em> with at least two children. That invariant buys a hard
+  bound worth quoting: a radix tree over n words has at most <strong>2n − 1 nodes</strong>, no matter how long
+  the words are — node count scales with the <em>word</em> count, not the character count, while the plain
+  trie's scales with total characters. Search is the same O(L) walk; you just compare characters in runs
+  against edge labels (store each label as offsets into the original word — two ints — and even the labels
+  cost nothing extra). Insertion picks up one new case: a new word may diverge <em>mid-edge</em>, splitting
+  that edge at the first mismatching character. <strong>Patricia</strong> proper is the binary-alphabet
+  special case — one bit per decision — which is exactly the shape of an IP routing table: CIDR routes are
+  bit-prefixes, and the longest-prefix-match walk in the routing card above runs over a compressed binary trie
+  (Linux's LC-trie FIB is this structure, level-compressed further). The same design carries search-engine
+  term dictionaries — Lucene keeps its on-disk terms index as a compressed prefix structure so "all terms
+  starting with X" is one seek — and a <strong>DAWG</strong> goes one step beyond by also merging identical
+  <em>suffixes</em>, turning the tree into a DAG: "walking", "talking", "stalking" share their tail once.
+  For interviews: implement the plain trie, <em>name</em> the compressed ones and the 2n − 1 bound.
+</p>
+
+<h3>7. Aho–Corasick in one idea</h3>
+<p>
+  Stream of Characters (worked below) restarts a fresh trie walk at every arriving character — fine when words
+  are short, quadratic-ish when they aren't. <strong>Aho–Corasick</strong> removes the restart with one
+  addition: give every trie node a <strong>failure link</strong> pointing to the node for the <em>longest
+  proper suffix of its prefix that is also a prefix of some pattern</em>. If that sentence sounds familiar, it
+  should — it is KMP's prefix function (<a href="14-strings-advanced.html">page 14</a>) generalized from a
+  single pattern string to an entire trie of patterns. Matching then never rewinds the text: on each character,
+  follow the child edge if it exists, otherwise chase failure links until one does (or you're back at the
+  root). Each text character does amortized O(1) work — depth only increases by following a child, and every
+  failure hop strictly decreases it, the same two-credit accounting as
+  <a href="09-stacks-queues.html">page 09</a>'s monotonic stack — so matching all patterns simultaneously
+  costs <strong>O(text + matches)</strong>, independent of how many patterns you loaded. The links themselves
+  are built in one BFS from the root (a child's failure = its parent's failure's same-letter child), and
+  word-end flags propagate along failure links so matches ending mid-walk aren't missed. That's the entire
+  engine inside the intrusion-detection and spam-filter systems named in the cards above, matching 10⁵
+  signatures at wire speed. For interviews: implement the trie, <em>explain</em> "failure links = KMP on a
+  trie" — nobody sane codes Aho–Corasick live.
+</p>
+
+<div class="tip">
+  <strong>Alphabets don't have to be letters.</strong> A 0/1 trie over 32-bit numbers turns "maximize XOR"
+  into a greedy 32-level walk — worked in full as Maximum XOR of Two Numbers (LC 421) below.
+</div>
+
+<div class="note">
+  <strong>Why you can't just "trie the suffixes".</strong> Inserting all n suffixes of one string gives a
+  <em>suffix trie</em> that answers "is p a substring?" in O(|p|) — beautiful, except the suffixes of an
+  n-character string total n(n+1)/2 characters, so the structure is <strong>Θ(n²) nodes</strong>: a 10⁵-character
+  text explodes into billions of nodes before the first query. Path compression (§6) tames it to O(n) nodes —
+  that's a <em>suffix tree</em>, a radix tree of suffixes — and suffix <em>arrays</em> get the same queries
+  from a plain sorted array of suffix start indexes with no nodes at all. Both live on
+  <a href="14-strings-advanced.html">page 14</a>; this note is the reason they exist.
 </div>
 
 <!-- ============================================================ -->

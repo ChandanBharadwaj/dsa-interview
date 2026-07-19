@@ -218,6 +218,32 @@
   Bellman-Ford.
 </div>
 
+<p>
+  The settling claim deserves its real proof — the <strong>cut argument</strong> — because it pinpoints the exact
+  sentence a negative edge deletes. Claim: when the PQ hands you node u, its tentative distance already equals the
+  true shortest distance δ(u). Suppose not: some strictly cheaper path P to u exists. P starts inside the settled set
+  (at the source) and ends outside it (at u), so somewhere it crosses the boundary — let x→y be its <em>first</em>
+  settled-to-unsettled edge. Since x is settled (with the correct δ(x), inductively) and x→y was relaxed when x
+  settled, y's tentative distance is at most δ(x) + w(x,y) — which is at most P's total cost, <em>because the
+  remaining y⇝u stretch of P has non-negative weight</em>. So y sits in the PQ at a value ≤ cost(P) &lt; dist[u],
+  contradicting the PQ having chosen u as its minimum. Every line of that argument is bookkeeping except one:
+  "the rest of the path can only add cost." That is the whole role of the no-negative-edges precondition — and
+  precisely the line the warning above shows breaking.
+</p>
+<p>
+  A word on the Java shape of the loop. Textbook Dijkstra calls <em>decrease-key</em> to lower a node's priority in
+  place — an operation <code>PriorityQueue</code> simply doesn't offer (<a href="12-heaps.html">page 12</a> covers
+  why, and both workarounds). <strong>Lazy deletion</strong> is the standard one: the heap grows by one entry per
+  successful relaxation — O(E) entries total — making the honest bound O(E log E); since log E ≤ 2 log V, that's
+  the same O(E log V) up to a constant, bought with a one-line staleness guard. The full complexity ladder is worth
+  quoting: a plain array scan ("pick the unsettled minimum by looping") is O(V²) — actually <em>optimal</em> for
+  dense graphs where E ≈ V²; a binary heap gives O(E log V), the workhorse bound; a <strong>Fibonacci heap</strong>
+  reaches O(E + V log V) amortized thanks to O(1) decrease-key — the theoretically best comparison-based bound and
+  the expected answer to "can we do better?". Then complete the answer: real code doesn't use it, because its
+  pointer-heavy nodes and constant factors lose to a flat array-backed binary (or d-ary) heap on real hardware.
+  Binary heap plus lazy deletion is simultaneously the interview answer and the production one.
+</p>
+
 <h3>3. Bellman-Ford: negatives welcome, cycles detected</h3>
 <p>
   Bellman-Ford drops the cleverness: relax <em>every edge</em>, and repeat that sweep <strong>V−1 times</strong>.
@@ -233,6 +259,27 @@
   (worked below).
 </p>
 
+<p>
+  Make the V−1 claim precise, because it's a two-line induction interviewers love hearing whole.
+  <strong>Invariant: after round k, dist[v] is correct for every node whose shortest path uses at most k
+  edges.</strong> Base: before any round, dist[src] = 0 is the correct zero-edge answer. Step: a shortest path to v
+  with ≤ k edges is a shortest path to some predecessor u with ≤ k−1 edges plus the edge u→v; by induction dist[u]
+  was already correct entering round k, and round k relaxes <em>every</em> edge, u→v included. Since a shortest path
+  (when one exists at all) never repeats a node, it has at most V−1 edges — so V−1 rounds cover everyone. The
+  early-exit flag in Template 2 is the same induction read backwards: a full sweep with no improvement is a
+  fixpoint — if no (k+1)-edge path beat the table, no longer path built from those prefixes ever will.
+</p>
+<div class="note">
+  <strong>Two follow-ups worth having loaded.</strong> <em>SPFA</em> ("Shortest Path Faster Algorithm") is
+  Bellman-Ford with a queue: only re-relax edges leaving nodes whose distance just changed. Often dramatically faster
+  on real graphs — but its worst case is still O(V·E) and adversarial inputs reliably trigger it, so never quote it
+  as an asymptotic improvement. And to <em>extract</em> a negative cycle rather than just detect one: record
+  pred[v] at every successful relaxation. If node v still improves in the extra round, v is <em>reachable from</em> a
+  negative cycle but not necessarily on it — so follow pred[] V times from v (guaranteeing you've walked into the
+  cycle itself), then keep following pred[] until a node repeats and collect the loop. That loop is the arbitrage
+  cycle the currency-trading card below hunts for.
+</div>
+
 <h3>4. Floyd-Warshall: every pair at once</h3>
 <p>
   Need the distance between <em>all</em> pairs on a small dense graph? Floyd-Warshall is a three-line DP. The state:
@@ -243,6 +290,37 @@
   few hundred nodes; also handles negative edges (though not negative cycles — a negative <code>dist[i][i]</code>
   is how you detect them).
 </p>
+
+<p>
+  Seen as a DP, the correctness argument is one sentence and the loop-order rule falls out of it. The best i→j path
+  with intermediates from {0..k} either skips k entirely — that's <code>dist[i][j]</code> from the previous stage —
+  or visits k <em>exactly once</em> (with no negative cycles there's never profit in looping back), splitting into
+  i→k then k→j, each of which uses only intermediates from {0..k−1} and is therefore already final. That's why
+  <strong>k is the stage variable and must sit outermost</strong>: burying it inside mixes stages, building
+  "paths through k" out of segments that already assumed k was available. And the single 2D array is the DP
+  rolling-array trick (<a href="19-dp-2d.html">page 19</a>) in disguise — overwriting stage k−1 with stage k in place
+  is safe because row k and column k themselves cannot change at stage k
+  (<code>dist[i][k]</code> routed "through k" would add <code>dist[k][k]</code> = 0).
+</p>
+<div class="note">
+  <strong>Transitive closure at O(V³/64).</strong> If you only need "can i reach j?" — not how cheaply — swap
+  (min, +) for (OR, AND): <code>reach[i][j] |= reach[i][k] &amp;&amp; reach[k][j]</code>. Now pack each row into a
+  <code>long[]</code> bitset and the whole inner j-loop collapses to word-wide ORs: whenever row i has bit k set,
+  OR row k into row i, 64 columns per instruction. Same triple loop, 64× less work — the bitset engine from
+  <a href="22-bit-manipulation.html">page 22</a> applied to graphs, and it stretches "a few hundred nodes" into a
+  few thousand.
+</div>
+<div class="note">
+  <strong>Johnson's algorithm — all pairs on a sparse graph, negatives allowed.</strong> Floyd-Warshall's O(V³)
+  hurts when V is large but E is small; Dijkstra-from-every-node would be O(V·E log V) — but negative edges forbid
+  it. Johnson's fix: add a virtual source with a 0-weight edge to every node and run <em>one</em> Bellman-Ford from
+  it, yielding a potential h(v) per node; then reweight every edge as w′(u,v) = w(u,v) + h(u) − h(v). Bellman-Ford's
+  convergence condition h(v) ≤ h(u) + w(u,v) makes every w′ ≥ 0, and along any fixed u→v path the h-terms
+  <em>telescope</em> to the constant h(u) − h(v) — every path shifts by the same amount, so shortest paths are
+  preserved exactly. Now run Dijkstra from each node on the reweighted graph and shift answers back:
+  O(V·E + V·E log V), a clear win over V³ whenever E ≪ V². The reweighting idea — "potentials" — reappears below
+  as the reason a consistent A* heuristic is safe.
+</div>
 
 <h3>5. DP on DAGs and grids: when movement can't loop</h3>
 <p>
@@ -273,6 +351,29 @@
   not an implementation.
 </p>
 
+<p>
+  Two grades of heuristic exist, and the distinction is a favorite senior probe. <strong>Admissible</strong> is the
+  condition above: h never overestimates the true remaining cost. <strong>Consistent</strong> (monotone) is
+  stronger: h(u) ≤ w(u,v) + h(v) for every edge — a triangle inequality saying the estimate can drop by at most the
+  edge you just traversed (chain it along any path to the goal and admissibility follows). Why the stronger notion
+  matters: with a consistent h, A* is <em>literally Dijkstra on reweighted edges</em> w′(u,v) = w(u,v) − h(u) + h(v),
+  all non-negative by consistency — Johnson's potential trick from the note above, run in reverse. So the cut
+  argument from section 2 applies verbatim, every node settles exactly once, and optimality is inherited rather than
+  re-proved. The one-line optimality sketch to give: when the goal is popped, its priority is g(goal) + 0; if a
+  strictly cheaper route existed, some frontier node along it would carry priority ≤ that cheaper cost &lt; g(goal)
+  (admissibility keeps estimates honest) and the PQ would have popped it first.
+</p>
+<div class="warn">
+  <strong>Admissible-but-inconsistent is the trap tier.</strong> The goal's answer is still optimal, but
+  "settled is final" fails <em>inside</em> the search: a node can be reached more cheaply after it was expanded,
+  forcing <strong>re-expansion</strong>. Close such nodes permanently anyway and you can emit wrong answers; keep
+  re-opening them and the worst case goes exponential. Straight-line distance on a road network is consistent, so
+  mapping never hits this — hand-rolled heuristics can. At planet scale the heuristic itself is engineered:
+  <em>landmarks</em> (ALT: precompute exact distances to a handful of pivot nodes, then use the triangle inequality
+  as h) and <em>contraction hierarchies</em> (precomputed shortcut edges that let queries skip the middle of the
+  graph) are how production routing answers in milliseconds — <a href="25-real-world-systems.html">page 25</a>.
+</div>
+
 <h3>7. Minimum spanning tree: connect everything, cheaply</h3>
 <p>
   Different goal entirely: not "cheapest route A→B" but "cheapest set of edges that connects <em>all</em> nodes" —
@@ -290,6 +391,30 @@
   between X and Y?", the answer is: not necessarily — different objective, different tree (Dijkstra's shortest-path
   tree ≠ MST).
 </div>
+
+<p>
+  Both algorithms are corollaries of one lemma, and its exchange proof is short enough to deliver live. The
+  <strong>cut property</strong>: for <em>any</em> split of the nodes into two camps, the lightest edge crossing the
+  split belongs to some MST. Proof by exchange: take a spanning tree T that skips that lightest crossing edge
+  e = (u,v). T still connects u to v, and that u–v path must cross the split somewhere — at some edge f with
+  w(f) ≥ w(e). Adding e to T closes exactly one cycle, which contains f; deleting f breaks it — so T − f + e is
+  again a spanning tree, with total weight ≤ T's. Any tree avoiding e exchanges into one at least as good that
+  uses it; done. The mirror lemma, the <strong>cycle property</strong>, runs the same swap the other way: the
+  strictly heaviest edge on any cycle belongs to <em>no</em> MST — if a tree used it, deleting it splits the tree in
+  two, the rest of the cycle must cross that split via some strictly lighter edge, and the swap strictly improves,
+  contradicting minimality.
+</p>
+<p>
+  Now read the two algorithms as the lemma on repeat. When <strong>Kruskal</strong> accepts an edge joining
+  components A and B, no lighter edge leaves A — anything lighter was processed earlier and, had it left A, would
+  have been accepted and merged A with something — so the accepted edge is the lightest one crossing the cut
+  (A, everything else): blessed by the cut property. When <strong>Prim</strong> pops the cheapest edge crossing from
+  tree to non-tree, that <em>is</em> the cut property applied to the cut (tree, rest), verbatim. One more name
+  completes the family: <strong>Borůvka</strong> (1926 — the original MST algorithm, built to electrify Moravia):
+  every component simultaneously grabs its cheapest incident edge, the component count at least halves per round,
+  so O(log V) rounds and O(E log V) total — and its round structure is the basis of the parallel and near-linear-time
+  MST algorithms.
+</p>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

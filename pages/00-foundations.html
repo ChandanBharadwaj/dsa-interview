@@ -128,6 +128,18 @@ while (lo &lt;= hi) {
 PriorityQueue&lt;Integer&gt; pq = new PriorityQueue&lt;&gt;();
 for (int x : arr) pq.offer(x);         // n pushes * O(log n) each</code></pre>
 
+<div class="note">
+  <strong>Reading recursive costs off the recursion tree.</strong> When code calls itself, draw the tree of
+  calls and multiply <em>levels × work per level</em>. <code>T(n) = 2T(n/2) + O(n)</code> — two half-size
+  children, linear work to combine — has log&nbsp;n levels each doing n total work: <strong>O(n log n)</strong>
+  (merge sort). <code>T(n) = T(n/2) + O(1)</code> is one child, constant work: <strong>O(log n)</strong>
+  (binary search). <code>T(n) = 2T(n−1) + O(1)</code> doubles the call count per level for n levels:
+  <strong>O(2ⁿ)</strong> (naive Fibonacci). The general rule: if per-level work grows or shrinks
+  geometrically, the biggest level dominates; if it's constant per level, multiply by the level count. The
+  formalized version is the master theorem — <a href="10-recursion-backtracking.html">page 10</a> applies it
+  to real recursions.
+</div>
+
 <h3>3. Space complexity &amp; the classic trade</h3>
 <p>
   Space complexity counts <em>extra</em> memory beyond the input. The single most common interview move is
@@ -164,6 +176,84 @@ public int[] twoSum(int[] nums, int target) {
   <code>HashMap</code> resizing and <code>StringBuilder</code> growth. If an interviewer asks "worst case?", the honest
   answer is: a single add can be O(n), but any sequence of n adds is O(n) total.
 </p>
+<p>
+  Senior interviews sometimes push one level deeper: <em>prove</em> the amortized bound. There are three standard
+  ways, and each one is a two-sentence argument for the doubling array:
+</p>
+<ul>
+  <li><strong>Aggregate method</strong> — total the whole sequence. n appends trigger copies of size
+    1, 2, 4, …, up to n; the geometric series sums to less than 2n, so n appends cost under 3n work total —
+    O(1) each on average. One inequality, done.</li>
+  <li><strong>Accounting (banker's) method</strong> — overcharge cheap operations and bank the difference.
+    Charge every append 3 credits: 1 pays for its own write, 1 is saved to move <em>itself</em> at the next
+    resize, 1 is saved to move one element from the older half that already spent its savings. Every copy at
+    resize time is pre-paid, so no operation is ever in debt.</li>
+  <li><strong>Potential method</strong> — the same idea as a formula. Define Φ = 2·size − capacity; each cheap
+    append raises Φ by 2, and a resize's O(n) copy is exactly cancelled by Φ collapsing back toward zero.
+    Amortized cost = actual cost + ΔΦ stays constant. This is the accounting method with the bank balance made
+    explicit — and the tool that generalizes to harder structures (the two-stack queue on
+    <a href="09-stacks-queues.html">page 09</a>, splay trees).</li>
+</ul>
+<p>
+  One honest detail worth volunteering: the doubling story is the textbook version, but the JDK's
+  <code>ArrayList</code> actually grows by <strong>1.5×</strong> (<code>old + (old &gt;&gt; 1)</code> in current
+  JDKs). The proof survives — <em>any</em> fixed factor &gt; 1 gives a geometric series and amortized O(1);
+  growing by a <em>constant amount</em> instead (say +10) does not, degrading n appends to O(n²). Why 1.5 and
+  not 2? A gentler factor wastes less memory (at most ~50% slack instead of ~100%) and plays nicer with
+  allocators: with growth below the golden ratio, the sum of previously freed blocks can eventually be reused
+  for the next allocation, which a strict doubler never manages. <code>HashMap</code> does double — but for a
+  different reason: it needs power-of-two table sizes so bucket indexing can be a bit-mask
+  (<a href="01-arrays-hashing.html">page 01</a>).
+</p>
+
+<h3>5. Worst, average, amortized, expected — four different promises</h3>
+<p class="lead">
+  "It's O(1)" hides which <em>kind</em> of O(1). Interviewers at the senior level listen for the qualifier,
+  because each one is a different contract:
+</p>
+<div class="tablewrap">
+<table>
+  <tr><th>Guarantee</th><th>What it promises</th><th>Java example</th></tr>
+  <tr><td><strong>Worst case</strong></td><td>every single operation, no exceptions</td><td><code>TreeMap.get</code> O(log n) — the strongest promise here</td></tr>
+  <tr><td><strong>Amortized</strong></td><td>any <em>sequence</em> averages out; single ops may spike</td><td><code>ArrayList.add</code>, <code>ArrayDeque</code> push, <code>StringBuilder.append</code></td></tr>
+  <tr><td><strong>Expected</strong></td><td>average over randomness (hash spread / coin flips), for <em>any</em> input</td><td><code>HashMap.get</code> O(1) expected, O(log n) worst per bucket since Java 8</td></tr>
+  <tr><td><strong>Average case</strong></td><td>average over an assumed <em>input distribution</em> — weakest, distrust it</td><td>quicksort O(n log n) "on random inputs" (<a href="06-sorting.html">page 06</a>)</td></tr>
+</table>
+</div>
+<p>
+  The practical difference is <strong>latency versus throughput</strong>. Amortized O(1) is a throughput
+  promise: a million appends cost a million-ish units of work — but one unlucky append eats an O(n) resize
+  pause. Batch jobs don't care; a p99-latency-sensitive request path does, which is why real systems that
+  can't tolerate spikes either pre-size their collections (<code>new ArrayList&lt;&gt;(expected)</code>,
+  <code>new HashMap&lt;&gt;(expected * 4 / 3 + 1)</code>) or resize <em>incrementally</em> — Redis rehashes its
+  hash tables a few buckets per operation precisely to smear that pause out. Saying "amortized O(1), and I'd
+  pre-size it on a hot path" is a senior-level sentence.
+</p>
+
+<h3>6. Lower bounds: knowing when to stop optimizing</h3>
+<p>
+  Big-O bounds an algorithm from above; <strong>Big-Ω bounds the problem from below</strong> — "no correct
+  algorithm can beat this". Three arguments cover nearly every interview mention:
+</p>
+<ul>
+  <li><strong>Ω(n) — you must read the input.</strong> Adversary argument: if an algorithm skips even one
+    element, an adversary sets that element to whatever flips the answer, so the algorithm is wrong on some
+    input. This is why "find the max" or "sum the array" can never beat linear — and why an O(n) solution to
+    such a problem is not "slow", it's optimal.</li>
+  <li><strong>Ω(n log n) — comparison sorting.</strong> A sorting algorithm that only compares elements is a
+    binary decision tree; it must distinguish all n! input orderings, so the tree needs n! leaves and hence
+    height at least log₂(n!) ≈ n log₂ n. Any comparison sort is Ω(n log n) in the worst case — the full
+    proof, and why counting/radix sorts legally "cheat" past it, lives on <a href="06-sorting.html">page 06</a>.</li>
+  <li><strong>Conjectured barriers.</strong> Some bounds aren't proven, just battle-tested: no strongly
+    subquadratic algorithm for 3SUM is known, and dozens of geometry problems are "3SUM-hard" — as fast as
+    3SUM or no faster. In an interview, O(n²) for 3Sum (<a href="02-two-pointers.html">page 02</a>) plus one
+    sentence about the barrier is a complete, confident answer.</li>
+</ul>
+<div class="tip">
+  <strong>Why this matters live.</strong> Matching your upper bound to the problem's lower bound is the
+  professional way to stop: "this is O(n), the problem is Ω(n) because every element must be read, so we're
+  done." It converts "I can't think of anything faster" into a proof.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="java">Your Java collections are already data structures</h2>
@@ -186,6 +276,26 @@ public int[] twoSum(int[] nums, int target) {
   <strong>Habit to build now.</strong> In interviews say the structure, not just the class: "I'll use a hash map for O(1)
   lookups", "a min-heap to always grab the smallest". It shows you chose the structure, not the Java default.
 </div>
+
+<p>
+  The table above is the Big-O story; the <strong>memory story</strong> is what separates candidates who've
+  profiled real JVMs. Every Java object carries a header (~12–16 bytes in current JDKs with compressed
+  references), so a boxed <code>Integer</code> spends roughly 16 bytes to hold 4 bytes of payload — an
+  <code>ArrayList&lt;Integer&gt;</code> costs about 4–5× the memory of an <code>int[]</code>, with each value
+  hiding behind a pointer. A <code>LinkedList</code> node is worse still: header + prev + next + element
+  references means ~24 bytes of overhead <em>per element</em>, scattered wherever the allocator put them.
+</p>
+<p>
+  That scattering is the real killer. CPUs fetch memory in ~64-byte <strong>cache lines</strong>, so scanning
+  an <code>int[]</code> gets 16 values per fetch and the hardware prefetcher streams the next line before you
+  ask; following <code>node.next</code> pointers lands somewhere unpredictable, and every hop risks a cache
+  miss costing ~100× a cached read. This is why <code>ArrayList</code> beats <code>LinkedList</code> in
+  practice even for workloads where the Big-O table says they tie, why <code>ArrayDeque</code> (a circular
+  array) is the JDK's own recommended stack/queue, and why "O(1) insert in the middle!" is a trap answer —
+  <em>finding</em> the middle of a linked list already cost O(n) pointer chases. One sentence of this —
+  "arrays win on cache locality; Big-O ignores the memory hierarchy" — reads as a decade of experience.
+  The full hardware argument continues on <a href="08-linked-lists.html">page 08</a>.
+</p>
 
 <!-- ============================================================ -->
 <h2 id="compare">When to use what</h2>

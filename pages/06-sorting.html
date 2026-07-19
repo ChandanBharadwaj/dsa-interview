@@ -144,6 +144,24 @@
   distinguish n! orderings, and each comparison splits the possibilities in half, so you need at least
   log₂(n!) ≈ n log n comparisons. To go faster you must stop comparing…
 </p>
+<p>
+  That halving argument deserves its full form, because "prove the lower bound" is a genuine senior-loop question.
+  Model any comparison sort as a <strong>decision tree</strong>: each internal node is one "is a[i] &lt; a[j]?"
+  comparison, and each leaf is a finished output ordering. To sort correctly, the tree needs at least
+  <strong>n! leaves</strong> — every distinct input permutation must reach its own leaf, or two different inputs
+  would get the same (wrong for one of them) answer. A binary tree of height h has at most 2ʰ leaves, so the
+  worst-case comparison count is h ≥ log₂(n!), and Stirling's approximation turns that into
+  <strong>log₂(n!) = n log₂ n − n log₂ e + O(log n) ≈ n log₂ n − 1.44n</strong>. Every comparison sort — including
+  ones nobody has invented yet — pays that on some input. Merge sort's ~n log₂ n comparisons sit within a linear
+  term of the floor, which is why the search for asymptotically faster comparison sorts is over, permanently.
+</p>
+<div class="note">
+  <strong>Why radix sort isn't a contradiction.</strong> The Ω(n log n) bound binds only algorithms whose
+  <em>sole</em> access to keys is pairwise comparison — one bit of information per question. Counting and radix
+  sorts never ask "is a &lt; b?"; they <em>index arrays with the key's digits</em>, extracting log₂ k bits per
+  operation. Different model, different lower bound. That sentence is exactly the answer to the follow-up
+  "you just said O(n log n) is optimal — so how is radix sort O(n)?"
+</div>
 
 <h3>4. Counting, bucket &amp; radix — sorting without comparisons</h3>
 <p class="code-title">Counting sort — keys in a small range ⇒ O(n + k)</p>
@@ -173,12 +191,84 @@ for (int v = 0; v &lt;= 100; v++)         // walk values in order — O(k)
   out of two passes. Unstable sorts destroy that. This is exactly why Java forces stable TimSort for objects.
 </div>
 
+<p>
+  <strong>How TimSort actually works</strong> is worth two minutes, because "tell me about TimSort" is a real
+  senior question. It scans for <strong>runs</strong> — maximal already-ascending stretches (strictly descending
+  ones are reversed in place, so reverse-sorted input is also O(n)). Runs shorter than <strong>minrun</strong>
+  (16–32, computed so that n/minrun is close to a power of two, making the final merges balanced) get extended
+  with binary insertion sort. Each run is pushed onto a stack, and merges fire whenever the top run lengths break
+  the stack invariants — roughly, each run must be longer than the next two combined, so lengths grow like
+  Fibonacci numbers, keeping the stack O(log n) deep. During a merge, if one run supplies seven elements in a row,
+  TimSort switches to <strong>galloping</strong>: exponential search (<a href="07-binary-search.html">page 07</a>)
+  finds how far the streak extends, then one bulk <code>arraycopy</code> moves it — which is how merging two
+  barely-interleaved runs costs far less than element-by-element O(n).
+</p>
+<div class="note">
+  <strong>The formal-verification anecdote.</strong> In 2015, researchers building a machine-checked proof of
+  TimSort discovered the run-stack invariant wasn't fully re-established after certain merges — adversarial inputs
+  could overflow the run stack with an <code>ArrayIndexOutOfBoundsException</code>. The bug had shipped in Python
+  and Java for over a decade of planetary-scale use. The JDK's fix enlarged the stack; Python repaired the
+  invariant. Quotable moral: a decade of testing missed what a proof attempt surfaced in weeks — and "my sort is
+  obviously correct" is exactly the confidence stability bugs hide behind.
+</div>
+<p>
+  Dual-pivot quicksort carries its own asterisk: it is still a quicksort, and crafted <strong>adversarial
+  inputs</strong> can drive it quadratic. That's why, in current JDKs, <code>Arrays.sort(int[])</code> tracks
+  recursion depth and falls back to <strong>heapsort</strong> when partitioning goes pathological — the same
+  introsort insurance C++ has always used — and routes nearly-sorted primitive arrays to a run-merging strategy
+  instead of partitioning at all. The one-line summary: <em>the JDK sorts primitives with a quicksort wearing a
+  heapsort parachute, and objects with a merge sort that exploits whatever order already exists.</em>
+</p>
+
 <h3>6. Quickselect — the K-th element without sorting</h3>
 <p>
   Quicksort's partition places the pivot at its final index. If you only need the K-th smallest element, recurse into
   <em>just the side containing K</em>: n + n/2 + n/4 + … ⇒ <strong>average O(n)</strong>, versus O(n log n) for a
   full sort. This powers "K-th largest element" (worked below) and is the one-shot alternative to heaps
   (<a href="12-heaps.html">page 12</a> compares them).
+</p>
+<p>
+  The honest caveat — quickselect's O(n) is <em>average</em>; hostile input or hostile luck makes it O(n²) — has a
+  classical fix worth knowing by name: <strong>median of medians</strong> (BFPRT, 1973). Split the array into
+  groups of 5, take each group's median (constant work per group), recursively select the median of those n/5
+  medians, and use <em>that</em> as the pivot. The guarantee: half the group-medians are ≤ the chosen pivot, and
+  each such median has two more group members below it — so at least ~3n/10 elements are ≤ the pivot, and
+  symmetrically ~3n/10 are ≥ it. Neither recursion side ever exceeds ~7n/10. The recurrence
+  <strong>T(n) ≤ T(n/5) + T(7n/10) + O(n)</strong> solves to worst-case O(n) because 1/5 + 7/10 &lt; 1: the level
+  costs form a shrinking geometric series (the recursion-tree reading from <a href="00-foundations.html">page 00</a>).
+</p>
+<div class="tip">
+  <strong>What to actually say in an interview.</strong> "Randomized quickselect is expected O(n); if we need a
+  worst-case guarantee, median-of-medians gives deterministic O(n), but its constants are large enough that real
+  libraries use <strong>introselect</strong> — quickselect that only falls back to the deterministic pivot when
+  recursion misbehaves; that's C++'s <code>nth_element</code>." Naming that trade-off is the senior answer;
+  nobody expects BFPRT reproduced at a whiteboard. Expected-O(n) with your own random pivot is acceptable
+  whenever the adversary can't see your random bits — which is every interview and almost all of production.
+</div>
+
+<h3>7. The comparator contract, and sorting beyond RAM</h3>
+<p>
+  Handing <code>Arrays.sort</code> a comparator asserts a <strong>total order</strong>: antisymmetry
+  (<code>sgn(c(a,b)) == -sgn(c(b,a))</code>), transitivity (c(a,b) ≤ 0 and c(b,c) ≤ 0 ⇒ c(a,c) ≤ 0), and
+  consistency — the same pair must compare the same way every time it's asked. Break any of these and a quicksort
+  would just quietly mis-sort; TimSort instead <em>notices</em>: its merges rely on runs being genuinely sorted,
+  and when a comparison contradicts that assumption it throws the exception quoted in the Pitfalls below —
+  "Comparison method violates its general contract". Typical culprits: the subtraction-overflow comparator (also
+  in Pitfalls), comparing doubles with <code>&lt;</code> so <code>NaN</code> answers inconsistently (use
+  <code>Double.compare</code>), and keys mutated concurrently mid-sort. Because the throw depends on which runs
+  happen to merge, it surfaces "randomly, only in production, only on some data" — a classic war story worth
+  telling before it happens to you.
+</p>
+<p>
+  And when data outgrows memory, sorting doesn't stop — it becomes <strong>external merge sort</strong>, the
+  pattern behind the LSM-compaction card below: read RAM-sized chunks, sort each in memory (that part is this
+  page), write them out as sorted runs, then <strong>k-way merge</strong> the runs using a min-heap holding each
+  run's current head — O(N log k) comparisons and strictly sequential disk I/O
+  (<a href="12-heaps.html">page 12</a> builds that heap; the <a href="25-real-world-systems.html">capstone</a>
+  shows it running forever inside database compaction). Note the symmetry with TimSort: both are bets on
+  <strong>presortedness</strong>. TimSort's true cost is O(n + n log r) for r runs — one run costs O(n), n runs
+  cost O(n log n) — so "how sorted is this input already?" is a question worth asking out loud before choosing
+  any sort at all.
 </p>
 
 <!-- ============================================================ -->

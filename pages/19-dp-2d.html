@@ -106,6 +106,19 @@ public static int minPathSum(int[][] grid) {
   recurrence flows around it. No new machinery, which is why interviewers like it as a follow-up.
 </p>
 
+<p>
+  <strong>The closed form, derived — and why the DP still matters.</strong> Any right/down path from corner to
+  corner makes exactly m−1 down-moves and n−1 right-moves, m+n−2 moves total, and the path is fully determined by
+  <em>choosing which</em> of those moves are downs. So the path count is the binomial coefficient
+  <strong>C(m+n−2, m−1)</strong> — computable in O(m+n) with no table at all (multiply-and-divide incrementally or
+  use the factorial/inverse-factorial pipeline on <a href="23-math-geometry.html">page 23</a>; a naive 62! for a
+  32×32 grid overflows <code>long</code> long before the answer does). One obstacle kills the formula: paths are
+  no longer free strings of moves, and the symmetry the binomial counts on is gone. But the DP doesn't care — a
+  blocked cell just contributes 0 ways and the recurrence flows around it. The general lesson is quotable:
+  <strong>closed forms are brittle to constraints; recurrences absorb them</strong>. Mention the formula, then
+  build the table.
+</p>
+
 <h3>2. Two-string DP: LCS, the master template</h3>
 <p>
   <em>Longest Common Subsequence</em>: the longest sequence of characters appearing in both strings in order (gaps
@@ -174,6 +187,27 @@ public static int longestCommonSubsequence(String a, String b) {
   which one you actually need.
 </p>
 
+<p>
+  <strong>Reconstructing the actual subsequence</strong> is a backwalk from dp[m][n], re-asking at each cell which
+  case produced it: characters match → that character belongs to the LCS, emit it and step diagonally; otherwise
+  step toward whichever of up/left holds the larger value (on ties, either — different tie-breaks recover
+  different, equally long LCSs). The walk is O(m+n) steps but needs the <em>full</em> table, which puts
+  reconstruction in direct tension with the rolling-row space optimization. The classic resolution is
+  <strong>Hirschberg's algorithm</strong>: compute the middle row's best scores forward from the top and backward
+  from the bottom — two rolling-row passes — pick the split column maximizing their sum, and recurse on the two
+  halves. Total work stays O(m·n) (the recursion halves the area each level), but space falls to O(min(m,n)).
+  That is how diff tools align files too big to hold a full table for.
+</p>
+
+<div class="note">
+  <strong>Is O(m·n) beatable? Essentially no — and that's a quotable fact.</strong> No strongly subquadratic
+  algorithm for LCS or edit distance is known, and finding one would refute SETH (the Strong Exponential Time
+  Hypothesis), a standard hardness assumption — so quadratic is believed to be essentially optimal for two
+  arbitrary strings. Every practical speedup changes the <em>parameters</em> instead: Myers' diff is O((n+m)·D)
+  and wins because real revisions have a small edit distance D, bit-parallel variants shave a machine-word
+  factor, and the banded trick in §3 bounds the answer up front.
+</div>
+
 <h3>3. Edit distance: three ops = three neighbors</h3>
 <p>
   <em>Edit Distance</em> (Levenshtein): minimum insert/delete/replace operations to turn word1 into word2. Same axes
@@ -206,6 +240,18 @@ public static int minDistance(String word1, String word2) {
     }
     return dp[m][n];
 }</code></pre>
+
+<p>
+  <strong>The banded optimization — how spell-check affords this table.</strong> A fuzzy query never asks "what is
+  the distance?"; it asks "is the distance ≤ k?" for a tiny k (search engines typically cap fuzziness at 2). That
+  bound collapses the table: cell (i, j) can only matter when |i − j| ≤ k, because every step off the main
+  diagonal costs at least one insert or delete — so you fill a band of width 2k+1 around the diagonal, treat
+  everything outside it as ∞, and abort early if the band's minimum ever exceeds k. Cost drops from O(n·m) to
+  O(k·min(n,m)). The reusable idea is worth naming out loud: <strong>a bounded answer collapses the state
+  space</strong>. Myers' diff algorithm — git's default, met again on <a href="25-real-world-systems.html">page
+  25</a> — is the same insight run along diagonals: O((n+m)·D) where D is the edit distance itself, brilliant
+  precisely because consecutive file revisions have small D.
+</p>
 
 <h3>4. 0/1 knapsack: item × capacity</h3>
 <p>
@@ -259,6 +305,28 @@ public static int change(int amount, int[] coins) {
     }
     return dp[amount];
 }</code></pre>
+
+<p>
+  <strong>The aliasing argument, made precise</strong> — because "why does the loop direction matter?" is a
+  standard follow-up and hand-waving it undoes the space optimization's credit. When one row overwrites another in
+  place, each slot aliases two logical cells: before being written this pass, <code>dp[w]</code> still holds row
+  i−1's value ("best <em>without</em> item i"); after, it holds row i's. The 0/1 recurrence wants to read
+  <code>dp[i−1][w−weight]</code> — a strictly smaller index than the cell being written. Sweep capacities
+  <strong>descending</strong> and every smaller index is still unwritten this pass, so every read sees row i−1:
+  each item used at most once. Sweep <strong>ascending</strong> and smaller indices were already overwritten, so
+  reads see row i — a row that may already contain item i, which is exactly the unbounded recurrence
+  <code>dp[i][w−weight]</code>. Identical code characters, opposite semantics: <strong>the direction is part of
+  the recurrence, not a style choice</strong>.
+</p>
+
+<div class="note">
+  <strong>"Pseudo-polynomial", explained honestly.</strong> Knapsack's O(n·W) looks polynomial but isn't: the
+  input encodes W in log₂ W bits, so W's <em>value</em> is exponential in the input's <em>length</em> — add one
+  digit to W and the runtime multiplies by ten. That's how subset-sum can be NP-complete and still have this
+  "efficient" DP: the DP is polynomial in the value of W, not in the size of its encoding. Practically, it's
+  genuinely fast when W is small (budgets and weights up to ~10⁶) and useless when W is a 64-bit quantity.
+  Using the word with its definition attached is a senior-signal moment in any knapsack conversation.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>

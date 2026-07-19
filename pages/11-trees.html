@@ -120,6 +120,27 @@
   <div class="anim-controls"></div>
 </div>
 
+<p>
+  Iterative pre-order and in-order are routine stack exercises (you'll meet in-order's push-left-spine version in
+  Kth Smallest below). <strong>Iterative post-order</strong> is the one that trips people, because the node must be
+  emitted <em>after</em> both children — a stack pop naturally gives it to you first. The interview-friendly escape is
+  the <strong>reversed-preorder trick</strong>: run a "preorder" that visits node → <em>right</em> → left (just push
+  left before right), collect values, and reverse at the end — reversing node-right-left yields exactly
+  left-right-node. Same O(n) time, O(h + n) space for the output list. The classic alternative is <strong>two
+  stacks</strong> (pop from the first, push onto the second, the second unwinds in post-order), and the true
+  single-stack version tracks a <code>lastVisited</code> pointer to detect "returning from the right child" — worth
+  recognizing, rarely worth writing under time pressure.
+</p>
+<div class="note">
+  <strong>How <code>TreeMap</code>'s iterator walks without a stack.</strong> Its entries carry a <em>parent</em>
+  pointer, so the iterator computes each in-order <strong>successor</strong> in place: if the node has a right child,
+  go right once then left all the way down; otherwise climb parents until you arrive from a left child — that parent is
+  next. Any single step can cost O(h), but a full iteration traverses each edge exactly twice (once down, once up), so
+  iterating all n entries is O(n) total with O(1) extra space — amortized O(1) per <code>next()</code>. That's why
+  <code>subMap</code>/<code>tailMap</code> views can stream a sorted range without materializing anything. The same
+  climb-until-left-child logic is LeetCode 285 (Inorder Successor) when nodes expose parents.
+</div>
+
 <h3>3. The one decision that solves most tree problems: top-down vs bottom-up</h3>
 <p>
   Every recursive tree solution passes information in one of two directions. Deciding <em>which</em> is 80% of solving
@@ -170,11 +191,111 @@
   B-trees are "BSTs with hundreds of keys per node" so each node is one page read (page <a href="24-advanced-structures.html">24</a>).
 </p>
 
+<p>
+  What a <strong>rotation</strong> actually does deserves thirty seconds, because it demystifies every balanced tree at
+  once: it's an O(1) re-parenting of two nodes that changes heights <em>without breaking the BST ordering</em>. Rotate
+  right at y: y's left child x moves up, y becomes x's right child, and x's old right subtree B — the only piece whose
+  parent changes — slides under y. Every key in B was between x and y before, and still is after:
+</p>
+<div class="card">
+  <p class="small"><strong>Right rotation at y</strong> — in-order sequence A x B y C is identical on both sides; only depths change.</p>
+<pre class="code"><code>        y                      x
+       / \    rotate right    / \
+      x   C   ==========&gt;    A   y
+     / \      &lt;==========       / \
+    A   B     rotate left      B   C</code></pre>
+  <p class="small">One wrinkle to know by name: if the deep grandchild sits on the <em>inside</em> (a left-right or
+  right-left "zig-zag"), a single rotation just moves the bulge to the other side. The fix is a <strong>double
+  rotation</strong> — first rotate the child to straighten the zig-zag into a line, then rotate the top. All of AVL and
+  red-black rebalancing is these two moves plus bookkeeping about <em>when</em> to fire them.</p>
+</div>
+<p>
+  The bookkeeping is where the flavors diverge, and the trade-off is quotable. <strong>AVL</strong> trees keep every
+  node's subtree heights within 1 — tighter balance (height ≤ ~1.44 log n), so lookups are marginally faster, but
+  inserts and deletes rotate more often. <strong>Red-black</strong> trees accept the looser ~2× bound from above in
+  exchange for cheaper maintenance: at most two rotations per insert and three per delete, with the rest of the fix-up
+  being O(1) recolorings. For a general-purpose library map whose write mix is unknown, cheap-writes-slightly-looser-reads
+  is the right default — that's why <code>TreeMap</code>, C++'s <code>std::map</code>, and the Linux kernel's rbtree all
+  chose red-black, while AVL survives where reads utterly dominate. Two more names complete the family:
+  a <strong>treap</strong> gives each node a random heap priority and rotates to satisfy it — balance holds
+  <em>in expectation</em> with almost no code, the "I could implement this live" balanced BST; a <strong>splay
+  tree</strong> rotates every accessed node to the root, guaranteeing only <em>amortized</em> O(log n) but giving free
+  locality on skewed access patterns.
+</p>
+<div class="note">
+  <strong>The B-tree fanout math, since the numbers land the point.</strong> A database page is typically 16&nbsp;KB
+  (InnoDB) or 8&nbsp;KB (Postgres); at a few dozen bytes per key+pointer, one node holds hundreds of separators — call
+  the fanout ~300. Height is log base <em>fanout</em>: 300² ≈ 9×10⁴, 300³ ≈ 2.7×10⁷, 300⁴ ≈ 8×10⁹ — so three to four
+  levels index millions to billions of rows, and the top levels live permanently in RAM, making an indexed point lookup
+  effectively <em>one</em> disk read. Compare a binary tree's log₂(10⁹) ≈ 30 pointer-chasing hops. Same O(log n), wildly
+  different constant — the whole story of disk-aware data structures in one comparison (page
+  <a href="24-advanced-structures.html">24</a>).
+</div>
+
 <h3>6. Serialize / deserialize (the pattern, briefly)</h3>
 <p>
   Pre-order with explicit null markers ("<code>4 2 # # 6 # #</code>") captures a tree's exact shape in one pass, and a
   recursive reader consuming tokens left-to-right rebuilds it — the parent-first property of pre-order is exactly why it
   works. This is LeetCode 297, and it's also conceptually what every JSON/AST writer does.
+</p>
+
+<h3>7. Morris traversal: in-order with O(1) space</h3>
+<p>
+  Recursive in-order costs O(h) stack; the explicit-stack version costs O(h) heap. When an interviewer asks for in-order
+  in <strong>O(1) extra space</strong>, the answer is <strong>Morris traversal</strong>, and its one idea is
+  <em>threading</em>: the traversal temporarily borrows null pointers to remember its way back. At each node with a left
+  subtree, find that subtree's rightmost node — the node's in-order <em>predecessor</em> — and point its null
+  <code>right</code> at the current node. Now you can dive left without a stack: when the left subtree finishes, its
+  rightmost null "falls through" the thread straight back to you.
+</p>
+<p class="code-title">Morris in-order — threads created, used, and removed</p>
+<pre class="code"><code>TreeNode cur = root;
+while (cur != null) {
+    if (cur.left == null) {
+        visit(cur);                        // no left subtree: visit, go right
+        cur = cur.right;                   // (possibly along a thread!)
+    } else {
+        TreeNode pred = cur.left;          // find in-order predecessor:
+        while (pred.right != null &amp;&amp; pred.right != cur)
+            pred = pred.right;             // rightmost node of left subtree
+        if (pred.right == null) {          // first arrival here:
+            pred.right = cur;              //   lay the thread back to me
+            cur = cur.left;                //   and descend left
+        } else {                           // second arrival (via the thread):
+            pred.right = null;             //   RESTORE the tree — mandatory
+            visit(cur);                    //   left subtree done: visit me
+            cur = cur.right;
+        }
+    }
+}</code></pre>
+<p>
+  Each edge is walked a constant number of times and each predecessor-finding scan is paid for by the thread it creates
+  and later removes, so the whole traversal is <strong>amortized O(n) time, O(1) space</strong> — the same accounting
+  style as the monotonic-stack proof on <a href="09-stacks-queues.html">page 09</a>. Two honesty clauses for interviews:
+  the tree is <em>temporarily mutated</em> (unacceptable for concurrent readers), and forgetting the
+  <code>pred.right = null</code> restoration leaves cycles behind — say both before writing it. Morris is the standard
+  trick behind O(1)-space answers to LC 99 (Recover BST) and LC 501.
+</p>
+
+<h3>8. LCA at scale: binary lifting and the Euler-tour alternative</h3>
+<p>
+  The per-query LCA recursions above cost O(n) each — fine once, ruinous for a million queries on the same tree. The
+  standard preprocessing answer is <strong>binary lifting</strong>: store <code>up[k][v]</code> = the 2ᵏ-th ancestor of
+  v, built level by level from the doubling identity <em>"my 2ᵏ-th ancestor is the 2ᵏ⁻¹-th ancestor of my 2ᵏ⁻¹-th
+  ancestor"</em> — <code>up[k][v] = up[k-1][ up[k-1][v] ]</code> — in O(n log n) time and space after one DFS records
+  depths. A query is then O(log n): lift the deeper node up by the depth difference (decompose it into powers of two,
+  exactly the binary-representation trick from <a href="22-bit-manipulation.html">page 22</a>), and if the nodes still
+  differ, walk both up in synchronized jumps from the largest power down — jump only when the two 2ᵏ-th ancestors
+  <em>differ</em>. After the loop both sit one step below the answer: <code>up[0][u]</code> is the LCA. The same table
+  answers "k-th ancestor of v" (LC 1483) for free.
+</p>
+<p>
+  The alternative worth naming: write down the <strong>Euler tour</strong> of the tree — the sequence of nodes as DFS
+  enters and returns, 2n−1 entries — and note that LCA(u,&nbsp;v) is simply the <em>shallowest node between u's and v's
+  first appearances</em> in that sequence. That turns LCA into <strong>range-minimum query</strong>, and a sparse table
+  (page <a href="24-advanced-structures.html">24</a>) answers RMQ in O(1) per query after O(n log n) preprocessing —
+  the theoretically cleanest offline LCA. Interview calibration: derive binary lifting if asked, <em>name</em>
+  Euler-tour-plus-RMQ as the O(1)-query alternative, and mention that both preprocess in O(n log n).
 </p>
 
 <!-- ============================================================ -->

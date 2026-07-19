@@ -133,6 +133,25 @@ public static int binarySearch(int[] nums, int target) {
   below, whose <code>lo &lt; hi</code> guard plus <code>hi = mid</code> is safe.
 </div>
 
+<p>
+  Those two callouts generalize into a <strong>proof template</strong> you can recite for any variant you invent.
+  <em>Correctness</em> is a loop invariant: state in one sentence what the range means ("if the target exists, its
+  index is in [lo..hi]"), check it holds before the first iteration, and check that <em>every branch preserves
+  it</em> — then the invariant plus the loop's exit condition force the answer with no further argument.
+  <em>Termination</em> is a strictly decreasing measure: <code>hi − lo</code> drops by at least 1 per iteration
+  (verify this survives the 2-element range, where <code>mid == lo</code> — that's where broken variants stall),
+  and a non-negative integer can't decrease forever. Two sentences, and your search is provably correct — which
+  matters for an algorithm with this history: binary search was published in <strong>1946</strong>, but the first
+  <em>correct</em> published version waited until <strong>1962</strong>, a sixteen-year gap Knuth made famous.
+</p>
+<div class="note">
+  <strong>How the JDK actually spells the fix.</strong> The 2006 repair to <code>Arrays.binarySearch</code> wasn't
+  <code>lo + (hi - lo) / 2</code> but <code>(lo + hi) &gt;&gt;&gt; 1</code>: the sum may still wrap negative, but
+  the <em>unsigned</em> shift (<a href="22-bit-manipulation.html">page 22</a>) reinterprets that bit pattern as the
+  correct large positive value and halves it. Both spellings are right; recognize the <code>&gt;&gt;&gt;</code>
+  form when reading JDK source, and write whichever you can explain under pressure.
+</div>
+
 <h3>2. The mental model that unifies everything: a predicate over F...FT...T</h3>
 <p>
   Here's the reframe that turns binary search from a memorized ritual into a tool you can adapt. Forget arrays for a
@@ -172,6 +191,18 @@ public static int firstTrue(int n, java.util.function.IntPredicate p) {
   <code>hi = mid</code> rather than discarding it. This pair is safe together because <code>mid</code> is always
   strictly less than <code>hi</code>, so the range still shrinks every iteration.
 </p>
+<p>
+  Why is O(log n) also the <em>best</em> possible? Two arguments, both quotable. The <strong>information
+  argument</strong>: locating a boundary among n candidates has n+1 distinguishable outcomes, and each comparison
+  yields at most one bit (a constant number, even three-way), so ⌈log₂(n+1)⌉ probes are needed just to tell the
+  outcomes apart. The <strong>adversary argument</strong> makes it concrete: imagine the input isn't fixed — an
+  adversary answers each probe, always placing the boundary in the <em>larger</em> surviving half. Against that
+  strategy the candidate set shrinks by at most half per question, so any algorithm that stops before ~log₂ n
+  probes leaves two candidate inputs its transcript cannot distinguish — and the adversary declares the one you
+  didn't output to be the truth. Binary search meets this bound exactly. That is the precise sense in which it is
+  optimal: not "fast", but <em>extracting a full bit from every comparison</em>. (The same counting argument,
+  scaled up to n! outcomes, gives sorting's Ω(n log n) floor on <a href="06-sorting.html">page 06</a>.)
+</p>
 
 <h3>3. Rotated sorted arrays: order survives, mostly</h3>
 <p>
@@ -197,6 +228,45 @@ public static int firstTrue(int n, java.util.function.IntPredicate p) {
   <strong>How to spot it.</strong> Trigger phrases: "minimum speed so that…", "least capacity to ship within D days",
   "smallest divisor such that…", "minimize the maximum…". If checking a <em>given</em> answer is easy but finding the
   <em>best</em> answer looks hard, you're almost certainly meant to binary-search the answer space.
+</div>
+
+<h3>5. The cousins: galloping, interpolation, and searching real numbers</h3>
+<p>
+  <strong>Exponential (galloping) search</strong> answers "binary search when you don't know the size" — an
+  unbounded or conceptually infinite sorted input, or one where the answer is probably near the front. Probe
+  indexes 1, 2, 4, 8, … until you overshoot the target (or run off the end), then binary-search inside the last
+  doubling window: <strong>O(log i)</strong> where i is the answer's actual position — strictly better than
+  O(log n) when i ≪ n, and never worse by more than a constant. This exact gallop is what TimSort's merge uses to
+  leap over one run's long winning streaks (<a href="06-sorting.html">page 06</a>), and it's the intended answer
+  to "search a sorted array of unknown size" (LC 702).
+</p>
+<p>
+  <strong>Interpolation search</strong> — the "mention-only" row in the comparison table above — deserves its two
+  sentences in full. Instead of probing the middle, probe where the value <em>should</em> be:
+  <code>lo + (target - a[lo]) * (hi - lo) / (a[hi] - a[lo])</code>, the index a straight-line interpolation
+  predicts (how you find "Smith" in a phone book). On uniformly distributed keys the expected cost is
+  <strong>O(log log n)</strong>; on skewed data the estimates are garbage and it degrades to <strong>O(n)</strong> —
+  which is why no general-purpose library defaults to it. In an interview, say both halves: the speedup <em>and</em>
+  the distribution assumption that buys it. The failure mode is the senior half of the answer.
+</p>
+<p class="code-title">Real-valued binary search — iterate a fixed count, don't chase epsilon</p>
+<pre class="code"><code>// Minimize/threshold over a continuous monotonic quantity (rates, angles, lengths).
+double lo = 0, hi = 1e9;
+for (int iter = 0; iter &lt; 100; iter++) {   // 100 halvings shrink the range by 2^100 —
+    double mid = lo + (hi - lo) / 2;       // far past double precision. No epsilon tuning,
+    if (feasible(mid)) hi = mid;           // no infinite loop when eps underflows at large
+    else               lo = mid;           // magnitudes. (lo = mid IS safe here: doubles
+}                                          // halve cleanly; there's no integer mid==lo stall.)
+return lo;</code></pre>
+<div class="note">
+  <strong>Binary search on a partition, not a value.</strong> The hardest variants search neither indexes nor
+  answer values but <em>cuts</em>: Median of Two Sorted Arrays (worked below) binary-searches how many elements
+  the first array contributes to the combined left half, with the predicate "is this partition balanced?". When a
+  problem asks for a statistic of combined sorted data in O(log), suspect a partition search before anything
+  fancier. And when someone asks "can you beat O(log range) on a smooth numeric problem?", the name to say is
+  <strong>Newton's method</strong> (see Sqrt(x) below) — quadratic convergence, doubling correct digits per step,
+  at the price of needing a derivative and a decent starting point. Binary search on a monotonic predicate remains
+  the robust workhorse.
 </div>
 
 <!-- ============================================================ -->

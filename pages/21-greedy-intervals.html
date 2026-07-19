@@ -81,6 +81,35 @@
   first</strong>. If you can't break the greedy rule quickly, start sketching why it's safe; if you can, it's DP.
 </div>
 
+<p>
+  For senior loops it's worth having seen the exchange argument run <em>fully</em> once, on earliest-end-first
+  scheduling (Non-overlapping Intervals below). Let g be the interval with the globally earliest end time and
+  OPT = {o₁, o₂, …} any optimal schedule, sorted by end. Claim: replacing o₁ with g keeps OPT valid and the same
+  size. <em>Validity:</em> g ends no later than o₁ (nothing ends earlier than g), so g cannot collide with o₂,
+  which starts at or after o₁'s end. <em>Size:</em> one swapped for one (and if g was already in OPT there's
+  nothing to do). So <strong>some</strong> optimal solution starts with the greedy choice; remove g and everything
+  it conflicts with, and the same argument applies to the remaining subproblem. Induction closes the loop:
+  greedy's full output has optimal size. Every exchange proof has this skeleton — name the greedy choice, swap it
+  into an arbitrary optimum, show nothing breaks and nothing is lost.
+</p>
+<p>
+  The second proof template is <strong>"greedy stays ahead"</strong> — induction on prefixes instead of surgery
+  on an optimum. Let greedy's picks end at g₁ ≤ g₂ ≤ … and any valid schedule's at o₁ ≤ o₂ ≤ …; claim gᵢ ≤ oᵢ for
+  all i. Base: g₁ is the earliest end overall. Step: if gᵢ ≤ oᵢ, then o<sub>i+1</sub> starts after oᵢ ends, hence
+  after gᵢ — so it was <em>available</em> to greedy at step i+1, and greedy chose something ending no later.
+  Greedy never falls behind, and therefore never stops while another schedule could still fit more (whatever they
+  fit next, greedy could too). Practical guidance: reach for exchange when the swap is easy to describe, for
+  stays-ahead when "greedy's prefix is always at least as good" is the natural sentence — they are two phrasings
+  of the same safety property.
+</p>
+<p>
+  And the one-liner for name recognition: when the feasible sets form a <strong>matroid</strong> — a subset
+  structure with the exchange property — sort-by-weight greedy is <em>always</em> optimal. That theorem is why
+  Kruskal's MST algorithm (<a href="17-shortest-paths.html">page 17</a>) gets to be greedy: forests form a
+  matroid. It's the formal answer to "when is greedy guaranteed?", and knowing the word is all an interview ever
+  requires.
+</p>
+
 <h3>2. The canonical greedy moves (non-interval)</h3>
 <ul>
   <li><strong>Furthest reach (Jump Game):</strong> walk the array keeping one number — the furthest index reachable so
@@ -157,6 +186,58 @@
     "max concurrent X" question (connections, calls, car pooling — see the difference array on
     <a href="04-prefix-sum.html">page 04</a>).</li>
 </ul>
+
+<p>
+  Sweep line is a <em>family</em>, not one trick, and its contract deserves a sentence: <strong>the tracked state
+  is constant between events</strong> — the room count cannot change on any stretch of time containing no start
+  and no end, so evaluating only at events loses nothing. That invariant is what generalizes: the skyline problem
+  (events = building edges, state = multiset of active heights), union-of-intervals length (state = coverage
+  count, accumulate while it's positive), "car pooling" capacity checks (state = passengers). Whenever a problem
+  says "at any point in time…", define the events, define the state, and prove to yourself the state only moves
+  at events.
+</p>
+<div class="warn">
+  <strong>Tie-ordering is the sweep's classic bug.</strong> Meetings [1,4) and [4,7): at time 4, does the end
+  event or the start event process first? Ends-before-starts means back-to-back meetings share a room — the usual
+  half-open convention, which the sweep code below encodes as <code>ends[e] &lt;= starts[s]</code>. Flip that tie
+  and the same input demands two rooms. Neither is "right" in general (Min Arrows treats touching as
+  <em>overlapping</em>), so when you build a single merged event list, sort by (time, type) with the type order
+  chosen deliberately — never left to whatever the sort happens to do with equal keys.
+</div>
+
+<h3>5. How to kill a greedy in 60 seconds</h3>
+<p class="lead">
+  Before defending a greedy, attack it. A counterexample found in one minute saves a doomed ten-minute proof —
+  and interviewers score the attack as highly as the proof.
+</p>
+<ul>
+  <li><strong>Brute-force tiny inputs (n ≤ 4) in your head.</strong> Nearly every wrong greedy dies on a 3- or
+    4-element input. The coin system in §1's warning box is the canonical kill (and
+    <a href="18-dp-1d.html">page 18</a> holds the DP that replaces it) — note its shape: the locally biggest
+    choice blocks a combination of two mediums. Recreate that shape in the problem's own terms.</li>
+  <li><strong>Aim at the rule, not at random.</strong> Sorting by start? Build one long early-starting interval
+    that conflicts with two short later ones — exactly the input that forces activity selection to sort by end.
+    "Take the largest first"? Make two mediums beat a large plus scraps. Rules with ties? Construct an input
+    where the tie-break decides the answer.</li>
+  <li><strong>Run the exchange check as a test, not a ceremony.</strong> Say the swap sentence — "take any optimal
+    solution, substitute my greedy choice" — and look for the case where the substitution <em>breaks
+    feasibility or loses value</em>. If you can't complete the sentence cleanly, treat the greedy as unproven and
+    pivot to DP; a greedy you can't argue is a bug you haven't met yet.</li>
+  <li><strong>Standard mutations for interval problems:</strong> nested intervals, exact ties, touching
+    endpoints, and a zero-length interval. Most interval greedies that fail, fail on one of these four.</li>
+</ul>
+
+<div class="note">
+  <strong>Huffman coding — the greedy that ships in every zip file.</strong> To build a minimum-cost prefix code,
+  repeatedly merge the two <em>least frequent</em> symbols into a combined node and reinsert it — a min-heap
+  serves "two rarest" in O(log n) (<a href="12-heaps.html">page 12</a>), O(n log n) total. The exchange proof
+  sketch: in any optimal code tree, some two sibling leaves sit at maximum depth; if they aren't the two rarest
+  symbols, swap the rarest symbols down into those slots — moving rarer symbols onto longer codes can only lower
+  total cost — so an optimal tree exists with the two rarest as deepest siblings, and merging them reduces the
+  problem to a smaller alphabet, closing the induction. This is the entropy stage inside DEFLATE/zip and JPEG,
+  and the standard "prove a non-interval greedy" interview question — heap mechanics from page 12, proof from
+  this page.
+</div>
 
 <!-- ============================================================ -->
 <h2 id="templates">Pattern templates (Java)</h2>
