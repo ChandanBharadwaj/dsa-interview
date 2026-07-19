@@ -261,11 +261,79 @@ class LruViaLinkedHashMap extends LinkedHashMap&lt;Integer, Integer&gt; {
   <li><strong>Skip list (concept):</strong> a sorted linked list with express lanes — each node is promoted to the next level with probability ½, giving O(log n) search/insert without rotation logic. This is how Redis implements sorted sets.</li>
 </ul>
 
+<p>
+  Two of those bullets get challenged in senior rounds — "you said ~10 bits per key, <em>why</em>?" — and both
+  derivations are short enough to own.
+</p>
+<p>
+  <strong>Skip list: where the expected O(log n) comes from.</strong> Promotion with probability ½ per level
+  means about n/2ᵏ nodes survive to level k, so around level log₂ n the expected survivor count hits 1 — and the
+  probability that <em>any</em> node climbs past c·log₂ n is at most n/2^(c·log₂ n) = n^(1−c), vanishing for
+  c &gt; 1. Height is O(log n) with high probability, not just on average. Search walks each level a constant
+  expected distance before dropping: every node you pass horizontally is one that failed its coin flip for the
+  level above (probability ½ each), so the expected run per level is about 2. O(log n) levels × O(1) steps =
+  O(log n) search — <em>randomness replacing rotations</em>, which is why the insert code stays a dozen lines
+  while a red-black tree's is a page.
+</p>
+<p>
+  <strong>Bloom filter: deriving the "~10 bits/key ≈ 1%" claim.</strong> Insert n keys with k hash functions
+  into m bits: a particular bit stays 0 with probability (1 − 1/m)^(kn) ≈ e^(−kn/m). A lookup of an
+  <em>absent</em> key lies only if all k probed bits happen to be set, so the false-positive rate is
+  <strong>(1 − e^(−kn/m))^k</strong>. Minimizing over k gives the optimum <strong>k* = (m/n)·ln 2 ≈ 0.69·(bits
+  per key)</strong> — and at that optimum each bit is set with probability exactly ½ (the filter at maximum
+  entropy — no bit pattern wasted), collapsing the rate to 2^(−k*) ≈ 0.6185^(m/n). Plug in m/n = 10:
+  k* ≈ 7 hashes and a rate of 0.6185¹⁰ ≈ 0.8% — the "~10 bits/key, k≈7, ≈1%" numbers above, no longer folklore.
+  Handy corollary: every extra ~4.8 bits per key buys another 10× reduction.
+</p>
+
 <div class="tip">
   <strong>Design-question reflex.</strong> Read the required operations and their target costs FIRST, then pick
   one structure per requirement and wire them together: "O(1) lookup" → hash map; "ordered / nearest" → TreeMap;
   "cheapest next" → heap; "O(1) reorder or evict" → doubly linked list; "random element" → array.
   Naming the contract before coding is exactly what a senior hire does.
+</div>
+
+<h3>6. Sparse table: O(1) range queries when the array never changes</h3>
+<p class="lead">
+  The segment tree pays O(log n) per query so it can survive updates. Drop the updates and you can pre-compute
+  your way down to <strong>O(1) per query</strong> — the structure the Euler-tour LCA on <a href="11-trees.html">page 11</a>
+  quietly relies on.
+</p>
+<p>
+  A <strong>sparse table</strong> precomputes the answer for every window whose length is a power of two:
+  <code>sparse[k][i]</code> = the query over <code>[i, i + 2ᵏ)</code>. Build it in
+  <strong>O(n log n)</strong> by doubling — a length-2ᵏ window is just its two length-2ᵏ⁻¹ halves merged, so
+  <code>sparse[k][i] = merge(sparse[k-1][i], sparse[k-1][i + 2ᵏ⁻¹])</code> — and store it in an
+  <code>int[log n][n]</code>. Because the table holds O(n log n) precomputed windows rather than n, the name
+  is a slight misnomer, but the payoff is the query.
+</p>
+<p>
+  <strong>Why the query is O(1).</strong> To answer <code>[l, r]</code>, let <code>k = floor(log2(r - l + 1))</code>
+  and take <code>merge(sparse[k][l], sparse[k][r - 2ᵏ + 1])</code> — two windows of length 2ᵏ, one anchored at each
+  end. They <em>overlap</em> in the middle, but that is exactly the point: <code>min(a, a) = a</code>, so covering an
+  element twice costs nothing. That trick only works when the operation is <strong>idempotent</strong> —
+  <code>min</code>, <code>max</code>, <code>gcd</code>, bitwise <code>and</code>/<code>or</code> all qualify;
+  <strong>sum does not</strong> (an overlapped element would be double-counted), which is why range-sum stays on
+  prefix sums (<a href="04-prefix-sum.html">page 04</a>) or a Fenwick tree.
+</p>
+<p class="code-title">Sparse table for range minimum — build once, answer in two array reads</p>
+<pre class="code"><code>int LOG = 32 - Integer.numberOfLeadingZeros(n);   // ceil-ish log2(n), page 22
+int[][] sparse = new int[LOG][n];
+sparse[0] = nums.clone();                          // length-1 windows = the elements
+for (int k = 1; k &lt; LOG; k++)
+    for (int i = 0; i + (1 &lt;&lt; k) &lt;= n; i++)         // merge two length-2^(k-1) halves
+        sparse[k][i] = Math.min(sparse[k - 1][i], sparse[k - 1][i + (1 &lt;&lt; (k - 1))]);
+
+int query(int l, int r) {                          // inclusive [l, r], O(1)
+    int k = 31 - Integer.numberOfLeadingZeros(r - l + 1);   // floor(log2(len))
+    return Math.min(sparse[k][l], sparse[k][r - (1 &lt;&lt; k) + 1]);
+}</code></pre>
+<div class="note">
+  <strong>Where it sits in the range-query zoo.</strong> Sparse table is the "static, idempotent, need O(1)" corner
+  the other three structures leave open: prefix sums give O(1) but only for invertible ops on a fixed array;
+  Fenwick and segment trees give O(log n) <em>with</em> updates. Reach for the sparse table when the array is frozen
+  and the query is min/max/gcd — the classic case being an RMQ that answers lowest-common-ancestor queries after an
+  Euler tour.
 </div>
 
 <!-- ============================================================ -->
@@ -353,13 +421,14 @@ m.floorEntry(x);   // same but returns the (key, value) pair
   <tr><td>heap (<code>PriorityQueue</code>)</td><td>peek O(1)</td><td>offer/poll O(log n)</td><td>—</td><td>min OR max only</td><td>"cheapest/next/top-K" repeatedly</td></tr>
   <tr><td>segment tree</td><td>—</td><td>O(log n)</td><td>O(log n), any assoc. op</td><td>—</td><td>range min/max/sum on a MUTABLE array</td></tr>
   <tr><td>Fenwick / BIT</td><td>—</td><td>O(log n)</td><td>O(log n), invertible ops</td><td>—</td><td>range SUM on a mutable array, minimal code</td></tr>
+  <tr><td>sparse table</td><td>—</td><td>O(n log n) build, no update</td><td>O(1), idempotent ops</td><td>—</td><td>range min/max/gcd on a FROZEN array</td></tr>
   <tr><td>bloom filter</td><td>O(k), probabilistic</td><td>add O(k), no delete</td><td>—</td><td>—</td><td>"cheaply pre-filter definite misses" at huge scale</td></tr>
 </table>
 </div>
 
 <ul>
   <li>If the problem says <strong>"O(1) for every operation"</strong> → compose HashMap + (doubly linked list | array), never a tree.</li>
-  <li>If it says <strong>"range query" and "update" together</strong> → BIT for sums, segment tree for min/max/anything associative. Immutable array? Plain prefix sums (page 04) win.</li>
+  <li>If it says <strong>"range query" and "update" together</strong> → BIT for sums, segment tree for min/max/anything associative. Immutable array? Plain prefix sums (page 04) win for sums; a sparse table gives O(1) min/max/gcd.</li>
   <li>If it says <strong>"closest / next available / calendar"</strong> → TreeMap floor/ceiling.</li>
   <li><strong>LinkedHashMap vs manual DLL:</strong> same asymptotics; LinkedHashMap is the one-liner you mention, the manual list is the one you write. If the interviewer says "don't use library ordering", that was the point of the question.</li>
 </ul>

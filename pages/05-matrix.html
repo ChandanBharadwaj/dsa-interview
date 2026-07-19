@@ -229,6 +229,14 @@
   heart of every serious BLAS/GPU matmul kernel (the tiling card above), and mentioning it when an
   interviewer asks "why is your transpose slow?" is a strong systems signal.
 </p>
+<p class="code-title">Same O(m·n), very different clock time</p>
+<pre class="code"><code>// Fast: row-major — walks each row's contiguous ints, prefetcher-friendly
+for (int r = 0; r &lt; rows; r++)
+    for (int c = 0; c &lt; cols; c++) sum += m[r][c];
+
+// Slow on large grids: column-major — hops between row objects every access
+for (int c = 0; c &lt; cols; c++)
+    for (int r = 0; r &lt; rows; r++) sum += m[r][c];   // likely cache miss per read</code></pre>
 <div class="note">
   <strong>Java internals worth quoting.</strong> <code>new int[1_000_000][2]</code> allocates a million tiny
   row objects — each with its own ~16-byte object header — while <code>new int[2][1_000_000]</code> allocates
